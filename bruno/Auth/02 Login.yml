@@ -1,0 +1,72 @@
+info:
+  name: Login
+  type: http
+  seq: 2
+
+http:
+  method: POST
+  url: "{{baseUrl}}/auth/login"
+  headers:
+    - name: Content-Type
+      value: application/json
+  body:
+    type: json
+    data: |-
+      {
+        "email": "user@example.com",
+        "password": "SecurePass1!"
+      }
+  auth: none
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+
+examples:
+  - name: 200 OK
+    description: Login successful — copy access_token into the "token" environment variable
+    request:
+      url: "{{baseUrl}}/auth/login"
+      method: POST
+      body:
+        type: json
+        data: |-
+          {
+            "email": "user@example.com",
+            "password": "SecurePass1!"
+          }
+    response:
+      status: 200
+      statusText: OK
+      headers:
+        - name: Content-Type
+          value: application/json
+      body:
+        type: json
+        data: |-
+          {
+            "access_token": "<jwt_token>",
+            "token_type": "bearer"
+          }
+  - name: 401 Invalid Credentials
+    request:
+      url: "{{baseUrl}}/auth/login"
+      method: POST
+      body:
+        type: json
+        data: |-
+          {
+            "email": "user@example.com",
+            "password": "wrongpassword"
+          }
+    response:
+      status: 401
+      statusText: Unauthorized
+      body:
+        type: json
+        data: |-
+          {
+            "detail": "Invalid email or password"
+          }

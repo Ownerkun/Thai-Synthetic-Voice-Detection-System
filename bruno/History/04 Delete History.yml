@@ -1,0 +1,42 @@
+info:
+  name: Delete History
+  type: http
+  seq: 4
+
+http:
+  method: DELETE
+  url: "{{baseUrl}}/history/{{detectionId}}"
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+
+examples:
+  - name: 204 No Content
+    description: UC7b — record deleted; cascades to SegmentScore and Feedback automatically (ON DELETE CASCADE)
+    request:
+      url: "{{baseUrl}}/history/{{detectionId}}"
+      method: DELETE
+    response:
+      status: 204
+      statusText: No Content
+      body:
+        type: text
+        data: ""
+  - name: 404 Not Found
+    description: Record does not exist or belongs to another user
+    request:
+      url: "{{baseUrl}}/history/{{detectionId}}"
+      method: DELETE
+    response:
+      status: 404
+      statusText: Not Found
+      body:
+        type: json
+        data: |-
+          {
+            "detail": "Record not found"
+          }

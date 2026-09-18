@@ -1,0 +1,87 @@
+info:
+  name: Submit Feedback
+  type: http
+  seq: 3
+
+http:
+  method: POST
+  url: "{{baseUrl}}/history/{{detectionId}}/feedback"
+  headers:
+    - name: Content-Type
+      value: application/json
+  body:
+    type: json
+    data: |-
+      {
+        "user_agrees": true
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+
+examples:
+  - name: 201 Created
+    description: UC6 — feedback submitted; guest users cannot use this endpoint (401)
+    request:
+      url: "{{baseUrl}}/history/{{detectionId}}/feedback"
+      method: POST
+      body:
+        type: json
+        data: |-
+          {
+            "user_agrees": true
+          }
+    response:
+      status: 201
+      statusText: Created
+      body:
+        type: json
+        data: |-
+          {
+            "id": "<feedback-uuid>",
+            "detection_id": "<detection-uuid>",
+            "user_agrees": true
+          }
+  - name: 409 Feedback Already Submitted
+    description: Can only submit feedback once per detection record
+    request:
+      url: "{{baseUrl}}/history/{{detectionId}}/feedback"
+      method: POST
+      body:
+        type: json
+        data: |-
+          {
+            "user_agrees": false
+          }
+    response:
+      status: 409
+      statusText: Conflict
+      body:
+        type: json
+        data: |-
+          {
+            "detail": "Feedback already submitted for this record"
+          }
+  - name: 404 Not Found
+    request:
+      url: "{{baseUrl}}/history/{{detectionId}}/feedback"
+      method: POST
+      body:
+        type: json
+        data: |-
+          {
+            "user_agrees": true
+          }
+    response:
+      status: 404
+      statusText: Not Found
+      body:
+        type: json
+        data: |-
+          {
+            "detail": "Record not found"
+          }

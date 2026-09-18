@@ -1,0 +1,81 @@
+info:
+  name: Set Threshold
+  type: http
+  seq: 2
+
+http:
+  method: POST
+  url: "{{baseUrl}}/admin/threshold"
+  headers:
+    - name: Content-Type
+      value: application/json
+  body:
+    type: json
+    data: |-
+      {
+        "value": 0.5,
+        "note": "adjusted after model evaluation"
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+
+examples:
+  - name: 200 OK
+    description: New threshold saved; takes effect immediately for all subsequent /predict calls (no restart needed)
+    request:
+      url: "{{baseUrl}}/admin/threshold"
+      method: POST
+      body:
+        type: json
+        data: |-
+          {
+            "value": 0.5,
+            "note": "adjusted after model evaluation"
+          }
+    response:
+      status: 200
+      statusText: OK
+      body:
+        type: json
+        data: |-
+          {
+            "previous_value": 0.4,
+            "current": {
+              "id": "<uuid>",
+              "value": 0.5,
+              "effective_from": "2026-01-01T00:00:00Z",
+              "changed_by_admin_id": "<admin-uuid>",
+              "note": "adjusted after model evaluation"
+            }
+          }
+  - name: 422 Validation Error
+    description: value must be between 0.0 and 1.0
+    request:
+      url: "{{baseUrl}}/admin/threshold"
+      method: POST
+      body:
+        type: json
+        data: |-
+          {
+            "value": 1.5
+          }
+    response:
+      status: 422
+      statusText: Unprocessable Entity
+      body:
+        type: json
+        data: |-
+          {
+            "detail": [
+              {
+                "loc": ["body", "value"],
+                "msg": "Input should be less than or equal to 1",
+                "type": "less_than_equal"
+              }
+            ]
+          }

@@ -1,0 +1,79 @@
+info:
+  name: Predict (Logged In)
+  type: http
+  seq: 3
+
+http:
+  method: POST
+  url: "{{baseUrl}}/predict"
+  body:
+    type: multipart
+    data:
+      - name: files
+        type: file
+        value: ""
+  auth:
+    mode: bearer
+    bearer:
+      token: "{{token}}"
+
+settings:
+  encodeUrl: true
+  timeout: 30000
+  followRedirects: true
+  maxRedirects: 5
+
+examples:
+  - name: 200 OK — ผลตรวจสอบเสียง (บันทึกประวัติแล้ว)
+    description: Logged-in request — result saved to history (saved_to_history = true); copy id into detectionId env variable
+    request:
+      url: "{{baseUrl}}/predict"
+      method: POST
+      body:
+        type: multipart
+        data:
+          - name: files
+            type: file
+            value: ""
+    response:
+      status: 200
+      statusText: OK
+      body:
+        type: json
+        data: |-
+          {
+            "results": [
+              {
+                "id": "<detection-uuid>",
+                "original_filename": "sample.wav",
+                "duration_seconds": 3.5,
+                "sample_rate": 16000,
+                "num_segments": 2,
+                "mean_probability": 0.82,
+                "max_probability": 0.91,
+                "threshold_used": 0.5,
+                "verdict": "spoof",
+                "possible_partial_spoof": false,
+                "model_version": "mock-v0 (real model not yet available)",
+                "processing_ms": 120,
+                "segments": [],
+                "saved_to_history": true
+              }
+            ],
+            "failed_files": []
+          }
+  - name: 200 OK — ไฟล์ใช้งานไม่ได้
+    description: Unsupported format or corrupt file goes into failed_files
+    request:
+      url: "{{baseUrl}}/predict"
+      method: POST
+    response:
+      status: 200
+      statusText: OK
+      body:
+        type: json
+        data: |-
+          {
+            "results": [],
+            "failed_files": ["corrupt.mp3"]
+          }

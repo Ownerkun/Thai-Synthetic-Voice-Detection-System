@@ -1,0 +1,19 @@
+
+# ไฟล์นี้ถูกโหลดอัตโนมัติทุกครั้งที่รัน `docker compose up` (ไม่ต้องระบุ -f เพิ่ม)
+# ใช้สำหรับ "โหมด dev" เท่านั้น: mount source code เข้า container + เปิด --reload
+# ตอน deploy จริงให้รันด้วย: docker compose -f docker-compose.yml up -d --build (ไม่รวมไฟล์นี้)
+
+services:
+  api:
+    build:
+      target: runtime
+    command: ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+    env_file:
+      - .env.dev
+    environment:
+      APPLICATION_MODE: DEV
+      BOOTSTRAP_ADMIN_PASSWORD: ${BOOTSTRAP_ADMIN_PASSWORD:-Admin1234Dev!}
+    volumes:
+      - ./app:/app/app
+      - ./alembic:/app/alembic
+      - ./models:/models:ro

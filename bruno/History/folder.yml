@@ -1,0 +1,10 @@
+info:
+  name: History
+  type: folder
+  seq: 3
+
+request:
+  auth:
+    mode: bearer
+    bearer:
+      token: "{{token}}"

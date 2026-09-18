@@ -1,0 +1,14 @@
+name: Local
+variables:
+  - name: baseUrl
+    value: http://localhost:8000
+    description: "API base URL"
+  - name: token
+    value: ""
+    description: "User JWT — copy access_token from Login response"
+  - name: adminToken
+    value: ""
+    description: "Admin JWT — copy access_token from Admin Login response"
+  - name: detectionId
+    value: ""
+    description: "Detection record UUID — copy id from Predict response"
