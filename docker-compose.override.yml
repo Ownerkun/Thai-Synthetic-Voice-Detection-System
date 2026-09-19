@@ -4,6 +4,9 @@
 # ตอน deploy จริงให้รันด้วย: docker compose -f docker-compose.yml up -d --build (ไม่รวมไฟล์นี้)
 
 services:
+  db:
+    env_file:
+      - .env.dev
   api:
     build:
       target: runtime

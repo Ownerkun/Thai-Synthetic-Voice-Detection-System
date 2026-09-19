@@ -1,18 +1,17 @@
-
+name: thai-spoof_backend
 services:
   db:
     image: postgres:16-alpine
     restart: unless-stopped
-    environment:
-      POSTGRES_USER: ${POSTGRES_USER:-postgres}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
-      POSTGRES_DB: ${POSTGRES_DB:-spoof_detection}
+    env_file:
+      - path: .env
+        required: false
     volumes:
       - db_data:/var/lib/postgresql/data
     ports:
-      - "${POSTGRES_PORT:-5432}:5432"
+      - "5432:5432"
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres}"]
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER:-postgres}"]
       interval: 5s
       timeout: 5s
       retries: 10
@@ -25,20 +24,18 @@ services:
     depends_on:
       db:
         condition: service_healthy
+    env_file:
+      - path: .env
+        required: false
     environment:
-      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@db:5432/${POSTGRES_DB:-spoof_detection}
-      JWT_SECRET_KEY: ${JWT_SECRET_KEY:-dev-only-insecure-jwt-secret-do-not-use-in-production}
-      CORS_ORIGINS: ${CORS_ORIGINS:-*}
       ONNX_MODEL_PATH: /models/model.onnx
       ONNX_MODEL_META_PATH: /models/model.json
-      BOOTSTRAP_ADMIN_USERNAME: ${BOOTSTRAP_ADMIN_USERNAME:-admin}
-      BOOTSTRAP_ADMIN_PASSWORD: ${BOOTSTRAP_ADMIN_PASSWORD:-}
     volumes:
       # เอาไฟล์โมเดลที่เทรนเสร็จ (model.onnx + model.json) มาวางในโฟลเดอร์นี้บนเครื่อง host
       # container จะอ่านผ่าน path เดียวกันเสมอ ไม่ต้อง build image ใหม่ตอนเปลี่ยนเวอร์ชันโมเดล
       - ./models:/models:ro
     ports:
-      - "${API_PORT:-8000}:8000"
+      - "8000:8000"
 
   # เปิดใช้ด้วย: docker compose --profile tools up -d
   # เข้าดู/แก้ข้อมูลผ่านหน้าเว็บที่ http://localhost:5050 (จำเป็นเฉพาะตอน dev)
@@ -48,11 +45,11 @@ services:
     restart: unless-stopped
     depends_on:
       - db
-    environment:
-      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_EMAIL:-dev@example.com}
-      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD:-devpassword}
+    env_file:
+      - path: .env
+        required: false
     ports:
-      - "${PGADMIN_PORT:-5050}:80"
+      - "5050:80"
     volumes:
       - pgadmin_data:/var/lib/pgadmin
 
