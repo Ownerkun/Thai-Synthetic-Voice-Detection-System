@@ -7,18 +7,20 @@ http:
   method: POST
   url: "{{baseUrl}}/predict"
   body:
-    type: multipart
+    type: multipart-form
     data:
       - name: files
         type: file
-        value: ""
-  auth: none
+        value:
+          - C:\Users\admin\Documents\Sound Recordings\Recording.wav
+        contentType: audio/wav
 
 settings:
   encodeUrl: true
   timeout: 30000
   followRedirects: true
   maxRedirects: 5
+  forwardAuthorizationHeader: true
 
 examples:
   - name: 200 OK — ผลตรวจสอบเสียง (ไม่บันทึกประวัติ)
@@ -26,12 +28,6 @@ examples:
     request:
       url: "{{baseUrl}}/predict"
       method: POST
-      body:
-        type: multipart
-        data:
-          - name: files
-            type: file
-            value: ""
     response:
       status: 200
       statusText: OK

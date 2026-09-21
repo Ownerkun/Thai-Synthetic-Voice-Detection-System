@@ -14,15 +14,15 @@ http:
     data: |-
       {
         "username": "admin",
-        "password": "AdminPassword1!"
+        "password": "CHANGE_ME_TO_A_STRONG_PASSWORD"
       }
-  auth: none
 
 settings:
   encodeUrl: true
   timeout: 0
   followRedirects: true
   maxRedirects: 5
+  forwardAuthorizationHeader: true
 
 examples:
   - name: 200 OK

@@ -6,13 +6,21 @@ info:
 http:
   method: GET
   url: "{{baseUrl}}/history/{{detectionId}}"
-  auth: inherit
+  auth:
+    type: bearer
+    token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJkZWU1MmM4ZS0wMmIwLTQ3ZTgtOTZhMC1lMGQxODZhNmJjNzEiLCJyb2xlIjoidXNlciIsImV4cCI6MTc5MDQyNjcwNH0.v-5Lw9XcwvsmE7NnPUVUqbVSzEeP6E59_xtRZxb3CYg
+
+runtime:
+  variables:
+    - name: detectionId
+      value: da676672-0d2e-44b0-ba2a-164b991963a5
 
 settings:
   encodeUrl: true
   timeout: 0
   followRedirects: true
   maxRedirects: 5
+  forwardAuthorizationHeader: true
 
 examples:
   - name: 200 OK

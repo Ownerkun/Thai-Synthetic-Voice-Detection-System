@@ -7,21 +7,23 @@ http:
   method: POST
   url: "{{baseUrl}}/predict"
   body:
-    type: multipart
+    type: multipart-form
     data:
       - name: files
         type: file
-        value: ""
+        value:
+          - C:\Users\admin\Documents\Sound Recordings\Recording.wav
+        contentType: audio/wav
   auth:
-    mode: bearer
-    bearer:
-      token: "{{token}}"
+    type: bearer
+    token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJkZWU1MmM4ZS0wMmIwLTQ3ZTgtOTZhMC1lMGQxODZhNmJjNzEiLCJyb2xlIjoidXNlciIsImV4cCI6MTc5MDQyNjcwNH0.v-5Lw9XcwvsmE7NnPUVUqbVSzEeP6E59_xtRZxb3CYg
 
 settings:
   encodeUrl: true
   timeout: 30000
   followRedirects: true
   maxRedirects: 5
+  forwardAuthorizationHeader: true
 
 examples:
   - name: 200 OK — ผลตรวจสอบเสียง (บันทึกประวัติแล้ว)
@@ -29,12 +31,6 @@ examples:
     request:
       url: "{{baseUrl}}/predict"
       method: POST
-      body:
-        type: multipart
-        data:
-          - name: files
-            type: file
-            value: ""
     response:
       status: 200
       statusText: OK
