@@ -17,7 +17,9 @@ logger = logging.getLogger(__name__)
 
 
 class UnsupportedAudioError(ValueError):
-    """ไฟล์เสียงไม่ผ่านการตรวจสอบรูปแบบ, ขนาด"""
+    def __init__(self, reason: FailureReason, message: str) -> None:
+        super().__init__(message)
+        self.reason = reason
 
 
 class AudioPreprocessor:
@@ -43,8 +45,15 @@ class AudioPreprocessor:
     def decode(self, file_bytes: bytes, source_format: str) -> AudioBuffer:
         try:
             waveform, sample_rate = sf.read(io.BytesIO(file_bytes), dtype="float32", always_2d=False)
-        except Exception as exc:  # noqa: BLE001 — ห่อ error ของ libsndfile ให้เป็นข้อความที่ API เข้าใจ
-            raise UnsupportedAudioError(f"Failed to read audio file: {exc}") from exc
+        except Exception as exc:  # noqa: BLE001 ห่อ error ของ libsndfile ให้เป็นข้อความที่ API เข้าใจ
+        # the raw libsndfile message is only for our logs, the client gets a generic message
+            logger.warning("Could not decode %s upload: %s", source_format, exc)
+            raise UnsupportedAudioError(
+                FailureReason.DECODE_FAILED,
+                "Could not read the audio data - the file may be corrupted or not a real audio file",
+            ) from exc
+        if len(waveform) == 0:
+            raise UnsupportedAudioError(FailureReason.EMPTY_AUDIO, "The file contains no audio samples")
         return AudioBuffer(waveform=np.asarray(waveform, dtype=np.float32), sample_rate=sample_rate, source_format=source_format)
 
     def to_mono(self, buffer: AudioBuffer) -> AudioBuffer:
