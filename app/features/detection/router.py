@@ -7,7 +7,7 @@ from fastapi import APIRouter, Depends, File, UploadFile
 from app.core.config import get_settings
 from app.deps import DbSession, get_optional_user_id
 from app.models.detection import DetectionRecord, SegmentScore
-from app.schemas.detection import BatchDetectionResultOut, DetectionResultOut, SegmentResultOut
+from app.schemas.detection import BatchDetectionResultOut, DetectionResultOut, SegmentResultOut, FailedFileOut
 from app.services.audio_preprocessor import AudioPreprocessor, UnsupportedAudioError
 from app.services.onnx_analyzer import get_analyzer
 from app.services.threshold_service import get_current_threshold
@@ -38,7 +38,7 @@ def predict(
     threshold = get_current_threshold(db, settings)
 
     results: list[DetectionResultOut] = []
-    failed_files: list[str] = []
+    failed_files: list[FailedFileOut] = []
 
     for upload in files:
         raw_bytes = upload.file.read()

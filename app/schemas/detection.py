@@ -3,6 +3,8 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict
 
+from app.services.audio_types import FailureReason
+
 
 class SegmentResultOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
@@ -34,12 +36,17 @@ class DetectionResultOut(BaseModel):
     segments: list[SegmentResultOut]
     saved_to_history: bool
 
+class FailedFileOut(BaseModel):
+    filename: str
+    reason: FailureReason
+    message: str
+
 
 class BatchDetectionResultOut(BaseModel):
     """Response เมื่ออัปโหลดหลายไฟล์พร้อมกัน"""
 
     results: list[DetectionResultOut]
-    failed_files: list[str]  # ไฟล์ที่รูปแบบ/ขนาดไม่ถูกต้อง
+    failed_files: list[FailedFileOut]  # ไฟล์ที่รูปแบบ/ขนาดไม่ถูกต้อง
 
 
 class DetectionRecordOut(BaseModel):
