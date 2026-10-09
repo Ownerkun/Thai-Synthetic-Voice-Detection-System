@@ -67,6 +67,23 @@ def submit_feedback(detection_id: UUID, payload: FeedbackRequest, db: DbSession,
     db.refresh(feedback)
     return feedback
 
+@router.get("/{detection_id}", response_model=FeedbackOut)
+def get_feedback(detection_id: UUID, db: DbSession, user: CurrentUser) -> Feedback:
+    record = _get_owned_record_or_404(db, detection_id, user.id)
+    if record.feedback is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No feedback submitted for this record")
+    return record.feedback
+
+@router.put("/{detection_id}/feedback", response_model=FeedbackOut)
+def update_feedback(detection_id: UUID, payload: FeedbackRequest, db: DbSession, user: CurrentUser) -> Feedback:
+    record = _get_owned_record_or_404(db, detection_id, user.id)
+    if record.feedback is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No feedback submitted for this record yet. submit it with POST first")
+    
+    record.feedback.user_agrees = payload.user_agrees
+    db.commit()
+    db.refresh(record.feedback)
+    return record.feedback
 
 def _get_owned_record_or_404(db: DbSession, detection_id: UUID, user_id: UUID) -> DetectionRecord:
     record = (
