@@ -44,14 +44,12 @@ def predict(
         raw_bytes = upload.file.read()
         filename = upload.filename or "unknown"
 
-        if not preprocessor.validate_format(filename, len(raw_bytes)):
-            failed_files.append(filename)
-            continue
-
         try:
+            preprocessor.validate_format(filename, len(raw_bytes))
             buffer = preprocessor.process(raw_bytes, filename)
-        except UnsupportedAudioError:
-            failed_files.append(filename)
+        except UnsupportedAudioError as exc:
+            logger.info("Rejected upload %r: %s (%s)", filename, exc.reason.value, exc)
+            failed_files.append(FailedFileOut(filename=filename, reason=exc.reason, message=str(exc)))
             continue
 
         report = analyzer.analyze(buffer, threshold=threshold)

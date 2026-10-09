@@ -34,13 +34,21 @@ class AudioPreprocessor:
         self._allowed_ext = settings.allowed_audio_extensions
         self._max_bytes = settings.max_upload_size_bytes
 
-    def validate_format(self, filename: str, file_size_bytes: int) -> bool:
+    def validate_format(self, filename: str, file_size_bytes: int) -> None:
+        """Raise UnsupportedAudioError if the file must be rejected before we even try to decode it"""
         ext = os.path.splitext(filename.lower())[1]
         if ext not in self._allowed_ext:
-            return False
-        if file_size_bytes <= 0 or file_size_bytes > self._max_bytes:
-            return False
-        return True
+            raise UnsupportedAudioError(
+                FailureReason.UNSUPPORTED_FORMAT,
+                f"Unsupported file type '{ext or '(none)'}' - allowed: {', '.join(self._allowed_ext)}",
+            )
+        if file_size_bytes <= 0:
+            raise UnsupportedAudioError(FailureReason.EMPTY_AUDIO, "The file is empty")
+        if file_size_bytes > self._max_bytes:
+            raise UnsupportedAudioError(
+                FailureReason.FILE_TOO_LARGE,
+                f"The file is {file_size_bytes / 1024 / 1024:.1f} MB - the limit is {self._max_bytes / 1024 / 1024:.0f} MB",
+            )
 
     def decode(self, file_bytes: bytes, source_format: str) -> AudioBuffer:
         try:
