@@ -48,7 +48,7 @@ def register_and_get_headers(client) -> dict:
     res = client.post(
         "/auth/register", json={"email": email, "password": "Password1234"}
     )
-    assert res.status_cond == 201, res.text
+    assert res.status_code == 201, res.text
     return {"Authorization": f"Bearer {res.json()['access_token']}"}
 
 

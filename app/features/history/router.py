@@ -67,7 +67,7 @@ def submit_feedback(detection_id: UUID, payload: FeedbackRequest, db: DbSession,
     db.refresh(feedback)
     return feedback
 
-@router.get("/{detection_id}", response_model=FeedbackOut)
+@router.get("/{detection_id}/feedback", response_model=FeedbackOut)
 def get_feedback(detection_id: UUID, db: DbSession, user: CurrentUser) -> Feedback:
     record = _get_owned_record_or_404(db, detection_id, user.id)
     if record.feedback is None:
