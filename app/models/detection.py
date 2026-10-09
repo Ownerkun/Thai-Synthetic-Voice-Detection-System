@@ -71,6 +71,7 @@ class Feedback(Base):
         GUID(), ForeignKey("user_account.id", ondelete="CASCADE"), nullable=False
     )
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime | None] = mapped_column((DateTime(timezone=True)), nullable=True, onupdate=func.now())
     user_agrees: Mapped[bool] = mapped_column(Boolean, nullable=False)
 
     detection: Mapped["DetectionRecord"] = relationship(back_populates="feedback")
