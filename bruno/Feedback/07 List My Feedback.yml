@@ -1,0 +1,46 @@
+info:
+  name: List My Feedback
+  type: http
+  seq: 7
+
+http:
+  method: GET
+  url: "{{baseUrl}}/feedback"
+  params:
+    - name: limit
+      value: "50"
+      description: "Max records to return (1–200)"
+    - name: offset
+      value: "0"
+      description: "Records to skip (>= 0)"
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+
+examples:
+  - name: 200 OK
+    description: Test 7 — user's feedback history, newest first. Right after the steps above it has exactly 1 row for this record (other rows may exist from earlier runs).
+    request:
+      url: "{{baseUrl}}/feedback"
+      method: GET
+    response:
+      status: 200
+      statusText: OK
+      body:
+        type: json
+        data: |-
+          [
+            {
+              "id": "<feedback-uuid>",
+              "detection_id": "<detection-uuid>",
+              "original_filename": "sample.wav",
+              "verdict": "spoof",
+              "user_agrees": false,
+              "created_at": "2026-01-01T00:00:00Z",
+              "updated_at": "2026-01-01T00:05:00Z"
+            }
+          ]

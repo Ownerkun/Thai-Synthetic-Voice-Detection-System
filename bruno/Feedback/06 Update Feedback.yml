@@ -1,0 +1,50 @@
+info:
+  name: Update Feedback
+  type: http
+  seq: 6
+
+http:
+  method: PUT
+  url: "{{baseUrl}}/history/{{detectionId}}/feedback"
+  headers:
+    - name: Content-Type
+      value: application/json
+  body:
+    type: json
+    data: |-
+      {
+        "user_agrees": false
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+
+examples:
+  - name: 200 OK
+    description: Test 6 — same feedback id as step 3 (edited in place, not a new row); updated_at is now set
+    request:
+      url: "{{baseUrl}}/history/{{detectionId}}/feedback"
+      method: PUT
+      body:
+        type: json
+        data: |-
+          {
+            "user_agrees": false
+          }
+    response:
+      status: 200
+      statusText: OK
+      body:
+        type: json
+        data: |-
+          {
+            "id": "<feedback-uuid>",
+            "detection_id": "<detection-uuid>",
+            "user_agrees": false,
+            "created_at": "2026-01-01T00:00:00Z",
+            "updated_at": "2026-01-01T00:05:00Z"
+          }

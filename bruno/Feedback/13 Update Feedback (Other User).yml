@@ -1,0 +1,48 @@
+info:
+  name: Update Feedback (Other User)
+  type: http
+  seq: 13
+
+http:
+  method: PUT
+  url: "{{baseUrl}}/history/{{detectionId}}/feedback"
+  headers:
+    - name: Content-Type
+      value: application/json
+  body:
+    type: json
+    data: |-
+      {
+        "user_agrees": true
+      }
+  auth:
+    type: bearer
+    token: "{{otherToken}}"
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+
+examples:
+  - name: 404 Not Found
+    description: Test 10 — logged in as a different user; cannot edit someone else's feedback
+    request:
+      url: "{{baseUrl}}/history/{{detectionId}}/feedback"
+      method: PUT
+      body:
+        type: json
+        data: |-
+          {
+            "user_agrees": true
+          }
+    response:
+      status: 404
+      statusText: Not Found
+      body:
+        type: json
+        data: |-
+          {
+            "detail": "Record not found"
+          }

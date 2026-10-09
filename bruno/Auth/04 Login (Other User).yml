@@ -1,0 +1,52 @@
+info:
+  name: Login (Other User)
+  type: http
+  seq: 4
+
+http:
+  method: POST
+  url: "{{baseUrl}}/auth/login"
+  headers:
+    - name: Content-Type
+      value: application/json
+  body:
+    type: json
+    data: |-
+      {
+        "email": "other@example.com",
+        "password": "SecurePass1!"
+      }
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: true
+
+examples:
+  - name: 200 OK
+    description: Login as a second user (register this account first with Register, using email other@example.com) — copy access_token into the "otherToken" environment variable. Used by Feedback "Get/Update Feedback (Other User)" (test 10 — feedback must not be readable or editable across users).
+    request:
+      url: "{{baseUrl}}/auth/login"
+      method: POST
+      body:
+        type: json
+        data: |-
+          {
+            "email": "other@example.com",
+            "password": "SecurePass1!"
+          }
+    response:
+      status: 200
+      statusText: OK
+      headers:
+        - name: Content-Type
+          value: application/json
+      body:
+        type: json
+        data: |-
+          {
+            "access_token": "<jwt_token>",
+            "token_type": "bearer"
+          }

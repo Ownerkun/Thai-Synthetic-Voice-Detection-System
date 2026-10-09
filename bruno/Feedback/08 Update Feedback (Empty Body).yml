@@ -1,0 +1,49 @@
+info:
+  name: Update Feedback (Empty Body)
+  type: http
+  seq: 8
+
+http:
+  method: PUT
+  url: "{{baseUrl}}/history/{{detectionId}}/feedback"
+  headers:
+    - name: Content-Type
+      value: application/json
+  body:
+    type: json
+    data: |-
+      {}
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+
+examples:
+  - name: 422 Validation Error
+    description: Test 8 — user_agrees is required; body validation fails before the handler runs
+    request:
+      url: "{{baseUrl}}/history/{{detectionId}}/feedback"
+      method: PUT
+      body:
+        type: json
+        data: |-
+          {}
+    response:
+      status: 422
+      statusText: Unprocessable Entity
+      body:
+        type: json
+        data: |-
+          {
+            "detail": [
+              {
+                "type": "missing",
+                "loc": ["body", "user_agrees"],
+                "msg": "Field required",
+                "input": {}
+              }
+            ]
+          }
