@@ -15,6 +15,7 @@ from app.features.admin.router import router as admin_router
 from app.features.auth.router import router as auth_router
 from app.features.detection.router import router as detection_router
 from app.features.history.router import router as history_router
+from app.features.feedback.router import router as feedback_router
 from app.models.admin import AdminAccount
 from app.services.onnx_analyzer import get_analyzer
 
@@ -52,6 +53,7 @@ app.include_router(auth_router)
 app.include_router(detection_router)
 app.include_router(history_router)
 app.include_router(admin_router)
+app.include_router(feedback_router)
 
 
 def _bootstrap_admin_if_missing() -> None:
