@@ -12,8 +12,18 @@ http:
       - name: files
         type: file
         value:
-          - C:\Users\admin\Documents\Sound Recordings\Recording.wav
-        contentType: audio/wav
+          - E:\thai-spoof-detection-project\CSS_Dataset\CSS_Data\VITS\spk1_VITS_gen_22khz\gen_0.wav
+          - E:\thai-spoof-detection-project\CSS_Dataset\CSS_Data\VITS\spk1_VITS_gen_22khz\gen_2.wav
+          - E:\thai-spoof-detection-project\CSS_Dataset\CSS_Data\VITS\spk1_VITS_gen_22khz\gen_3.wav
+          - E:\thai-spoof-detection-project\CSS_Dataset\CSS_Data\VITS\spk1_VITS_gen_22khz\gen_4.wav
+          - E:\thai-spoof-detection-project\CSS_Dataset\CSS_Data\VITS\spk1_VITS_gen_22khz\gen_5.wav
+          - E:\thai-spoof-detection-project\CSS_Dataset\CSS_Data\VITS\spk1_VITS_gen_22khz\gen_6.wav
+          - E:\thai-spoof-detection-project\CSS_Dataset\CSS_Data\VITS\spk1_VITS_gen_22khz\gen_7.wav
+          - E:\thai-spoof-detection-project\CSS_Dataset\CSS_Data\VITS\spk1_VITS_gen_22khz\gen_8.wav
+          - E:\thai-spoof-detection-project\CSS_Dataset\CSS_Data\VITS\spk1_VITS_gen_22khz\gen_9.wav
+          - E:\thai-spoof-detection-project\CSS_Dataset\CSS_Data\VITS\spk1_VITS_gen_22khz\gen_11.wav
+          - E:\thai-spoof-detection-project\CSS_Dataset\CSS_Data\VITS\spk1_VITS_gen_22khz\gen_12.wav
+        contentType: multipart/mixed
 
 settings:
   encodeUrl: true

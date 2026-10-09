@@ -105,8 +105,8 @@ class AudioPreprocessor:
         buffer = self.decode(file_bytes, source_format=ext)
         buffer = self.to_mono(buffer)
         buffer = self.resample(buffer)
-        buffer = self.trim_silence(buffer)
-        buffer = self.normalize_loudness(buffer)
+        # buffer = self.trim_silence(buffer)
+        # buffer = self.normalize_loudness(buffer)
         buffer = self.enforce_max_duration(buffer)
         return buffer
 

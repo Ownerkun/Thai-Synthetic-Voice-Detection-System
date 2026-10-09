@@ -13,16 +13,19 @@ http:
     type: json
     data: |-
       {
-        "value": 0.5,
-        "note": "adjusted after model evaluation"
+        "value": 0.9593832492828369,
+        "note": "test on XLS-R Setup 2 ep 5"
       }
-  auth: inherit
+  auth:
+    type: bearer
+    token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI3ODI1ODBiYS1mMWVhLTQyM2QtYjM4ZS05MWRlNjYyZDcwMWUiLCJyb2xlIjoiYWRtaW4iLCJleHAiOjE3OTIwNDY0ODF9.zJHq4rsVmyPz8V6O__mS7rzisvZdjCro9zMM-YeYaTc
 
 settings:
   encodeUrl: true
   timeout: 0
   followRedirects: true
   maxRedirects: 5
+  forwardAuthorizationHeader: true
 
 examples:
   - name: 200 OK
