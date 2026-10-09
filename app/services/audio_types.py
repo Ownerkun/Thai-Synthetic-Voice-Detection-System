@@ -6,8 +6,15 @@ from __future__ import annotations
 import uuid
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
+from enum import Enum
 
 import numpy as np
+
+class FailureReason(str, Enum):
+    UNSUPPORTED_FORMAT = "unsupported_format"  # extension is not in the allowed list
+    FILE_TOO_LARGE = "file_too_large"  # bigger than max_upload_size_bytes
+    EMPTY_AUDIO = "empty_audio"  # 0-byte file, or a valid audio file that contains 0 samples
+    DECODE_FAILED = "decode_failed"  # the bytes could not be read as audio (corrupted / not real audio)
 
 
 @dataclass
