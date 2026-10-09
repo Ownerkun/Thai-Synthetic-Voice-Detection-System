@@ -12,3 +12,6 @@ variables:
   - name: detectionId
     value: ""
     description: "Detection record UUID — copy id from Predict response"
+  - name: otherToken
+    value: ""
+    description: "JWT of a second user (not the owner of detectionId) — copy access_token from Login (Other User)"

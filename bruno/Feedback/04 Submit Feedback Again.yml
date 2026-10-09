@@ -1,0 +1,46 @@
+info:
+  name: Submit Feedback Again
+  type: http
+  seq: 4
+
+http:
+  method: POST
+  url: "{{baseUrl}}/history/{{detectionId}}/feedback"
+  headers:
+    - name: Content-Type
+      value: application/json
+  body:
+    type: json
+    data: |-
+      {
+        "user_agrees": true
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+
+examples:
+  - name: 409 Feedback Already Submitted
+    description: Test 4 — run right after Submit Feedback; POST is one-shot per record (use PUT to change it)
+    request:
+      url: "{{baseUrl}}/history/{{detectionId}}/feedback"
+      method: POST
+      body:
+        type: json
+        data: |-
+          {
+            "user_agrees": false
+          }
+    response:
+      status: 409
+      statusText: Conflict
+      body:
+        type: json
+        data: |-
+          {
+            "detail": "Feedback already submitted for this record"
+          }

@@ -27,7 +27,10 @@
 | `/history` | GET | **ต้อง** (user) | ดูรายการประวัติของตนเอง |
 | `/history/{id}` | GET | **ต้อง** (user) | ดูรายละเอียด + คะแนนรายช่วง |
 | `/history/{id}` | DELETE | **ต้อง** (user) | ลบรายการประวัติ |
-| `/history/{id}/feedback` | POST | **ต้อง** (user) | ให้ feedback ว่าผลถูกต้องไหม |
+| `/history/{id}/feedback` | POST | **ต้อง** (user) | ให้ feedback ว่าผลถูกต้องไหม (ครั้งแรก) |
+| `/history/{id}/feedback` | GET | **ต้อง** (user) | ดู feedback ที่เคยให้ไว้กับรายการนี้ |
+| `/history/{id}/feedback` | PUT | **ต้อง** (user) | แก้คำตอบ feedback ที่เคยให้ไว้แล้ว |
+| `/feedback` | GET | **ต้อง** (user) | ประวัติ feedback ทั้งหมดที่ฉันเคยให้ (ใหม่→เก่า) |
 | `/admin/threshold` | GET | **ต้อง** (admin) | ดูค่า threshold ปัจจุบัน |
 | `/admin/threshold` | POST | **ต้อง** (admin) | อัปเดตค่า threshold (มีผลทันที) |
 | `/admin/stats` | GET | **ต้อง** (admin) | สถิติภาพรวมระบบ |
@@ -376,19 +379,120 @@ curl -X POST http://localhost:8000/history/241de76c-f61e-48a8-9d37-807cb7cb6484/
 **201 Created**
 ```json
 {
-  "id": "24d9e7c2-1e72-4c71-9274-3a2663757985",
-  "detection_id": "241de76c-f61e-48a8-9d37-807cb7cb6484",
-  "user_agrees": true
+  "id": "f2ba17f1-f882-4e7b-ab82-bb682ec6689a",
+  "detection_id": "53d92be8-15ac-426f-b6e2-ad486ad61016",
+  "user_agrees": true,
+  "created_at": "2026-10-09T06:30:07",
+  "updated_at": null
 }
 ```
 
-**409 Conflict** — ให้ feedback รายการนี้ไปแล้ว (1 รายการให้ feedback ได้ครั้งเดียว)
+**409 Conflict** ให้ feedback รายการนี้ไปแล้ว (1 รายการให้ feedback ได้ครั้งเดียว) ถ้าจะแก้ไขใช้ `PUT /history/{id}/feedback` แทน
 ```json
-{ "detail": "ให้ feedback รายการนี้ไปแล้ว" }
+{ "detail": "Feedback already submitted for this record" }
 ```
 
-> ⚠️ ตอนนี้ endpoint นี้บังคับ login เสมอ แม้ Use Case Diagram จะให้ guest feedback ได้ด้วย
-> (ดูหมายเหตุใน README ของ backend — เป็นจุดที่ต้องยืนยันกับอาจารย์อีกครั้ง)
+---
+
+## GET /history/{id}/feedback
+
+ดู feedback ที่ผู้ใช้เคยให้ไว้กับรายการตรวจนี้ (ใช้ตอนเปิดหน้ารายละเอียด เพื่อรู้ว่าต้องแสดงปุ่ม "ให้ feedback" หรือ "แก้ไข feedback")
+
+```bash
+curl http://localhost:8000/history/53d92be8-15ac-426f-b6e2-ad486ad61016/feedback \
+  -H "Authorization: Bearer <TOKEN>"
+```
+
+**200 OK**
+```json
+{
+  "id": "f2ba17f1-f882-4e7b-ab82-bb682ec6689a",
+  "detection_id": "53d92be8-15ac-426f-b6e2-ad486ad61016",
+  "user_agrees": true,
+  "created_at": "2026-10-09T06:30:07",
+  "updated_at": null
+}
+```
+`updated_at` เป็น `null` = ยังไม่เคยแก้ไข
+
+**404 Not Found** ยังไม่เคยให้ feedback รายการนี้ (หรือรายการไม่ใช่ของผู้ใช้คนนี้ → `"Record not found"`)
+```json
+{ "detail": "No feedback submitted for this record" }
+```
+
+**401 Unauthorized** ไม่ได้ส่ง token หรือ token ไม่ถูกต้อง
+
+---
+
+## PUT /history/{id}/feedback
+
+แก้คำตอบของ feedback ที่เคยให้ไว้แล้ว (ส่งซ้ำด้วยค่าเดิมกี่ครั้งผลก็เท่าเดิม)
+
+```bash
+curl -X PUT http://localhost:8000/history/53d92be8-15ac-426f-b6e2-ad486ad61016/feedback \
+  -H "Authorization: Bearer <TOKEN>" -H "Content-Type: application/json" \
+  -d '{"user_agrees": false}'
+```
+
+**200 OK** `id` เดิม (แก้แถวเดิม ไม่ได้สร้างใหม่) และ `updated_at` มีค่าแล้ว
+```json
+{
+  "id": "f2ba17f1-f882-4e7b-ab82-bb682ec6689a",
+  "detection_id": "53d92be8-15ac-426f-b6e2-ad486ad61016",
+  "user_agrees": false,
+  "created_at": "2026-10-09T06:30:07",
+  "updated_at": "2026-10-09T06:30:07"
+}
+```
+หมายเหตุ: ถ้าส่งค่าเดียวกับที่บันทึกไว้อยู่แล้ว `updated_at` จะไม่เปลี่ยน
+
+**404 Not Found** — ยังไม่เคยให้ feedback รายการนี้ ให้เรียก `POST` ก่อน
+```json
+{ "detail": "No feedback submitted for this record yet submit it with POST first" }
+```
+
+**422 Unprocessable Entity** — body ไม่ครบ
+```json
+{
+  "detail": [
+    { "type": "missing", "loc": ["body", "user_agrees"], "msg": "Field required", "input": {} }
+  ]
+}
+```
+
+---
+
+## GET /feedback
+
+ประวัติ feedback ทั้งหมดที่ผู้ใช้คนนี้เคยให้ เรียงใหม่→เก่า (ไม่รวมของคนอื่น)
+
+Query: `limit` (ค่าเริ่มต้น 50, สูงสุด 200), `offset` (ค่าเริ่มต้น 0)
+
+```bash
+curl "http://localhost:8000/feedback?limit=20&offset=0" -H "Authorization: Bearer <TOKEN>"
+```
+
+**200 OK** — ถ้ายังไม่เคยให้เลยจะได้ `[]`
+```json
+[
+  {
+    "id": "f2ba17f1-f882-4e7b-ab82-bb682ec6689a",
+    "detection_id": "53d92be8-15ac-426f-b6e2-ad486ad61016",
+    "original_filename": "call_from_bank.wav",
+    "verdict": "spoof",
+    "user_agrees": false,
+    "created_at": "2026-10-09T06:30:07",
+    "updated_at": "2026-10-09T06:30:07"
+  }
+]
+```
+`verdict` คือผลที่ระบบตัดสินตอนนั้น (`"real"` / `"spoof"`) — `user_agrees` บอกว่าผู้ใช้เห็นด้วยกับผลนั้นหรือไม่
+กด "แก้ไข" ที่แถวนี้ → เรียก `PUT /history/{detection_id}/feedback`
+
+**401 Unauthorized**
+```json
+{ "detail": "Authentication required" }
+```
 
 ---
 

@@ -15,25 +15,17 @@ http:
       {
         "user_agrees": true
       }
-  auth:
-    type: bearer
-    token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJkZWU1MmM4ZS0wMmIwLTQ3ZTgtOTZhMC1lMGQxODZhNmJjNzEiLCJyb2xlIjoidXNlciIsImV4cCI6MTc5MDQyNjcwNH0.v-5Lw9XcwvsmE7NnPUVUqbVSzEeP6E59_xtRZxb3CYg
-
-runtime:
-  variables:
-    - name: detectionId
-      value: da676672-0d2e-44b0-ba2e-164b991963a5
+  auth: inherit
 
 settings:
   encodeUrl: true
   timeout: 0
   followRedirects: true
   maxRedirects: 5
-  forwardAuthorizationHeader: true
 
 examples:
   - name: 201 Created
-    description: UC6 — feedback submitted; guest users cannot use this endpoint (401)
+    description: Test 3 — first feedback for this record; updated_at is null because it has never been edited. Guest users get 401.
     request:
       url: "{{baseUrl}}/history/{{detectionId}}/feedback"
       method: POST
@@ -52,29 +44,12 @@ examples:
           {
             "id": "<feedback-uuid>",
             "detection_id": "<detection-uuid>",
-            "user_agrees": true
+            "user_agrees": true,
+            "created_at": "2026-01-01T00:00:00Z",
+            "updated_at": null
           }
-  - name: 409 Feedback Already Submitted
-    description: Can only submit feedback once per detection record
-    request:
-      url: "{{baseUrl}}/history/{{detectionId}}/feedback"
-      method: POST
-      body:
-        type: json
-        data: |-
-          {
-            "user_agrees": false
-          }
-    response:
-      status: 409
-      statusText: Conflict
-      body:
-        type: json
-        data: |-
-          {
-            "detail": "Feedback already submitted for this record"
-          }
-  - name: 404 Not Found
+  - name: 404 Record Not Found
+    description: Record does not exist or belongs to another user
     request:
       url: "{{baseUrl}}/history/{{detectionId}}/feedback"
       method: POST

@@ -1,0 +1,31 @@
+info:
+  name: List My Feedback (No Token)
+  type: http
+  seq: 11
+
+http:
+  method: GET
+  url: "{{baseUrl}}/feedback"
+  auth: none
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+
+examples:
+  - name: 401 Unauthorized
+    description: Test 9 — no Authorization header; must be 401
+    request:
+      url: "{{baseUrl}}/feedback"
+      method: GET
+    response:
+      status: 401
+      statusText: Unauthorized
+      body:
+        type: json
+        data: |-
+          {
+            "detail": "Authentication required"
+          }

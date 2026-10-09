@@ -1,0 +1,31 @@
+info:
+  name: Get Feedback (Not Submitted)
+  type: http
+  seq: 1
+
+http:
+  method: GET
+  url: "{{baseUrl}}/history/{{detectionId}}/feedback"
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+
+examples:
+  - name: 404 No feedback yet
+    description: Test 1 — run before any feedback is submitted for this record
+    request:
+      url: "{{baseUrl}}/history/{{detectionId}}/feedback"
+      method: GET
+    response:
+      status: 404
+      statusText: Not Found
+      body:
+        type: json
+        data: |-
+          {
+            "detail": "No feedback submitted for this record"
+          }

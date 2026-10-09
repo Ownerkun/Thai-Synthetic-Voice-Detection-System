@@ -1,0 +1,46 @@
+info:
+  name: Update Feedback (Not Submitted)
+  type: http
+  seq: 2
+
+http:
+  method: PUT
+  url: "{{baseUrl}}/history/{{detectionId}}/feedback"
+  headers:
+    - name: Content-Type
+      value: application/json
+  body:
+    type: json
+    data: |-
+      {
+        "user_agrees": false
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+
+examples:
+  - name: 404 Nothing to edit yet
+    description: Test 2 — PUT before POST; the error tells the client to submit with POST first
+    request:
+      url: "{{baseUrl}}/history/{{detectionId}}/feedback"
+      method: PUT
+      body:
+        type: json
+        data: |-
+          {
+            "user_agrees": false
+          }
+    response:
+      status: 404
+      statusText: Not Found
+      body:
+        type: json
+        data: |-
+          {
+            "detail": "No feedback submitted for this record yet. submit it with POST first"
+          }

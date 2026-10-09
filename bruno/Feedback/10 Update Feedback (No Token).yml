@@ -1,0 +1,46 @@
+info:
+  name: Update Feedback (No Token)
+  type: http
+  seq: 10
+
+http:
+  method: PUT
+  url: "{{baseUrl}}/history/{{detectionId}}/feedback"
+  headers:
+    - name: Content-Type
+      value: application/json
+  body:
+    type: json
+    data: |-
+      {
+        "user_agrees": true
+      }
+  auth: none
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+
+examples:
+  - name: 401 Unauthorized
+    description: Test 9 — no Authorization header; must be 401 (not 422 or 404)
+    request:
+      url: "{{baseUrl}}/history/{{detectionId}}/feedback"
+      method: PUT
+      body:
+        type: json
+        data: |-
+          {
+            "user_agrees": true
+          }
+    response:
+      status: 401
+      statusText: Unauthorized
+      body:
+        type: json
+        data: |-
+          {
+            "detail": "Authentication required"
+          }
