@@ -47,6 +47,9 @@ def login(payload: LoginRequest, db: DbSession) -> TokenResponse:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid email or password"
         )
+    # เช็คหลังตรวจรหัสผ่านเท่านั้น คนที่ไม่รู้รหัสผ่านจะไม่รู้ว่าบัญชีนี้มีอยู่หรือถูกระงับ
+    if not user.is_active:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Account suspended")
 
     user.last_login_at = datetime.now(timezone.utc)
     db.commit()
