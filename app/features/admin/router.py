@@ -1,3 +1,5 @@
+import logging
+from uuid import UUID
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Query
@@ -12,7 +14,8 @@ from app.schemas.admin import (
     ThresholdUpdateRequest,
     ThresholdUpdateResponse,
     AdminUserListOut,
-    AdminUserOut
+    AdminUserOut,
+    AdminUserUpdateRequest,
 )
 
 router = APIRouter(prefix="/admin", tags=["admin"])
@@ -132,3 +135,26 @@ def list_users(
         limit=limit,
         offset=offset,
     )
+
+@router.patch("/users/{user_id}", response_model=AdminUserOut)
+def update_user(
+    user_id: UUID, payload: AdminUserUpdateRequest, db: DbSession, admin: CurrentAdmin
+) -> AdminUserOut:
+    user = db.get(UserAccount, user_id)
+    if user is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+
+    # แก้เฉพาะฟิลด์ที่ client ส่งมาจริงๆ (แยก "ไม่ส่ง" ออกจาก "ส่ง null")
+    if "display_name" in payload.model_fields_set:
+        user.display_name = payload.display_name
+    if "is_active" in payload.model_fields_set:
+        user.is_active = payload.is_active
+    db.commit()
+    db.refresh(user)
+
+    logger.info(
+        "Admin %r updated user %s: %s", admin.username, user.id, sorted(payload.model_fields_set)
+    )
+
+    detection_count = db.query(DetectionRecord).filter(DetectionRecord.user_id == user.id).count()
+    return _to_admin_user_out(user, detection_count)
