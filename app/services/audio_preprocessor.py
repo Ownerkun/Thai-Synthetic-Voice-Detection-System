@@ -11,7 +11,7 @@ import numpy as np
 import soundfile as sf
 
 from app.core.config import get_settings
-from app.services.audio_types import AudioBuffer
+from app.services.audio_types import AudioBuffer, FailureReason
 
 logger = logging.getLogger(__name__)
 
