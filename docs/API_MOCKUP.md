@@ -250,37 +250,46 @@ curl -F "files=@call_a.wav" -F "files=@call_b.wav" \
 ### ตัวอย่าง 3 — ไฟล์บางไฟล์รูปแบบไม่ถูกต้อง (ผสมกับไฟล์ที่ถูกต้อง)
 
 ```bash
-curl -F "files=@clip.mp3" -F "files=@clip2.wav" http://localhost:8000/predict
+curl -F "files=@clip2.wav" -F "files=@clip.mp3" -F "files=@broken.wav" http://localhost:8000/predict
 ```
 
-**200 OK** — status code ยังเป็น 200 เสมอ! ไฟล์ที่ผ่านอยู่ใน `results`, ไฟล์ที่ไม่ผ่านอยู่ใน `failed_files`
-(ไม่ throw error รวมทั้ง request เพราะอาจมีไฟล์อื่นที่ตรวจสำเร็จปนอยู่)
+**200 OK** — status code ยังเป็น 200 เสมอ! ไฟล์ที่ผ่านอยู่ใน `results` ส่วนไฟล์ที่ไม่ผ่านอยู่ใน `failed_files`
+**พร้อมสาเหตุ** (ไม่ throw error รวมทั้ง request เพราะอาจมีไฟล์อื่นที่ตรวจสำเร็จปนอยู่)
+
 ```json
 {
-  "results": [
+  "results": [ { "id": "…", "original_filename": "clip2.wav", "verdict": "spoof", "…": "…" } ],
+  "failed_files": [
     {
-      "id": "581288b2-6cb9-4898-86a6-ef63cde50f25",
-      "original_filename": "clip2.wav",
-      "duration_seconds": 3.0,
-      "sample_rate": 16000,
-      "num_segments": 1,
-      "mean_probability": 0.7559,
-      "max_probability": 0.7559,
-      "threshold_used": 0.5,
-      "verdict": "spoof",
-      "possible_partial_spoof": false,
-      "model_version": "mock-v0 (โมเดลจริงยังไม่พร้อม)",
-      "processing_ms": 0,
-      "segments": [
-        { "index": 0, "start_seconds": 0.0, "end_seconds": 3.0, "spoof_probability": 0.7558805346488953, "is_spoof": true }
-      ],
-      "saved_to_history": false
+      "filename": "clip.mp3",
+      "reason": "unsupported_format",
+      "message": "Unsupported file type '.mp3' - allowed: .wav, .flac"
+    },
+    {
+      "filename": "broken.wav",
+      "reason": "decode_failed",
+      "message": "Could not read the audio data - the file may be corrupted or not a real audio file"
     }
-  ],
-  "failed_files": ["clip.mp3"]
+  ]
 }
 ```
-→ frontend ควรวน `failed_files` มาแจ้งผู้ใช้แยกจากผลที่ตรวจสำเร็จ เช่น toast "clip.mp3 ไม่รองรับ (รองรับเฉพาะ .wav, .flac)"
+
+> ⚠️ **เปลี่ยน contract:** ก่อนหน้านี้ `failed_files` เป็น `["clip.mp3"]` (list ของชื่อไฟล์)
+> ตอนนี้เป็น list ของ object `{ filename, reason, message }` — frontend ที่อ่าน `failed_files` เป็น string ต้องแก้
+
+### รหัส `reason` (frontend ควรดูจากฟิลด์นี้ ไม่ใช่จาก `message`)
+
+| `reason` | เกิดเมื่อ | `message` ตัวอย่าง | ข้อความไทยที่แนะนำให้แสดง |
+|---|---|---|---|
+| `unsupported_format` | นามสกุลไม่ใช่ `.wav` / `.flac` (หรือไม่มีนามสกุล) | `Unsupported file type '(none)' - allowed: .wav, .flac` | ไฟล์ชนิดนี้ไม่รองรับ (รองรับเฉพาะ .wav และ .flac) |
+| `file_too_large` | ไฟล์ใหญ่กว่า 20 MB | `The file is 21.0 MB - the limit is 20 MB` | ไฟล์ใหญ่เกินไป (ไม่เกิน 20 MB) |
+| `empty_audio` | ไฟล์ 0 ไบต์ **หรือ** เปิดได้แต่ไม่มีเสียงเลย (0 samples) | `The file is empty` / `The file contains no audio samples` | ไฟล์นี้ไม่มีเสียง |
+| `decode_failed` | อ่านข้อมูลเสียงไม่ได้ (ไฟล์เสียหาย หรือไม่ใช่ไฟล์เสียงจริง) | `Could not read the audio data - the file may be corrupted or not a real audio file` | เปิดไฟล์ไม่ได้ ไฟล์อาจเสียหาย ลองอัดหรือบันทึกใหม่ |
+
+- `message` เป็นภาษาอังกฤษไว้ให้ดูตอน debug เท่านั้น ข้อความอาจปรับถ้อยคำได้ในอนาคต — อย่าเอาไป `if (message === "...")`
+- ถ้า `reason` มีค่าใหม่ที่ frontend ไม่รู้จัก ให้แสดงข้อความกลางๆ ไว้เป็น fallback เช่น "ไฟล์นี้ตรวจสอบไม่ได้"
+- ไฟล์ที่ไม่ผ่านจะ **ไม่ถูกบันทึกลงประวัติ**
+- ลำดับการตรวจ: นามสกุล → ว่างเปล่า → ขนาด → อ่านข้อมูลเสียง (ไฟล์ `.mp3` ขนาด 0 ไบต์จึงได้ `unsupported_format`)
 
 ---
 
@@ -581,4 +590,4 @@ curl -H "Authorization: Bearer <ADMIN_TOKEN>" http://localhost:8000/admin/stats
 | 404 | ไม่พบข้อมูล หรือไม่ใช่เจ้าของ | `/history/{id}` ที่ไม่มีจริงหรือเป็นของคนอื่น |
 | 409 | ข้อมูลขัดแย้งกับที่มีอยู่ | อีเมลซ้ำตอนสมัคร, feedback ซ้ำ |
 | 422 | request body ไม่ผ่าน validation | password สั้นไป, threshold นอกช่วง 0–1 |
-| 200 (แต่มี `failed_files`) | ตรวจสอบเสียงสำเร็จบางไฟล์ | อัปโหลดไฟล์ผิดฟอร์แมตปนกับไฟล์ที่ถูกต้อง |
+| 200 (แต่มี `failed_files`) | ตรวจสอบเสียงสำเร็จบางไฟล์ | อัปโหลดไฟล์ผิดฟอร์แมต/เสียหาย/ว่างเปล่าปนกับไฟล์ที่ถูกต้อง — ดู `failed_files[].reason` |
