@@ -34,6 +34,8 @@
 | `/admin/threshold` | GET | **ต้อง** (admin) | ดูค่า threshold ปัจจุบัน |
 | `/admin/threshold` | POST | **ต้อง** (admin) | อัปเดตค่า threshold (มีผลทันที) |
 | `/admin/stats` | GET | **ต้อง** (admin) | สถิติภาพรวมระบบ |
+| `/admin/users` | GET | **ต้อง** (admin) | รายชื่อผู้ใช้ + ค้นหา + filter ระงับ/ใช้งานปกติ + แบ่งหน้า |
+| `/admin/users/{id}` | PATCH | **ต้อง** (admin) | แก้ display_name / ระงับ-เปิดใช้งานบัญชี |
 
 ---
 
@@ -117,6 +119,12 @@ curl -X POST http://localhost:8000/auth/login \
 ```json
 { "detail": "อีเมลหรือรหัสผ่านไม่ถูกต้อง" }
 ```
+
+**403 Forbidden** — รหัสผ่านถูก แต่บัญชีถูก admin ระงับไว้ (ไม่ออก token ให้)
+```json
+{ "detail": "Account suspended" }
+```
+ถ้ารหัสผ่านผิด จะได้ `401 Invalid email or password` เหมือนเดิมเสมอ (ไม่บอกว่าบัญชีนี้ถูกระงับ ให้คนที่ไม่รู้รหัสผ่าน)
 
 ---
 
@@ -281,6 +289,9 @@ curl -F "files=@clip.mp3" -F "files=@clip2.wav" http://localhost:8000/predict
 }
 ```
 → frontend ควรวน `failed_files` มาแจ้งผู้ใช้แยกจากผลที่ตรวจสำเร็จ เช่น toast "clip.mp3 ไม่รองรับ (รองรับเฉพาะ .wav, .flac)"
+
+> ถ้าส่ง token ของบัญชีที่ **ถูกระงับหรือถูกลบแล้ว** มา ระบบจะตรวจเสียงให้ตามปกติ แต่ปฏิบัติกับผู้ใช้เป็น guest:
+> `saved_to_history: false` และไม่บันทึกลงประวัติ (ไม่ตอบ 401/500)
 
 ---
 
@@ -573,12 +584,137 @@ curl -H "Authorization: Bearer <ADMIN_TOKEN>" http://localhost:8000/admin/stats
 
 ---
 
+## GET /admin/users
+
+รายชื่อผู้ใช้ทั้งหมด (ใช้กับหน้าจัดการผู้ใช้ของ admin) เรียงสมัครใหม่ → เก่า ไม่มี `password_hash` ในผลลัพธ์
+
+Query (ทุกตัวไม่บังคับ):
+
+| Query | ค่าเริ่มต้น | คำอธิบาย |
+|---|---|---|
+| `q` | — | ค้นหาจาก email หรือ display_name (บางส่วนก็ได้ ไม่สนตัวพิมพ์ใหญ่/เล็ก; สูงสุด 100 ตัวอักษร) |
+| `is_active` | — | `true` = ใช้งานปกติ · `false` = ถูกระงับ · ไม่ส่ง = ทั้งหมด |
+| `limit` | 50 | 1–200 |
+| `offset` | 0 | ≥ 0 |
+
+```bash
+curl "http://localhost:8000/admin/users?limit=2" -H "Authorization: Bearer <ADMIN_TOKEN>"
+```
+
+**200 OK**
+```json
+{
+  "items": [
+    {
+      "id": "3af40806-da39-42ac-bd5b-1e1ecde6d939",
+      "email": "napat@example.com",
+      "display_name": null,
+      "created_at": "2026-10-10T07:40:33",
+      "last_login_at": null,
+      "is_active": true,
+      "detection_count": 0
+    },
+    {
+      "id": "d839abb0-e093-4a30-870a-ad71663b730e",
+      "email": "somchai@example.com",
+      "display_name": "Somchai",
+      "created_at": "2026-10-10T07:40:33",
+      "last_login_at": "2026-10-10T07:40:34.044877",
+      "is_active": true,
+      "detection_count": 2
+    }
+  ],
+  "total": 3,
+  "limit": 2,
+  "offset": 0
+}
+```
+
+- `total` = จำนวนที่ตรงกับ filter **ทั้งหมด** (ไม่ใช่แค่หน้านี้) — ใช้คำนวณจำนวนหน้า
+- `detection_count` = จำนวนครั้งที่ผู้ใช้คนนี้ตรวจเสียงตอน login (การตรวจแบบ guest ไม่นับ)
+- `last_login_at` เป็น `null` ถ้ายังไม่เคย login หลังสมัคร (การสมัครไม่นับเป็น login)
+- ค้นหา `%` หรือ `_` จะหาตัวอักษรนั้นจริงๆ ไม่ใช่ wildcard
+- ไม่มีผลลัพธ์ → `{"items": [], "total": 0, ...}` (ไม่ใช่ 404)
+
+**401 Unauthorized** — ไม่มี token หรือเป็น token ของผู้ใช้ทั่วไป
+```json
+{ "detail": "Insufficient permissions" }
+```
+
+**422 Unprocessable Entity** — `limit` นอกช่วง 1–200, `offset` ติดลบ, `is_active` ไม่ใช่ true/false
+
+---
+
+## PATCH /admin/users/{id}
+
+แก้ข้อมูลผู้ใช้ **ส่งเฉพาะฟิลด์ที่ต้องการแก้** (ฟิลด์ที่ไม่ส่งจะไม่ถูกแตะ)
+
+| ฟิลด์ | ชนิด | ความหมาย |
+|---|---|---|
+| `display_name` | string 1–100 ตัวอักษร หรือ `null` | `null` = ล้างชื่อ |
+| `is_active` | `true` / `false` | `false` = ระงับบัญชี · `true` = เปิดใช้งานอีกครั้ง |
+
+แก้ `email` / รหัสผ่านผ่าน endpoint นี้ไม่ได้ (ส่งมา → 422)
+
+```bash
+curl -X PATCH http://localhost:8000/admin/users/d839abb0-e093-4a30-870a-ad71663b730e \
+  -H "Authorization: Bearer <ADMIN_TOKEN>" -H "Content-Type: application/json" \
+  -d '{"is_active": false}'
+```
+
+**200 OK** — คืนผู้ใช้หลังแก้ (หน้าตาเดียวกับ 1 แถวใน `GET /admin/users`)
+```json
+{
+  "id": "d839abb0-e093-4a30-870a-ad71663b730e",
+  "email": "somchai@example.com",
+  "display_name": "คุณสมชาย",
+  "created_at": "2026-10-10T07:40:33",
+  "last_login_at": "2026-10-10T07:40:34.044877",
+  "is_active": false,
+  "detection_count": 2
+}
+```
+
+**ผลของการระงับ (`is_active: false`)** — มีผลทันที ไม่ต้องรอ token หมดอายุ:
+
+| ผู้ใช้ที่ถูกระงับเรียก | ผลลัพธ์ |
+|---|---|
+| `GET /history`, `/feedback`, ฯลฯ ด้วย token เดิม | `401` `{"detail": "Invalid or suspended account"}` |
+| `POST /auth/login` | `403` `{"detail": "Account suspended"}` |
+| `POST /predict` (ด้วย token เดิม) | `200` ตรวจให้ แต่เป็น guest (`saved_to_history: false`) |
+
+ประวัติการตรวจที่มีอยู่แล้ว **ไม่ถูกลบ** และกลับมาเห็นได้เมื่อเปิดบัญชีอีกครั้ง
+
+**404 Not Found**
+```json
+{ "detail": "User not found" }
+```
+
+**422 Unprocessable Entity** — ตัวอย่างที่เจอได้
+
+| ส่งอะไรมา | สาเหตุ |
+|---|---|
+| `{}` | ต้องส่งอย่างน้อย 1 ฟิลด์: `"Send at least one field to update: display_name or is_active"` |
+| `{"email": "x@y.com"}` | ฟิลด์ที่ไม่รู้จัก: `"Extra inputs are not permitted"` |
+| `{"is_active": null}` | `"is_active must be true or false"` |
+| `{"display_name": ""}` หรือยาว > 100 | ชื่อต้องยาว 1–100 ตัวอักษร (อยากล้างชื่อให้ส่ง `null`) |
+| id ใน URL ไม่ใช่ UUID | `Input should be a valid UUID` |
+
+**401 Unauthorized** — ไม่มี token หรือเป็น token ของผู้ใช้ทั่วไป
+
+---
+
 ## สรุป error status code ที่ frontend ต้องดักไว้
 
 | Status | ความหมาย | ตัวอย่างจุดที่เจอ |
 |---|---|---|
-| 401 | ไม่ได้ login / token หมดอายุ / role ไม่ตรง | `/history`, `/admin/*` เมื่อไม่มี/ผิด token |
+| 401 | ไม่ได้ login / token หมดอายุ / role ไม่ตรง / **บัญชีถูกระงับหรือถูกลบ** | `/history`, `/admin/*` เมื่อไม่มี/ผิด token หรือบัญชีถูกระงับ |
+| 401 | ไม่ได้ login / token หมดอายุ / role ไม่ตรง / **บัญชีถูกระงับหรือถูกลบ** | `/history`, `/admin/*` เมื่อไม่มี/ผิด token หรือบัญชีถูกระงับ |
 | 404 | ไม่พบข้อมูล หรือไม่ใช่เจ้าของ | `/history/{id}` ที่ไม่มีจริงหรือเป็นของคนอื่น |
 | 409 | ข้อมูลขัดแย้งกับที่มีอยู่ | อีเมลซ้ำตอนสมัคร, feedback ซ้ำ |
 | 422 | request body ไม่ผ่าน validation | password สั้นไป, threshold นอกช่วง 0–1 |
 | 200 (แต่มี `failed_files`) | ตรวจสอบเสียงสำเร็จบางไฟล์ | อัปโหลดไฟล์ผิดฟอร์แมตปนกับไฟล์ที่ถูกต้อง |
+
+
+> หมายเหตุ: ใน Bruno `bruno/Admin/03 Get Stats.yml` มี example "403 Forbidden" แต่โค้ดจริงตอบ **401** `Insufficient permissions`
+> (admin endpoint ตอบ 401 ทั้งกรณีไม่มี token และ token ผิด role) แนะนำให้แก้ example นั้นเป็น 401
