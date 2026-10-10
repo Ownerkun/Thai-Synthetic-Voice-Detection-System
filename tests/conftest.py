@@ -62,3 +62,12 @@ def predict_and_get_detection_id(
     )
     assert res.status_code == 200, res.text
     return res.json()["results"][0]["id"]
+
+
+def admin_login_headers(client) -> dict:
+    res = client.post(
+        "/auth/admin/login",
+        json={"username": "admin", "password": "test-admin-pass-123"},
+    )
+    assert res.status_code == 200, res.text
+    return {"Authorization": f"Bearer {res.json()['access_token']}"}

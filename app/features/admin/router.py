@@ -1,6 +1,6 @@
 from typing import Annotated
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 
 from app.deps import DbSession, get_current_admin
 from app.models.admin import AdminAccount, ThresholdSetting
@@ -11,6 +11,8 @@ from app.schemas.admin import (
     ThresholdOut,
     ThresholdUpdateRequest,
     ThresholdUpdateResponse,
+    AdminUserListOut,
+    AdminUserOut
 )
 
 router = APIRouter(prefix="/admin", tags=["admin"])
@@ -70,4 +72,63 @@ def stats_overview(db: DbSession, _admin: CurrentAdmin) -> StatsOverviewOut:
         total_real_verdicts=total - total_spoof,
         total_users=total_users,
         feedback_agreement_rate=agreement_rate,
+    )
+
+def _to_admin_user_out(user: UserAccount, detection_count: int) -> AdminUserOut:
+    return AdminUserOut(
+        id=user.id,
+        email=user.email,
+        display_name=user.display_name,
+        created_at=user.created_at,
+        last_login_at=user.last_login_at,
+        is_active=user.is_active,
+        detection_count=detection_count,
+    )
+
+@router.get("/users", response_model=AdminUserListOut)
+def list_users(
+    db: DbSession,
+    _admin: CurrentAdmin,
+    q: str | None = Query(default=None, max_length=100, description="ค้นหาจาก email หรือ display_name"),
+    is_active: bool | None = Query(default=None, description="true = ใช้งานปกติ, false = ถูกระงับ"),
+    limit: int = Query(default=50, ge=1, le=200),
+    offset: int = Query(default=0, ge=0),
+) -> AdminUserListOut:
+    query = db.query(UserAccount)
+
+    if q:
+        # autoescape = ถ้าพิมพ์ % หรือ _ จะค้นหาตัวอักษรนั้นจริงๆ ไม่ใช่ wildcard
+        query = query.filter(
+            or_(
+                UserAccount.email.icontains(q, autoescape=True),
+                UserAccount.display_name.icontains(q, autoescape=True),
+            )
+        )
+    if is_active is not None:
+        query = query.filter(UserAccount.is_active.is_(is_active))
+
+    total = query.count()
+    users = (
+        query.order_by(UserAccount.created_at.desc(), UserAccount.id)  # id ไว้ตัดสินเมื่อ created_at เท่ากัน ไม่ให้แบ่งหน้าสลับกัน
+        .offset(offset)
+        .limit(limit)
+        .all()
+    )
+
+    # นับจำนวนการตรวจของผู้ใช้ทั้งหน้าด้วย query เดียว (ไม่วน query ทีละคน)
+    counts: dict[UUID, int] = {}
+    if users:
+        rows = (
+            db.query(DetectionRecord.user_id, func.count(DetectionRecord.id))
+            .filter(DetectionRecord.user_id.in_([u.id for u in users]))
+            .group_by(DetectionRecord.user_id)
+            .all()
+        )
+        counts = {user_id: count for user_id, count in rows}
+
+    return AdminUserListOut(
+        items=[_to_admin_user_out(u, counts.get(u.id, 0)) for u in users],
+        total=total,
+        limit=limit,
+        offset=offset,
     )
