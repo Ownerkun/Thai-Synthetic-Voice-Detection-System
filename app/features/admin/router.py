@@ -2,7 +2,8 @@ import logging
 from uuid import UUID
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Query, HTTPException, status
+from sqlalchemy import func, or_
 
 from app.deps import DbSession, get_current_admin
 from app.models.admin import AdminAccount, ThresholdSetting
@@ -18,6 +19,7 @@ from app.schemas.admin import (
     AdminUserUpdateRequest,
 )
 
+logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/admin", tags=["admin"])
 
 CurrentAdmin = Annotated[AdminAccount, Depends(get_current_admin)]
