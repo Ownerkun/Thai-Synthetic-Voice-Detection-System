@@ -284,6 +284,8 @@ curl -F "files=@clip2.wav" -F "files=@clip.mp3" -F "files=@broken.wav" http://lo
 
 > ⚠️ **เปลี่ยน contract:** ก่อนหน้านี้ `failed_files` เป็น `["clip.mp3"]` (list ของชื่อไฟล์)
 > ตอนนี้เป็น list ของ object `{ filename, reason, message }` — frontend ที่อ่าน `failed_files` เป็น string ต้องแก้
+> ถ้าส่ง token ของบัญชีที่ **ถูกระงับหรือถูกลบแล้ว** มา ระบบจะตรวจเสียงให้ตามปกติ แต่ปฏิบัติกับผู้ใช้เป็น guest:
+> `saved_to_history: false` และไม่บันทึกลงประวัติ (ไม่ตอบ 401/500)
 
 ### รหัส `reason` (frontend ควรดูจากฟิลด์นี้ ไม่ใช่จาก `message`)
 
@@ -715,7 +717,7 @@ curl -X PATCH http://localhost:8000/admin/users/d839abb0-e093-4a30-870a-ad71663b
 | Status | ความหมาย | ตัวอย่างจุดที่เจอ |
 |---|---|---|
 | 401 | ไม่ได้ login / token หมดอายุ / role ไม่ตรง / **บัญชีถูกระงับหรือถูกลบ** | `/history`, `/admin/*` เมื่อไม่มี/ผิด token หรือบัญชีถูกระงับ |
-| 401 | ไม่ได้ login / token หมดอายุ / role ไม่ตรง / **บัญชีถูกระงับหรือถูกลบ** | `/history`, `/admin/*` เมื่อไม่มี/ผิด token หรือบัญชีถูกระงับ |
+| 403 | บัญชีถูกระงับ (รหัสผ่านถูก แต่ login ไม่ได้) | `POST /auth/login` |
 | 404 | ไม่พบข้อมูล หรือไม่ใช่เจ้าของ | `/history/{id}` ที่ไม่มีจริงหรือเป็นของคนอื่น |
 | 409 | ข้อมูลขัดแย้งกับที่มีอยู่ | อีเมลซ้ำตอนสมัคร, feedback ซ้ำ |
 | 422 | request body ไม่ผ่าน validation | password สั้นไป, threshold นอกช่วง 0–1 |
