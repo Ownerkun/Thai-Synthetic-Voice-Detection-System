@@ -21,15 +21,22 @@ def _extract_token(authorization: str | None) -> str | None:
     return None
 
 
-def get_optional_user_id(authorization: Annotated[str | None, Header()] = None) -> UUID | None:
-    """ใช้กับ /predict ตรวจสอบได้ทั้งแบบ login และไม่ login (token ไม่มีก็ผ่าน, มีแต่ผิดก็ถือว่าไม่ login)"""
+def get_optional_user_id(db: DbSession, authorization: Annotated[str | None, Header()] = None) -> UUID | None:
+    """ใช้กับ /predict ตรวจสอบได้ทั้งแบบ login และไม่ login (token ไม่มีก็ผ่าน, มีแต่ผิดก็ถือว่าไม่ login)
+
+    บัญชีที่ถูกลบหรือถูกระงับ (is_active = False) ก็ถือว่าเป็น guest เช่นกัน: ยังตรวจเสียงได้ แต่ผลจะไม่ถูกบันทึกลงประวัติ
+    (ไม่งั้น INSERT detection_record จะอ้าง user_id ที่ไม่มีอยู่แล้ว)
+    """
     token = _extract_token(authorization)
     if not token:
         return None
     payload = decode_access_token(token)
     if payload is None or payload.role != "user":
         return None
-    return payload.subject_id
+    user = db.get(UserAccount, payload.subject_id)
+    if user is None or not user.is_active:
+        return None
+    return user.id
 
 
 def get_current_user(db: DbSession, authorization: Annotated[str | None, Header()] = None) -> UserAccount:
