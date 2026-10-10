@@ -71,5 +71,11 @@ examples:
         data: |-
           {
             "results": [],
-            "failed_files": ["corrupt.mp3"]
+            "failed_files": [
+              {
+                "filename": "corrupt.mp3",
+                "reason": "unsupported_format",
+                "message": "Unsupported file type '.mp3' - allowed: .wav, .flac"
+              }
+            ]
           }
