@@ -5,7 +5,9 @@ import react from '@vitejs/plugin-react';
 // ทำให้ไม่ต้องพึ่ง CORS และไม่ต้องแก้อะไรฝั่ง backend
 const backend = process.env.BACKEND_URL ?? 'http://localhost:8000';
 
-export default defineConfig({
+export default defineConfig(({ mode }) => ({
+  // --mode demo = build สำหรับ GitHub Pages ที่ https://<user>.github.io/<repo>/
+  base: mode === 'demo' ? (process.env.DEMO_BASE ?? '/Thai-Synthetic-Voice-Detection-System/') : '/',
   plugins: [react()],
   server: {
     port: 5173,
@@ -17,4 +19,4 @@ export default defineConfig({
       },
     },
   },
-});
+}));

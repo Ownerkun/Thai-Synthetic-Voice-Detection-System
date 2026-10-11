@@ -25,6 +25,16 @@ VITE_API_BASE_URL=https://api.example.com npm run build   # ผลลัพธ�
 `dist/` เป็นไฟล์ static ล้วน วางบน host ไหนก็ได้ (ต้องตั้ง fallback ทุก path ไปที่ `index.html` เพราะใช้ client-side routing)
 และต้องใส่โดเมนของ frontend ใน `CORS_ORIGINS` ของ backend
 
+## เวอร์ชันสาธิต (GitHub Pages)
+
+```bash
+npm run build:demo   # build แบบไม่ต้องมี backend → dist/ (มี 404.html สำหรับ SPA บน Pages)
+```
+
+ใช้ตัวจำลอง backend ในเบราว์เซอร์ (`src/api/demo.ts`) ที่ทำตามกติกาเดียวกับ backend (นามสกุล/ขนาด/10 วินาที/ช่วงละ 4 วินาที/threshold)
+ข้อมูลทั้งหมดเก็บใน localStorage ของผู้เปิด บัญชีผู้ดูแลสาธิตคือ `admin` / `demo1234` (แสดงบนหน้าเข้าสู่ระบบผู้ดูแลเฉพาะโหมดนี้)
+base path ค่าเริ่มต้นคือ `/Thai-Synthetic-Voice-Detection-System/` เปลี่ยนได้ด้วยตัวแปร `DEMO_BASE`
+
 ## หน้าที่มี
 
 | Path | สิทธิ์ | ทำอะไร |

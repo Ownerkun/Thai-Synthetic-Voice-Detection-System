@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { api, ApiError } from '../api/client';
+import { api, ApiError, isDemo } from '../api/client';
+import { DEMO_ADMIN } from '../api/demo';
 import { useAuth } from '../auth/AuthContext';
 import { Icon } from '../components/Icon';
 
@@ -198,6 +199,11 @@ export function AdminLoginPage() {
           onChange={(e) => setPassword(e.target.value)}
         />
       </label>
+      {isDemo && (
+        <div className="callout callout-ok">
+          🎭 บัญชีผู้ดูแลสำหรับโหมดสาธิต: {DEMO_ADMIN.username} / {DEMO_ADMIN.password}
+        </div>
+      )}
       {error && <div className="callout callout-danger">{error}</div>}
       <button className="btn btn-primary btn-big" disabled={loading}>
         {loading ? 'กำลังเข้าสู่ระบบ…' : 'เข้าสู่ระบบ'}

@@ -12,17 +12,12 @@ import type {
   ThresholdUpdateResponse,
   TokenResponse,
 } from './types';
+import { ApiError } from './errors';
+import { demoApi } from './demo';
 
 const BASE_URL = (import.meta.env.VITE_API_BASE_URL ?? '/api').replace(/\/$/, '');
 
-export class ApiError extends Error {
-  constructor(
-    public readonly status: number,
-    message: string,
-  ) {
-    super(message);
-  }
-}
+export { ApiError };
 
 let getToken: () => string | null = () => null;
 let onUnauthorized: () => void = () => {};
@@ -90,7 +85,7 @@ async function request<T>(path: string, { method = 'GET', json, form, query }: R
   return data as T;
 }
 
-export const api = {
+const realApi = {
   health: () => request<Health>('/health'),
 
   register: (body: { email: string; password: string; display_name?: string | null }) =>
@@ -127,3 +122,7 @@ export const api = {
   updateUser: (id: string, body: { display_name?: string | null; is_active?: boolean }) =>
     request<AdminUser>(`/admin/users/${id}`, { method: 'PATCH', json: body }),
 };
+
+// build ด้วย --mode demo (GitHub Pages) = ไม่เรียก backend ใช้ตัวจำลองในเบราว์เซอร์แทน (src/api/demo.ts)
+export const isDemo = import.meta.env.VITE_DEMO === '1';
+export const api: typeof realApi = isDemo ? demoApi : realApi;
