@@ -1,0 +1,11 @@
+{
+  "name": "เสียงจริงไหม? — ตรวจเสียงสังเคราะห์ภาษาไทย",
+  "short_name": "เสียงจริงไหม?",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#fbf8ff",
+  "theme_color": "#a996ff",
+  "icons": [
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}
