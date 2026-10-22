@@ -18,11 +18,9 @@ from app.schemas.admin import (
     AdminUserOut,
     AdminUserUpdateRequest,
 )
-from app.features.admin.detections_router import router as detections_router
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/admin", tags=["admin"])
-router.include_router(detections_router)  # GET /admin/detections
 
 CurrentAdmin = Annotated[AdminAccount, Depends(get_current_admin)]
 
