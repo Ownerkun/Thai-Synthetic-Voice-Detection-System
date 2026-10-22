@@ -18,6 +18,15 @@ class AdminDetectionFilters(BaseModel):
     date_to: date | None = None
     q: str | None = Field(default=None, min_length=1, max_length=100, description="ค้นหาจากชื่อไฟล์ (บางส่วน ไม่สนตัวพิมพ์)")
 
+    user_id: UUID | None = None  # ผลตรวจของผู้ใช้คนนี้คนเดียว (ใช้ลิงก์มาจากหน้าจัดการผู้ใช้)
+    user_email: str | None = Field(default=None, min_length=1, max_length=255, description="ค้นหาจากอีเมลผู้ใช้ (บางส่วน ไม่สนตัวพิมพ์)")
+    guest: bool | None = Field(default=None, description="true = เฉพาะที่ไม่ได้ login, false = เฉพาะที่ login")
+    model_version: str | None = Field(default=None, min_length=1, max_length=50, description="ตรงทุกตัวอักษร")
+    partial_spoof: bool | None = Field(default=None, description="true = เฉพาะที่ระบบสงสัยว่าปลอมบางช่วง")
+    # ช่วงของ mean_probability (ความน่าจะเป็นที่เป็นเสียงปลอมโดยเฉลี่ย) 0.0 - 1.0
+    min_prob: float | None = Field(default=None, ge=0.0, le=1.0)
+    max_prob: float | None = Field(default=None, ge=0.0, le=1.0)
+
     @model_validator(mode="after")
     def check_date_range(self) -> "AdminDetectionFilters":
         if self.date_from and self.date_to and self.date_from > self.date_to:

@@ -63,6 +63,25 @@ def _apply_filters(query, params: AdminDetectionFilters):
         # autoescape = ถ้าพิมพ์ % หรือ _ จะค้นหาตัวอักษรนั้นจริงๆ ไม่ใช่ wildcard
         query = query.filter(DetectionRecord.original_filename.icontains(params.q, autoescape=True))
 
+    if params.user_id is not None:
+        query = query.filter(DetectionRecord.user_id == params.user_id)
+    if params.user_email:
+        query = query.filter(UserAccount.email.icontains(params.user_email, autoescape=True))
+    if params.guest is True:
+        query = query.filter(DetectionRecord.user_id.is_(None))
+    elif params.guest is False:
+        query = query.filter(DetectionRecord.user_id.is_not(None))
+
+    if params.model_version is not None:
+        query = query.filter(DetectionRecord.model_version == params.model_version)
+    if params.partial_spoof is not None:
+        query = query.filter(DetectionRecord.possible_partial_spoof.is_(params.partial_spoof))
+
+    if params.min_prob is not None:
+        query = query.filter(DetectionRecord.mean_probability >= params.min_prob)
+    if params.max_prob is not None:
+        query = query.filter(DetectionRecord.mean_probability <= params.max_prob)
+
     return query
 
 def _start_of_thai_day(day: date) -> datetime:
