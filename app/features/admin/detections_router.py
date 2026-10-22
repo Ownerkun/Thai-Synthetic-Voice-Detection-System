@@ -16,6 +16,12 @@ router = APIRouter(prefix="/detections")
 
 THAI_TZ = timezone(timedelta(hours=7))
 
+SORT_COLUMNS = {
+    "created_at": DetectionRecord.created_at,
+    "mean_probability": DetectionRecord.mean_probability,
+    "processing_ms": DetectionRecord.processing_ms,
+}
+
 CurrentAdmin = Annotated[AdminAccount, Depends(get_current_admin)]
 
 
@@ -35,8 +41,10 @@ def list_detections(
     query = _apply_filters(query, params)
 
     total = query.count()
+    sort_column = SORT_COLUMNS[params.sort]
+    direction = sort_column.asc() if params.order == "asc" else sort_column.desc()
     rows = (
-        query.order_by(DetectionRecord.created_at.desc(), DetectionRecord.id)  # id ไว้ตัดสินเมื่อเวลาเท่ากัน ไม่ให้แบ่งหน้าสลับกัน
+        query.order_by(direction, DetectionRecord.id)  # id ไว้ตัดสินเมื่อค่าเท่ากัน ไม่ให้แบ่งหน้าสลับกัน
         .offset(params.offset)
         .limit(params.limit)
         .all()
@@ -83,7 +91,7 @@ def _apply_filters(query, params: AdminDetectionFilters):
         query = query.filter(Feedback.user_agrees.is_(False))
     elif params.feedback == "none":
         query = query.filter(Feedback.id.is_(None))  # outer join แล้วไม่เจอ feedback
-        
+
     if params.min_prob is not None:
         query = query.filter(DetectionRecord.mean_probability >= params.min_prob)
     if params.max_prob is not None:

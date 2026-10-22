@@ -11,6 +11,10 @@ class AdminDetectionFilters(BaseModel):
     limit: int = Field(default=50, ge=1, le=200)
     offset: int = Field(default=0, ge=0)
 
+    # --- เรียงลำดับ (ค่าเริ่มต้น = ใหม่สุดก่อน) ---
+    sort: Literal["created_at", "mean_probability", "processing_ms"] = "created_at"
+    order: Literal["asc", "desc"] = "desc"
+
     # --- filter (ใส่เฉพาะที่ต้องการ ใส่หลายตัวพร้อมกัน = ต้องตรงทุกเงื่อนไข) ---
     verdict: Literal["real", "spoof"] | None = None
     # วันที่ตามเวลาไทย (UTC+7) นับรวมทั้งวัน เช่น date_from=2026-10-01&date_to=2026-10-01 = ทั้งวันที่ 1 ต.ค.
@@ -23,6 +27,7 @@ class AdminDetectionFilters(BaseModel):
     guest: bool | None = Field(default=None, description="true = เฉพาะที่ไม่ได้ login, false = เฉพาะที่ login")
     model_version: str | None = Field(default=None, min_length=1, max_length=50, description="ตรงทุกตัวอักษร")
     partial_spoof: bool | None = Field(default=None, description="true = เฉพาะที่ระบบสงสัยว่าปลอมบางช่วง")
+    
     # ช่วงของ mean_probability (ความน่าจะเป็นที่เป็นเสียงปลอมโดยเฉลี่ย) 0.0 - 1.0
     feedback: Literal["agree", "disagree", "none"] | None = Field(
         default=None, description="agree/disagree = ผู้ใช้กด feedback แบบนั้น, none = ยังไม่มี feedback")
