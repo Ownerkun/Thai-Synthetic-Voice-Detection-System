@@ -77,10 +77,18 @@ def _apply_filters(query, params: AdminDetectionFilters):
     if params.partial_spoof is not None:
         query = query.filter(DetectionRecord.possible_partial_spoof.is_(params.partial_spoof))
 
+    if params.feedback == "agree":
+        query = query.filter(Feedback.user_agrees.is_(True))
+    elif params.feedback == "disagree":
+        query = query.filter(Feedback.user_agrees.is_(False))
+    elif params.feedback == "none":
+        query = query.filter(Feedback.id.is_(None))  # outer join แล้วไม่เจอ feedback
+        
     if params.min_prob is not None:
         query = query.filter(DetectionRecord.mean_probability >= params.min_prob)
     if params.max_prob is not None:
         query = query.filter(DetectionRecord.mean_probability <= params.max_prob)
+
 
     return query
 

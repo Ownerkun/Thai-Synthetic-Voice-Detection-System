@@ -24,6 +24,8 @@ class AdminDetectionFilters(BaseModel):
     model_version: str | None = Field(default=None, min_length=1, max_length=50, description="ตรงทุกตัวอักษร")
     partial_spoof: bool | None = Field(default=None, description="true = เฉพาะที่ระบบสงสัยว่าปลอมบางช่วง")
     # ช่วงของ mean_probability (ความน่าจะเป็นที่เป็นเสียงปลอมโดยเฉลี่ย) 0.0 - 1.0
+    feedback: Literal["agree", "disagree", "none"] | None = Field(
+        default=None, description="agree/disagree = ผู้ใช้กด feedback แบบนั้น, none = ยังไม่มี feedback")
     min_prob: float | None = Field(default=None, ge=0.0, le=1.0)
     max_prob: float | None = Field(default=None, ge=0.0, le=1.0)
 
