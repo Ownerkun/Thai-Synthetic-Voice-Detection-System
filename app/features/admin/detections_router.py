@@ -14,6 +14,8 @@ from app.schemas.admin_detection import (
 
 router = APIRouter(prefix="/detections")
 
+THAI_TZ = timezone(timedelta(hours=7))
+
 CurrentAdmin = Annotated[AdminAccount, Depends(get_current_admin)]
 
 
@@ -30,6 +32,8 @@ def list_detections(
         .outerjoin(Feedback, Feedback.detection_id == DetectionRecord.id)
     )
 
+    query = _apply_filters(query, params)
+
     total = query.count()
     rows = (
         query.order_by(DetectionRecord.created_at.desc(), DetectionRecord.id)  # id ไว้ตัดสินเมื่อเวลาเท่ากัน ไม่ให้แบ่งหน้าสลับกัน
@@ -45,6 +49,24 @@ def list_detections(
         offset=params.offset,
     )
 
+def _apply_filters(query, params: AdminDetectionFilters):
+    if params.verdict is not None:
+        query = query.filter(DetectionRecord.verdict == params.verdict)
+
+    if params.date_from is not None:
+        query = query.filter(DetectionRecord.created_at >= _start_of_thai_day(params.date_from))
+    if params.date_to is not None:
+        # นับรวมทั้งวัน date_to: เอาก่อน "เที่ยงคืนของวันถัดไป"
+        query = query.filter(DetectionRecord.created_at < _start_of_thai_day(params.date_to + timedelta(days=1)))
+
+    if params.q:
+        # autoescape = ถ้าพิมพ์ % หรือ _ จะค้นหาตัวอักษรนั้นจริงๆ ไม่ใช่ wildcard
+        query = query.filter(DetectionRecord.original_filename.icontains(params.q, autoescape=True))
+
+    return query
+
+def _start_of_thai_day(day: date) -> datetime:
+    return datetime.combine(day, time.min, tzinfo=THAI_TZ).astimezone(timezone.utc)
 
 def _to_item(record: DetectionRecord, user_email: str | None, user_agrees: bool | None) -> AdminDetectionItemOut:
     if user_agrees is None:
