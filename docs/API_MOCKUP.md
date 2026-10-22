@@ -36,6 +36,7 @@
 | `/admin/stats` | GET | **ต้อง** (admin) | สถิติภาพรวมระบบ |
 | `/admin/users` | GET | **ต้อง** (admin) | รายชื่อผู้ใช้ + ค้นหา + filter ระงับ/ใช้งานปกติ + แบ่งหน้า |
 | `/admin/users/{id}` | PATCH | **ต้อง** (admin) | แก้ display_name / ระงับ-เปิดใช้งานบัญชี |
+| `/admin/detections` | GET | **ต้อง** (admin) | ผลตรวจของทุกคน (รวม guest) + filter + เรียงลำดับ + แบ่งหน้า |
 
 ---
 
@@ -709,6 +710,89 @@ curl -X PATCH http://localhost:8000/admin/users/d839abb0-e093-4a30-870a-ad71663b
 | id ใน URL ไม่ใช่ UUID | `Input should be a valid UUID` |
 
 **401 Unauthorized** — ไม่มี token หรือเป็น token ของผู้ใช้ทั่วไป
+
+---
+
+## GET /admin/detections
+
+ผลตรวจเสียงของ **ทุกคน (รวม guest)** สำหรับหน้า "ผลตรวจทั้งหมด" ของ admin เรียงใหม่ → เก่าเป็นค่าเริ่มต้น
+(แต่ละรายการไม่มีรายละเอียดรายช่วงเสียง — เป็นข้อมูลระดับไฟล์เท่านั้น)
+
+Query (ทุกตัวไม่บังคับ — ใส่หลายตัวพร้อมกัน = ต้องตรงทุกเงื่อนไข):
+
+| Query | ค่าเริ่มต้น | คำอธิบาย |
+|---|---|---|
+| `verdict` | — | `real` หรือ `spoof` |
+| `date_from`, `date_to` | — | วันที่ `YYYY-MM-DD` **ตามเวลาไทย** นับรวมทั้งวัน (`date_from=date_to=2026-10-01` = ทั้งวันที่ 1 ต.ค.) |
+| `q` | — | ค้นหาจากชื่อไฟล์ (บางส่วนก็ได้ ไม่สนตัวพิมพ์; 1–100 ตัวอักษร) |
+| `user_id` | — | เฉพาะผลตรวจของผู้ใช้คนนี้ (UUID) |
+| `user_email` | — | ค้นหาจากอีเมลผู้ใช้ (บางส่วนก็ได้ ไม่สนตัวพิมพ์) |
+| `guest` | — | `true` = เฉพาะที่ไม่ได้ login · `false` = เฉพาะที่ login |
+| `model_version` | — | ตรงทุกตัวอักษร (ดูค่าที่มีได้จากผลลัพธ์) |
+| `partial_spoof` | — | `true` = เฉพาะที่ระบบสงสัยว่าปลอมบางช่วง · `false` = เฉพาะที่ไม่สงสัย |
+| `feedback` | — | `agree` · `disagree` · `none` (ยังไม่มี feedback) |
+| `min_prob`, `max_prob` | — | ช่วงของ `mean_probability` 0–1 (รวมค่าปลายทั้งสองข้าง) |
+| `sort` | `created_at` | `created_at` · `mean_probability` · `processing_ms` |
+| `order` | `desc` | `asc` หรือ `desc` |
+| `limit` | 50 | 1–200 |
+| `offset` | 0 | ≥ 0 |
+
+```bash
+# ผลที่ระบบตัดสินว่าจริง เรียงจาก mean_probability น้อย → มาก เอา 2 รายการ
+curl "http://localhost:8000/admin/detections?verdict=real&sort=mean_probability&order=asc&limit=2" \
+  -H "Authorization: Bearer <ADMIN_TOKEN>"
+```
+
+**200 OK**
+```json
+{
+  "items": [
+    {
+      "id": "e8da1af3-c58b-4616-ad1a-69d5ca241fe6",
+      "created_at": "2026-10-22T09:16:43",
+      "original_filename": "call_recording.wav",
+      "duration_seconds": 3.0,
+      "num_segments": 1,
+      "mean_probability": 0.2609,
+      "max_probability": 0.2609,
+      "threshold_used": 0.5,
+      "verdict": "real",
+      "possible_partial_spoof": false,
+      "model_version": "mock-v0 (real model not yet available)",
+      "processing_ms": 1,
+      "user_id": null,
+      "user_email": null,
+      "feedback": null
+    }
+  ],
+  "total": 1,
+  "limit": 2,
+  "offset": 0
+}
+```
+
+- `total` = จำนวนที่ตรงกับ filter **ทั้งหมด** (ไม่ใช่แค่หน้านี้) — ใช้คำนวณจำนวนหน้า
+- `user_id` / `user_email` เป็น `null` = ผลตรวจของ guest (ไม่ได้ login ตอนตรวจ)
+- `feedback`: `"agree"` / `"disagree"` / `null` (ยังไม่มี feedback)
+- `created_at` เก็บเป็น UTC ส่วน `date_from` / `date_to` ตีความเป็นเวลาไทย (UTC+7)
+- ถ้าค่า `sort` เท่ากัน ลำดับยังคงที่ (ตัดสินด้วย id) แบ่งหน้าแล้วไม่ซ้ำ/ไม่ตก
+- ค้นหา `%` หรือ `_` จะหาตัวอักษรนั้นจริงๆ ไม่ใช่ wildcard
+- ไม่มีผลลัพธ์ → `{"items": [], "total": 0, ...}` (ไม่ใช่ 404)
+
+**401 Unauthorized** — ไม่มี token หรือเป็น token ของผู้ใช้ทั่วไป
+```json
+{ "detail": "Insufficient permissions" }
+```
+
+**422 Unprocessable Entity** — ตัวอย่างที่เจอได้
+
+| ส่งอะไรมา | สาเหตุ |
+|---|---|
+| `sort=bad` / `order=up` / `verdict=maybe` / `feedback=maybe` | `Input should be ...` (ระบุค่าที่ใช้ได้ให้) |
+| `date_from=2026-10-30&date_to=2026-10-01` | `date_from must not be after date_to` |
+| `min_prob=0.9&max_prob=0.1` หรือค่านอก 0–1 | `min_prob must not be greater than max_prob` |
+| `q=` (ว่าง) หรือ `limit=0` / `limit=201` / `offset=-1` | นอกช่วงที่กำหนด |
+| ชื่อ query ที่ไม่รู้จัก (เช่น `verdit=spoof`) | `Extra inputs are not permitted` — พิมพ์ผิดแล้วไม่ถูกเมินเงียบๆ |
 
 ---
 
