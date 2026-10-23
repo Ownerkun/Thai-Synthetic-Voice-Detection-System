@@ -31,6 +31,9 @@
 | `/history/{id}/feedback` | GET | **ต้อง** (user) | ดู feedback ที่เคยให้ไว้กับรายการนี้ |
 | `/history/{id}/feedback` | PUT | **ต้อง** (user) | แก้คำตอบ feedback ที่เคยให้ไว้แล้ว |
 | `/feedback` | GET | **ต้อง** (user) | ประวัติ feedback ทั้งหมดที่ฉันเคยให้ (ใหม่→เก่า) |
+| `/users/me` | GET | **ต้อง** (user) | ดูข้อมูลบัญชีของตัวเอง |
+| `/users/me` | PATCH | **ต้อง** (user) | แก้ชื่อที่แสดง (`display_name`) |
+| `/users/me/password` | PUT | **ต้อง** (user) | เปลี่ยนรหัสผ่าน (ต้องส่งรหัสเดิม) |
 | `/admin/threshold` | GET | **ต้อง** (admin) | ดูค่า threshold ปัจจุบัน |
 | `/admin/threshold` | POST | **ต้อง** (admin) | อัปเดตค่า threshold (มีผลทันที) |
 | `/admin/stats` | GET | **ต้อง** (admin) | สถิติภาพรวมระบบ |
@@ -516,6 +519,106 @@ curl "http://localhost:8000/feedback?limit=20&offset=0" -H "Authorization: Beare
 
 ---
 
+## GET /users/me
+
+ดูข้อมูลบัญชีของตัวเอง (ใช้กับหน้าโปรไฟล์) — ไม่มี `password_hash` ในผลลัพธ์
+
+```bash
+curl http://localhost:8000/users/me -H "Authorization: Bearer <TOKEN>"
+```
+
+**200 OK**
+```json
+{
+  "id": "d17bbf05-acc4-4c83-b994-8fb6189cfea6",
+  "email": "somchai@example.com",
+  "display_name": "Somchai",
+  "created_at": "2026-10-23T08:23:00"
+}
+```
+`display_name` เป็น `null` ถ้ายังไม่เคยตั้งชื่อ
+
+**401 Unauthorized** — ไม่มี token / token ไม่ถูกต้อง / เป็น token ของ admin / บัญชีถูกระงับหรือถูกลบ
+```json
+{ "detail": "Authentication required" }
+```
+
+---
+
+## PATCH /users/me
+
+แก้ชื่อที่แสดงของตัวเอง **ส่งเฉพาะฟิลด์ที่ต้องการแก้** ตอนนี้แก้ได้แค่ `display_name` (อีเมลและสถานะบัญชีแก้เองไม่ได้)
+
+| ฟิลด์ | ชนิด | ความหมาย |
+|---|---|---|
+| `display_name` | string (1–100 ตัวอักษร) หรือ `null` | ชื่อใหม่ · ส่ง `null` = ล้างชื่อ |
+
+```bash
+curl -X PATCH http://localhost:8000/users/me \
+  -H "Authorization: Bearer <TOKEN>" -H "Content-Type: application/json" \
+  -d '{"display_name": "Somchai K."}'
+```
+
+**200 OK** — คืนข้อมูลบัญชีหลังแก้ (หน้าตาเดียวกับ `GET /users/me`)
+```json
+{
+  "id": "d17bbf05-acc4-4c83-b994-8fb6189cfea6",
+  "email": "somchai@example.com",
+  "display_name": "Somchai K.",
+  "created_at": "2026-10-23T08:23:00"
+}
+```
+
+**401 Unauthorized** — เหมือน `GET /users/me`
+
+**422 Unprocessable Entity** — ตัวอย่างที่เจอได้
+
+| ส่งอะไรมา | สาเหตุ |
+|---|---|
+| `{}` | ต้องส่งอย่างน้อย 1 ฟิลด์: `"Send at least one field to update: display_name"` |
+| `{"email": "x@y.com"}` / `{"is_active": false}` | ฟิลด์ที่ไม่รู้จักหรือแก้เองไม่ได้: `"Extra inputs are not permitted"` |
+| `{"display_name": ""}` หรือยาว > 100 | ชื่อต้องยาว 1–100 ตัวอักษร (อยากล้างชื่อให้ส่ง `null`) |
+
+---
+
+## PUT /users/me/password
+
+เปลี่ยนรหัสผ่านของตัวเอง ต้องส่งรหัสเดิมมาด้วย
+
+| ฟิลด์ | ชนิด | ความหมาย |
+|---|---|---|
+| `current_password` | string | รหัสผ่านปัจจุบัน |
+| `new_password` | string (8–128 ตัวอักษร) | รหัสผ่านใหม่ (กฎเดียวกับตอนสมัคร) ต้องไม่ซ้ำกับรหัสเดิม |
+
+```bash
+curl -X PUT http://localhost:8000/users/me/password \
+  -H "Authorization: Bearer <TOKEN>" -H "Content-Type: application/json" \
+  -d '{"current_password": "Password1234", "new_password": "NewPassword5678"}'
+```
+
+**204 No Content** — เปลี่ยนสำเร็จ (ไม่มี body) ต่อจากนี้ต้อง login ด้วยรหัสใหม่
+
+**400 Bad Request** — รหัสเดิมไม่ถูกต้อง (ไม่เปลี่ยนอะไร)
+```json
+{ "detail": "Current password is incorrect" }
+```
+ใช้ 400 ไม่ใช่ 401 โดยตั้งใจ — token ยังใช้ได้ frontend **ไม่ควร** เด้งไปหน้า login แค่แสดงข้อความ "รหัสผ่านเดิมไม่ถูกต้อง"
+
+**401 Unauthorized** — เหมือน `GET /users/me`
+
+**422 Unprocessable Entity** — ตัวอย่างที่เจอได้
+
+| ส่งอะไรมา | สาเหตุ |
+|---|---|
+| `new_password` สั้นกว่า 8 หรือยาวกว่า 128 | `String should have at least 8 characters` |
+| `new_password` เหมือน `current_password` | `New password must be different from the current password` |
+| ขาดฟิลด์ใดฟิลด์หนึ่ง / `current_password` ว่าง / ฟิลด์แปลก | `Field required` / `String should have at least 1 character` / `Extra inputs are not permitted` |
+
+> **ข้อจำกัดที่ควรรู้:** token ที่ออกไปก่อนเปลี่ยนรหัส **ยังใช้ได้จนหมดอายุ** (JWT ไม่เก็บสถานะ) — ถ้าต้องการให้เปลี่ยนรหัสแล้วทุกเครื่องหลุดทันที ต้องเพิ่มคอลัมน์ (migration) แล้วเช็คใน `get_current_user`
+> และ response 422 ของ FastAPI จะส่งค่า `input` กลับมาด้วย (รวมรหัสผ่านที่ client เพิ่งส่ง) — ฝั่ง frontend อย่าเอา body ของ error 422 ไปเก็บ log
+
+---
+
 ## GET /admin/threshold
 
 ```bash
@@ -800,6 +903,7 @@ curl "http://localhost:8000/admin/detections?verdict=real&sort=mean_probability&
 
 | Status | ความหมาย | ตัวอย่างจุดที่เจอ |
 |---|---|---|
+| 400 | ข้อมูลรูปแบบถูกแต่เงื่อนไขไม่ผ่าน (token ยังใช้ได้ **อย่าเด้งไปหน้า login**) | `PUT /users/me/password` เมื่อรหัสเดิมไม่ถูกต้อง |
 | 401 | ไม่ได้ login / token หมดอายุ / role ไม่ตรง / **บัญชีถูกระงับหรือถูกลบ** | `/history`, `/admin/*` เมื่อไม่มี/ผิด token หรือบัญชีถูกระงับ |
 | 403 | บัญชีถูกระงับ (รหัสผ่านถูก แต่ login ไม่ได้) | `POST /auth/login` |
 | 404 | ไม่พบข้อมูล หรือไม่ใช่เจ้าของ | `/history/{id}` ที่ไม่มีจริงหรือเป็นของคนอื่น |

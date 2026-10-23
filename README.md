@@ -38,6 +38,7 @@ app/
     detection/     POST /predict, GET /health
     history/       GET /history, GET /history/{id}, DELETE /history/{id},
                    POST /history/{id}/feedback  (ทุก endpoint ต้อง login)
+    users/         GET/PATCH /users/me, PUT /users/me/password  (ต้อง login)
     admin/         GET/POST /admin/threshold, GET /admin/stats, GET /admin/detections
   main.py          ประกอบ FastAPI app, CORS, lifespan
 alembic/           DB migrations
