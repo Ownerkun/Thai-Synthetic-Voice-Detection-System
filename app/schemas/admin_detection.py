@@ -4,6 +4,8 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
+from app.schemas.detection import SegmentResultOut
+
 
 class AdminDetectionFilters(BaseModel):
     model_config = ConfigDict(extra="forbid")
@@ -75,3 +77,4 @@ class AdminDetectionDetailOut(AdminDetectionItemOut):
     audio_format: str
     feedback_created_at: datetime | None
     feedback_updated_at: datetime | None
+    segments: list[SegmentResultOut]

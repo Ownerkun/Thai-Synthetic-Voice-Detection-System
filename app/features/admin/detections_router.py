@@ -14,6 +14,7 @@ from app.schemas.admin_detection import (
     AdminDetectionListOut,
     AdminDetectionDetailOut
 )
+from app.schemas.detection import SegmentResultOut
 
 router = APIRouter(prefix="/detections")
 
@@ -132,7 +133,6 @@ def _to_item(record: DetectionRecord, user_email: str | None, user_agrees: bool 
 
 @router.get("/{detection_id}", response_model=AdminDetectionDetailOut)
 def get_detection(detection_id: UUID, db: DbSession, _admin: CurrentAdmin) -> AdminDetectionDetailOut:
-    """รายละเอียดผลตรวจ 1 รายการของใครก็ได้ (รวม guest) — ต่างจาก /history/{id} ที่ดูได้เฉพาะของตัวเอง"""
     record = db.get(DetectionRecord, detection_id)
     if record is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Detection not found")
@@ -150,4 +150,14 @@ def get_detection(detection_id: UUID, db: DbSession, _admin: CurrentAdmin) -> Ad
         audio_format=record.audio_format,
         feedback_created_at=feedback.created_at if feedback else None,
         feedback_updated_at=feedback.updated_at if feedback else None,
+        segments=[
+            SegmentResultOut(
+                index=s.segment_index,
+                start_seconds=s.start_seconds,
+                end_seconds=s.end_seconds,
+                spoof_probability=s.spoof_probability,
+                is_spoof=s.spoof_probability >= record.threshold_used,  # เกณฑ์เดียวกับ /history/{id}
+            )
+            for s in record.segments  # relationship เรียงตาม segment_index อยู่แล้ว
+        ],
     )
