@@ -1,7 +1,8 @@
 from typing import Annotated
+from uuid import UUID
 from datetime import date, datetime, time, timedelta, timezone
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Query, HTTPException, status
 
 from app.deps import DbSession, get_current_admin
 from app.models.admin import AdminAccount
@@ -11,7 +12,9 @@ from app.schemas.admin_detection import (
     AdminDetectionFilters,
     AdminDetectionItemOut,
     AdminDetectionListOut,
+    AdminDetectionDetailOut
 )
+from app.schemas.detection import SegmentResultOut
 
 router = APIRouter(prefix="/detections")
 
@@ -126,4 +129,35 @@ def _to_item(record: DetectionRecord, user_email: str | None, user_agrees: bool 
         user_id=record.user_id,
         user_email=user_email,
         feedback=feedback,
+    )
+
+@router.get("/{detection_id}", response_model=AdminDetectionDetailOut)
+def get_detection(detection_id: UUID, db: DbSession, _admin: CurrentAdmin) -> AdminDetectionDetailOut:
+    record = db.get(DetectionRecord, detection_id)
+    if record is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Detection not found")
+
+    feedback = record.feedback
+    item = _to_item(
+        record,
+        record.user.email if record.user else None,  # user เป็น None = guest
+        feedback.user_agrees if feedback else None,
+    )
+    return AdminDetectionDetailOut(
+        **item.model_dump(),
+        sample_rate=record.sample_rate,
+        file_size_bytes=record.file_size_bytes,
+        audio_format=record.audio_format,
+        feedback_created_at=feedback.created_at if feedback else None,
+        feedback_updated_at=feedback.updated_at if feedback else None,
+        segments=[
+            SegmentResultOut(
+                index=s.segment_index,
+                start_seconds=s.start_seconds,
+                end_seconds=s.end_seconds,
+                spoof_probability=s.spoof_probability,
+                is_spoof=s.spoof_probability >= record.threshold_used,  # เกณฑ์เดียวกับ /history/{id}
+            )
+            for s in record.segments  # relationship เรียงตาม segment_index อยู่แล้ว
+        ],
     )

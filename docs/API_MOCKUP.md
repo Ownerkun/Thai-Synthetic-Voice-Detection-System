@@ -40,6 +40,7 @@
 | `/admin/users` | GET | **ต้อง** (admin) | รายชื่อผู้ใช้ + ค้นหา + filter ระงับ/ใช้งานปกติ + แบ่งหน้า |
 | `/admin/users/{id}` | PATCH | **ต้อง** (admin) | แก้ display_name / ระงับ-เปิดใช้งานบัญชี |
 | `/admin/detections` | GET | **ต้อง** (admin) | ผลตรวจของทุกคน (รวม guest) + filter + เรียงลำดับ + แบ่งหน้า |
+| `/admin/detections/{id}` | GET | **ต้อง** (admin) | รายละเอียดผลตรวจ 1 รายการ + รายช่วงเสียง + feedback + เจ้าของ |
 
 ---
 
@@ -896,6 +897,66 @@ curl "http://localhost:8000/admin/detections?verdict=real&sort=mean_probability&
 | `min_prob=0.9&max_prob=0.1` หรือค่านอก 0–1 | `min_prob must not be greater than max_prob` |
 | `q=` (ว่าง) หรือ `limit=0` / `limit=201` / `offset=-1` | นอกช่วงที่กำหนด |
 | ชื่อ query ที่ไม่รู้จัก (เช่น `verdit=spoof`) | `Extra inputs are not permitted` — พิมพ์ผิดแล้วไม่ถูกเมินเงียบๆ |
+
+---
+
+## GET /admin/detections/{id}
+
+รายละเอียดผลตรวจ 1 รายการของ **ใครก็ได้ (รวม guest)** สำหรับหน้า/ drawer รายละเอียดของ admin (กดจากแถวใน `GET /admin/detections`) —
+ต่างจาก `GET /history/{id}` ที่ผู้ใช้ดูได้เฉพาะของตัวเอง
+
+```bash
+curl http://localhost:8000/admin/detections/d1ac9092-a27f-4de6-80e5-eb8610c6bfec \
+  -H "Authorization: Bearer <ADMIN_TOKEN>"
+```
+
+**200 OK**
+```json
+{
+  "id": "d1ac9092-a27f-4de6-80e5-eb8610c6bfec",
+  "created_at": "2026-10-24T06:00:51",
+  "original_filename": "call_from_bank.wav",
+  "duration_seconds": 7.0,
+  "num_segments": 2,
+  "mean_probability": 0.7463,
+  "max_probability": 0.986,
+  "threshold_used": 0.5,
+  "verdict": "spoof",
+  "possible_partial_spoof": false,
+  "model_version": "mock-v0 (real model not yet available)",
+  "processing_ms": 0,
+  "user_id": "287775a5-f234-43b5-b424-a5dcae578a44",
+  "user_email": "somchai@example.com",
+  "feedback": "disagree",
+  "sample_rate": 16000,
+  "file_size_bytes": 224044,
+  "audio_format": "wav",
+  "feedback_created_at": "2026-10-24T06:00:51",
+  "feedback_updated_at": "2026-10-24T06:00:51",
+  "segments": [
+    { "index": 0, "start_seconds": 0.0, "end_seconds": 4.0, "spoof_probability": 0.9859611392021179, "is_spoof": true },
+    { "index": 1, "start_seconds": 4.0, "end_seconds": 7.0, "spoof_probability": 0.5066450238227844, "is_spoof": true }
+  ]
+}
+```
+
+- ฟิลด์ตั้งแต่ `id` ถึง `feedback` **เหมือน 1 แถวใน `GET /admin/detections` ทุกตัว** (ใช้ component เดียวกันได้) ที่เพิ่มมาคือ `sample_rate`, `file_size_bytes`, `audio_format`, `feedback_created_at`, `feedback_updated_at`, `segments`
+- `user_id` / `user_email` เป็น `null` = ผลตรวจของ guest · `feedback` เป็น `"agree"` / `"disagree"` / `null`
+- `feedback_created_at` เป็น `null` ถ้ายังไม่มี feedback · `feedback_updated_at` เป็น `null` ถ้ายังไม่เคยแก้ feedback
+- `segments` เรียงตาม `index` · `is_spoof` = `spoof_probability >= threshold_used` **ของผลตรวจนี้** (ไม่ใช่ threshold ปัจจุบันของระบบ) — ใช้วาดกราฟช่วงเวลาที่น่าสงสัย; ถ้าไม่มี segment จะได้ `[]`
+- ไม่เก็บไฟล์เสียงจริง จึงไม่มีลิงก์ให้ฟัง
+
+**401 Unauthorized** — ไม่มี token หรือเป็น token ของผู้ใช้ทั่วไป
+```json
+{ "detail": "Insufficient permissions" }
+```
+
+**404 Not Found** — ไม่มีผลตรวจ id นี้ (เช่น ผู้ใช้ลบจากหน้าประวัติของตัวเองไปแล้ว)
+```json
+{ "detail": "Detection not found" }
+```
+
+**422 Unprocessable Entity** — id ใน URL ไม่ใช่ UUID
 
 ---
 
