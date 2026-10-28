@@ -68,3 +68,10 @@ class AdminDetectionListOut(BaseModel):
     total: int  # จำนวนที่ตรงกับ filter ทั้งหมด
     limit: int
     offset: int
+
+class AdminDetectionDetailOut(AdminDetectionItemOut):
+    sample_rate: int
+    file_size_bytes: int
+    audio_format: str
+    feedback_created_at: datetime | None
+    feedback_updated_at: datetime | None
