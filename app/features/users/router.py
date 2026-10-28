@@ -1,15 +1,16 @@
 from typing import Annotated
+import logging
 
 from fastapi import APIRouter, Depends, HTTPException, Response, status
 
 from app.core.security import hash_password, verify_password
 
-from app.deps import get_current_user, get_current_user
+from app.deps import DbSession, get_current_user
 from app.models.user import UserAccount
 from app.schemas.auth import UserOut
 from app.schemas.user import UserUpdateRequest, ChangePasswordRequest
 
-logger = loggin.getLogger(__name__)
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/users", tags=["users"])
 
@@ -23,7 +24,7 @@ def get_me(user: CurrentUser) -> UserAccount:
 
 @router.patch("/me", response_model=UserOut)
 def update_me(payload: UserUpdateRequest, db: DbSession, user: CurrentUser) -> UserAccount:
-    if "display_name" in payload.model.display_name
+    if "display_name" in payload.model_fields_set:
         user.display_name = payload.display_name
     db.commit()
     db.refresh(user)

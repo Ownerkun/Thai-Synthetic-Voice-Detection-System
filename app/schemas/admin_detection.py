@@ -36,7 +36,9 @@ class AdminDetectionFilters(BaseModel):
 
     @model_validator(mode="after")
     def check_date_range(self) -> "AdminDetectionFilters":
-                if self.min_prob is not None and self.max_prob is not None and self.min_prob > self.max_prob:
+        if self.date_from and self.date_to and self.date_from > self.date_to:
+            raise ValueError("date_from must not be after date_to")
+        if self.min_prob is not None and self.max_prob is not None and self.min_prob > self.max_prob:
             raise ValueError("min_prob must not be greater than max_prob")
         return self
 
