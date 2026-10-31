@@ -1,10 +1,12 @@
-import { useRef, useState, type DragEvent } from 'react';
+import { useMemo, useRef, useState, type DragEvent } from 'react';
 import { Link } from 'react-router-dom';
-import { api, ApiError } from '../api/client';
+import { api, ApiError, isCancelled } from '../api/client';
 import type { BatchDetectionResult } from '../api/types';
 import { useAuth } from '../auth/AuthContext';
 import { Icon } from '../components/Icon';
 import { Recorder } from '../components/Recorder';
+import { useUi } from '../components/UiProvider';
+import { checkFile, MAX_FILES_PER_CHECK } from '../lib/audioRules';
 import { ResultView, VerdictBadge } from '../components/ResultView';
 import { dateTime, failureText, fileSize, pct, verdictEmoji } from '../lib/format';
 import { addGuestResults, clearGuestResults, loadGuestResults, type LocalResult } from '../lib/guestResults';
@@ -13,6 +15,7 @@ const ACCEPT = '.wav,.flac,audio/wav,audio/x-wav,audio/flac';
 
 export function DetectPage() {
   const { role } = useAuth();
+  const { confirm, toast } = useUi();
   const [files, setFiles] = useState<File[]>([]);
   const [dragging, setDragging] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -23,6 +26,19 @@ export function DetectPage() {
   const [recent, setRecent] = useState<LocalResult[]>(loadGuestResults);
   const inputRef = useRef<HTMLInputElement>(null);
   const resultRef = useRef<HTMLDivElement>(null);
+  const abortRef = useRef<AbortController | null>(null);
+
+  // เช็กไฟล์ตั้งแต่ตอนเลือก (F2): ไฟล์ที่ไม่ผ่านแสดงเหตุผลบนชิปทันที และจะไม่ถูกส่ง
+  const checked = useMemo(() => {
+    let accepted = 0;
+    return files.map((file) => {
+      const issue = checkFile(file) ?? (accepted >= MAX_FILES_PER_CHECK ? 'too_many_files' : null);
+      if (!issue) accepted++;
+      return { file, issue };
+    });
+  }, [files]);
+  const sendable = checked.filter((c) => !c.issue).map((c) => c.file);
+  const rejected = checked.length - sendable.length;
 
   const addFiles = (list: FileList | File[]) => {
     const incoming = Array.from(list);
@@ -38,12 +54,14 @@ export function DetectPage() {
   };
 
   const submit = async () => {
-    if (files.length === 0) return;
+    if (sendable.length === 0) return;
     setLoading(true);
     setError(null);
+    const controller = new AbortController();
+    abortRef.current = controller;
     try {
-      const sent = files;
-      const res = await api.predict(sent);
+      const sent = sendable;
+      const res = await api.predict(sent, controller.signal);
       setResult(res);
       setAudioFiles(matchFilesToResults(sent, res.results.map((r) => r.original_filename)));
       setSelected(0);
@@ -51,8 +69,11 @@ export function DetectPage() {
       if (role !== 'user' && res.results.length > 0) setRecent(addGuestResults(res.results));
       scrollToResult();
     } catch (e) {
-      setError(e instanceof ApiError ? e.message : 'ตรวจเสียงไม่สำเร็จ ลองใหม่อีกครั้งนะ');
+      // ไฟล์ที่เลือกยังอยู่ กด "ลองอีกครั้ง" ได้เลย (F3)
+      if (isCancelled(e)) toast('ยกเลิกการตรวจแล้ว', 'info');
+      else setError(e instanceof ApiError ? e.message : 'ตรวจเสียงไม่สำเร็จ ลองอีกครั้ง');
     } finally {
+      abortRef.current = null;
       setLoading(false);
     }
   };
@@ -67,10 +88,17 @@ export function DetectPage() {
     scrollToResult();
   };
 
-  const clearRecent = () => {
-    if (!confirm('ล้างผลล่าสุดที่เก็บไว้ในเบราว์เซอร์นี้?')) return;
+  const clearRecent = async () => {
+    const ok = await confirm({
+      title: 'ล้างผลล่าสุด?',
+      message: `ผล ${recent.length} รายการที่เก็บไว้ในเบราว์เซอร์นี้จะหายไป`,
+      confirmLabel: 'ล้างผลล่าสุด',
+      danger: true,
+    });
+    if (!ok) return;
     clearGuestResults();
     setRecent([]);
+    toast('ล้างผลล่าสุดแล้ว');
   };
 
   const results = result?.results ?? [];
@@ -126,11 +154,11 @@ export function DetectPage() {
 
         {files.length > 0 && (
           <ul className="file-chips">
-            {files.map((file, i) => (
-              <li key={`${file.name}-${i}`}>
+            {checked.map(({ file, issue }, i) => (
+              <li key={`${file.name}-${i}`} className={issue ? 'is-invalid' : ''}>
                 <Icon name="music" size={16} />
                 <span className="file-name">{file.name}</span>
-                <span className="muted small">{fileSize(file.size)}</span>
+                <span className="small chip-note">{issue ? failureText(issue) : fileSize(file.size)}</span>
                 <button
                   type="button"
                   className="btn-icon"
@@ -143,27 +171,57 @@ export function DetectPage() {
             ))}
           </ul>
         )}
+        {rejected > 0 && (
+          <div className="row between wrap">
+            <span className="muted small">
+              ส่งตรวจได้ {sendable.length} ไฟล์ · ข้าม {rejected} ไฟล์ที่ไม่ผ่าน
+            </span>
+            <button
+              type="button"
+              className="btn btn-ghost btn-small"
+              onClick={() => setFiles(checked.filter((c) => !c.issue).map((c) => c.file))}
+            >
+              เอาไฟล์ที่ไม่ผ่านออก
+            </button>
+          </div>
+        )}
 
-        <button className="btn btn-primary btn-big" disabled={files.length === 0 || loading} onClick={submit}>
+        <button className="btn btn-primary btn-big" disabled={sendable.length === 0 || loading} onClick={submit}>
           {loading ? (
             <>
               <span className="spinner" /> กำลังฟังอย่างตั้งใจ…
             </>
           ) : files.length === 0 ? (
             'เลือกไฟล์หรืออัดเสียงก่อนนะ'
+          ) : sendable.length === 0 ? (
+            'ไม่มีไฟล์ที่ตรวจได้'
           ) : (
             <>
-              <Icon name="sparkle" size={18} /> เช็กเลย{files.length > 1 ? ` (${files.length} ไฟล์)` : ''}
+              <Icon name="sparkle" size={18} /> เช็กเลย{sendable.length > 1 ? ` (${sendable.length} ไฟล์)` : ''}
             </>
           )}
         </button>
+        {loading && (
+          <button type="button" className="btn btn-ghost btn-small cancel-btn" onClick={() => abortRef.current?.abort()}>
+            ยกเลิก
+          </button>
+        )}
 
         {role !== 'user' && (
           <p className="hint">
             💡 <Link to="/register">สมัครฟรี</Link> หรือ <Link to="/login">เข้าสู่ระบบ</Link> เพื่อเก็บผลไว้ดูย้อนหลังและบอกเราได้ว่าผลถูกไหม
           </p>
         )}
-        {error && <div className="callout callout-danger">{error}</div>}
+        {error && (
+          <div className="callout callout-danger error-card" role="alert">
+            <span>{error}</span>
+            {sendable.length > 0 && (
+              <button type="button" className="btn btn-primary btn-small" onClick={submit}>
+                ลองอีกครั้ง
+              </button>
+            )}
+          </div>
+        )}
       </section>
 
       <div ref={resultRef} className="stack scroll-anchor">

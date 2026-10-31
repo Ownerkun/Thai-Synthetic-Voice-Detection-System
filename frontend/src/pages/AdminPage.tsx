@@ -1,8 +1,9 @@
-import { useCallback, useEffect, useState, type FormEvent } from 'react';
+import { useCallback, useEffect, useState, type FormEvent, type ReactNode } from 'react';
 import { api, ApiError } from '../api/client';
 import type { AdminUser, AdminUserList, StatsOverview, Threshold } from '../api/types';
 import { Link } from 'react-router-dom';
 import { Icon, type IconName } from '../components/Icon';
+import { useUi } from '../components/UiProvider';
 import { AdminTabs } from './AdminDetectionsPages';
 import { dateTime, pct } from '../lib/format';
 
@@ -73,7 +74,28 @@ function Kpi({
   );
 }
 
+// ประเมินว่าถ้าใช้เกณฑ์ใหม่ ผลตรวจล่าสุดกี่รายการจะได้คำตัดสินต่างจากเดิม (ดึงสูงสุด 1,000 รายการจาก /admin/detections)
+async function estimateImpact(newValue: number) {
+  let offset = 0;
+  let checked = 0;
+  let toReal = 0;
+  let toSpoof = 0;
+  for (let i = 0; i < 5; i++) {
+    const page = await api.listDetections({ limit: 200, offset, sort: 'created_at', order: 'desc' });
+    for (const d of page.items) {
+      const next = d.mean_probability >= newValue ? 'spoof' : 'real';
+      if (d.verdict === 'spoof' && next === 'real') toReal++;
+      if (d.verdict === 'real' && next === 'spoof') toSpoof++;
+    }
+    checked += page.items.length;
+    offset += page.items.length;
+    if (offset >= page.total || page.items.length === 0) break;
+  }
+  return { checked, toReal, toSpoof };
+}
+
 function ThresholdCard() {
+  const { confirm, toast } = useUi();
   const [current, setCurrent] = useState<Threshold | null | undefined>(undefined);
   const [value, setValue] = useState('0.5');
   const [note, setNote] = useState('');
@@ -97,14 +119,50 @@ function ThresholdCard() {
       setMessage({ kind: 'error', text: 'threshold ต้องอยู่ระหว่าง 0 ถึง 1' });
       return;
     }
+    const before = current?.value ?? 0.5;
     setSaving(true);
     setMessage(null);
+
+    let impact: ReactNode = null;
+    try {
+      const r = await estimateImpact(num);
+      impact =
+        r.checked === 0 ? (
+          'ยังไม่มีผลตรวจในระบบ'
+        ) : r.toReal + r.toSpoof === 0 ? (
+          `จากผลตรวจล่าสุด ${r.checked} รายการ คำตัดสินจะไม่เปลี่ยนเลย`
+        ) : (
+          <>
+            จากผลตรวจล่าสุด {r.checked} รายการ ถ้าตรวจด้วยเกณฑ์ใหม่ <b>{r.toReal}</b> รายการจะเปลี่ยนจาก AI เป็นเสียงจริง และ{' '}
+            <b>{r.toSpoof}</b> รายการจะเปลี่ยนจากเสียงจริงเป็น AI
+          </>
+        );
+    } catch {
+      impact = 'ประเมินผลกระทบไม่ได้ในตอนนี้';
+    }
+
+    const ok = await confirm({
+      title: `เปลี่ยนเกณฑ์จาก ${pct(before, 0)} เป็น ${pct(num, 0)}?`,
+      message: (
+        <>
+          <p>{impact}</p>
+          <p>ผลเก่าที่บันทึกไว้แล้วจะไม่ถูกแก้ แต่การตรวจครั้งถัดไปของทุกคนจะใช้เกณฑ์ใหม่ทันที</p>
+        </>
+      ),
+      confirmLabel: `ใช้เกณฑ์ ${pct(num, 0)}`,
+    });
+    if (!ok) {
+      setSaving(false);
+      return;
+    }
+
     try {
       const res = await api.setThreshold(num, note.trim());
       setCurrent(res.current);
       setNote('');
       const prev = res.previous_value === null ? 'ค่าเริ่มต้น' : res.previous_value;
       setMessage({ kind: 'ok', text: `อัปเดตแล้ว: ${prev} → ${res.current.value} (มีผลกับการตรวจครั้งถัดไปทันที)` });
+      toast('เปลี่ยนเกณฑ์แล้ว');
     } catch (err) {
       setMessage({ kind: 'error', text: errText(err, 'บันทึกไม่สำเร็จ') });
     } finally {
@@ -145,7 +203,7 @@ function ThresholdCard() {
         />
         <input placeholder="หมายเหตุ (ไม่บังคับ)" value={note} onChange={(e) => setNote(e.target.value)} />
         <button className="btn btn-primary" disabled={saving}>
-          {saving ? 'กำลังบันทึก…' : 'บันทึก'}
+          {saving ? 'กำลังประเมิน…' : 'บันทึก'}
         </button>
       </form>
       {message && (
@@ -158,6 +216,7 @@ function ThresholdCard() {
 const PAGE_SIZE = 20;
 
 function UsersCard({ onChanged }: { onChanged: () => void }) {
+  const { confirm, toast } = useUi();
   const [q, setQ] = useState('');
   const [query, setQuery] = useState('');
   const [status, setStatus] = useState<'all' | 'active' | 'suspended'>('all');
@@ -197,12 +256,21 @@ function UsersCard({ onChanged }: { onChanged: () => void }) {
 
   const toggleActive = async (user: AdminUser) => {
     const action = user.is_active ? 'ระงับ' : 'เปิดใช้งาน';
-    if (!confirm(`${action}บัญชี ${user.email}?`)) return;
+    const ok = await confirm({
+      title: `${action}บัญชีนี้?`,
+      message: user.is_active
+        ? `${user.email} จะเข้าสู่ระบบไม่ได้ และถ้ากำลังใช้งานอยู่จะถูกออกจากระบบในการกดครั้งถัดไป เปิดใช้งานคืนได้ภายหลัง`
+        : `${user.email} จะกลับมาเข้าสู่ระบบได้ตามปกติ`,
+      confirmLabel: `${action}บัญชี`,
+      danger: user.is_active,
+    });
+    if (!ok) return;
     try {
       replaceUser(await api.updateUser(user.id, { is_active: !user.is_active }));
       onChanged();
+      toast(`${action}บัญชี ${user.email} แล้ว`);
     } catch (e) {
-      alert(errText(e, `${action}ไม่สำเร็จ`));
+      toast(errText(e, `${action}ไม่สำเร็จ`), 'error');
     }
   };
 
@@ -211,8 +279,9 @@ function UsersCard({ onChanged }: { onChanged: () => void }) {
     try {
       replaceUser(await api.updateUser(editing.id, { display_name: editing.name.trim() || null }));
       setEditing(null);
+      toast('บันทึกชื่อแล้ว');
     } catch (e) {
-      alert(errText(e, 'แก้ชื่อไม่สำเร็จ'));
+      toast(errText(e, 'แก้ชื่อไม่สำเร็จ'), 'error');
     }
   };
 
@@ -237,6 +306,19 @@ function UsersCard({ onChanged }: { onChanged: () => void }) {
             <option value="active">ใช้งานปกติ</option>
             <option value="suspended">ถูกระงับ</option>
           </select>
+          {(q || status !== 'all') && (
+            <button
+              type="button"
+              className="btn btn-ghost btn-small"
+              onClick={() => {
+                setQ('');
+                setStatus('all');
+                setOffset(0);
+              }}
+            >
+              ล้างตัวกรอง
+            </button>
+          )}
         </div>
       </div>
 

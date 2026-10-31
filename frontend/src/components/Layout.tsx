@@ -63,7 +63,12 @@ export function Layout() {
               <Icon name={theme === 'dark' ? 'sun' : 'moon'} size={18} />
             </button>
             {role ? (
-              <button className="btn btn-soft btn-small" onClick={logout}>
+              <button
+                className="btn btn-soft btn-small"
+                onClick={logout}
+                aria-label={role === 'admin' ? 'ออกจากระบบผู้ดูแล' : 'ออกจากระบบ'}
+                title="ออกจากระบบ"
+              >
                 <Icon name="logout" size={16} />
                 <span className="hide-sm">ออกจากระบบ{role === 'admin' ? ' (ผู้ดูแล)' : ''}</span>
               </button>

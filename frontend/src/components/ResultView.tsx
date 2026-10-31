@@ -45,6 +45,9 @@ interface Props {
 export function ResultView(props: Props) {
   const spoof = props.verdict === 'spoof';
   const player = useSegmentPlayer(props.audio);
+  // ผลรวมเป็นเสียงจริง แต่มีบางช่วงเกินเกณฑ์ และ backend ไม่ได้ติดป้าย "อาจตัดต่อ" → เตือนเพิ่ม (แสดงผลเท่านั้น ไม่เปลี่ยนคำตัดสิน)
+  const flagged = props.segments.filter((s) => s.is_spoof);
+  const hiddenRisk = !spoof && !props.possiblePartialSpoof && flagged.length > 0;
   return (
     <section className={`card result result-${props.verdict}`}>
       <div className="result-hero">
@@ -69,6 +72,15 @@ export function ResultView(props: Props) {
         <div className="callout callout-warn">
           <span aria-hidden>👀</span>
           <span>บางช่วงคะแนนสูง บางช่วงต่ำมาก เสียงนี้อาจถูกตัดต่อมาบางส่วน ดูกราฟรายช่วงด้านล่างได้เลย</span>
+        </div>
+      )}
+
+      {hiddenRisk && (
+        <div className="callout callout-warn">
+          <span aria-hidden>🔎</span>
+          <span>
+            ค่าเฉลี่ยต่ำกว่าเกณฑ์ แต่มี {flagged.length} ช่วงที่คะแนนเกินเกณฑ์ (สูงสุด {pct(props.maxProbability)}) ลองดูแท่งสีชมพูในกราฟด้านล่าง
+          </span>
         </div>
       )}
 

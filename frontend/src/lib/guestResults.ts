@@ -13,10 +13,21 @@ const MAX_ITEMS = 20;
 export function loadGuestResults(): LocalResult[] {
   try {
     const parsed: unknown = JSON.parse(localStorage.getItem(KEY) ?? '[]');
-    return Array.isArray(parsed) ? (parsed as LocalResult[]) : [];
+    // ข้อมูลในเครื่องอาจเก่าหรือเสียรูป เก็บเฉพาะรายการที่เปิดดูได้จริง
+    return Array.isArray(parsed) ? (parsed as LocalResult[]).filter(isUsable) : [];
   } catch {
     return [];
   }
+}
+
+function isUsable(r: LocalResult): boolean {
+  return (
+    !!r &&
+    typeof r.original_filename === 'string' &&
+    typeof r.mean_probability === 'number' &&
+    (r.verdict === 'spoof' || r.verdict === 'real') &&
+    Array.isArray(r.segments)
+  );
 }
 
 export function addGuestResults(results: DetectionResult[]): LocalResult[] {

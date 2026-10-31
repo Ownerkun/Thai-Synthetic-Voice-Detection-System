@@ -16,12 +16,13 @@ import type {
   TokenResponse,
   UserProfile,
 } from './types';
-import { ApiError } from './errors';
+import { ApiError, STATUS_CANCELLED, STATUS_NETWORK, STATUS_TIMEOUT } from './errors';
 import { demoApi } from './demo';
 
 const BASE_URL = (import.meta.env.VITE_API_BASE_URL ?? '/api').replace(/\/$/, '');
 
 export { ApiError };
+export { isCancelled } from './errors';
 
 // getToken / onUnauthorized ถูกตั้งค่าโดย AuthProvider (src/auth/AuthContext.tsx) ผ่าน configureApi() ตอนแอปเริ่ม
 // - getToken() คืน JWT ของ session ปัจจุบัน (ได้จาก /auth/login, /auth/register หรือ /auth/admin/login และจำไว้ใน localStorage)
@@ -42,6 +43,25 @@ interface RequestOptions {
   json?: unknown;
   form?: FormData;
   query?: Record<string, string | number | boolean | undefined | null>;
+  /** ตัดคำขอเมื่อนานเกินกำหนด (ms) */
+  timeoutMs?: number;
+  /** ให้หน้าจอยกเลิกคำขอเองได้ เช่น ปุ่ม "ยกเลิก" ตอนส่งไฟล์ */
+  signal?: AbortSignal;
+}
+
+const DEFAULT_TIMEOUT_MS = 20_000;
+const PREDICT_TIMEOUT_MS = 120_000; // ไฟล์ใหญ่หลายไฟล์ + โมเดลจริงอาจใช้เวลานาน
+
+const NETWORK_MESSAGE = 'ตอนนี้เชื่อมต่อระบบตรวจเสียงไม่ได้ ตรวจสอบอินเทอร์เน็ตแล้วลองอีกครั้ง';
+const TIMEOUT_MESSAGE = 'ระบบตอบช้ากว่าปกติ ลองอีกครั้ง ถ้ายังช้าอยู่ ลองใหม่ในอีกสักครู่';
+
+// ข้อผิดพลาดฝั่งเซิร์ฟเวอร์ แปลเป็นข้อความที่บอกว่าเกิดอะไรขึ้นและควรทำอะไรต่อ (ไม่แสดงรหัส HTTP ให้ผู้ใช้)
+function serverMessage(status: number): string | null {
+  if (status === 413) return 'ไฟล์ใหญ่เกินกว่าที่ระบบรับได้ ลองใช้ไฟล์ที่เล็กลง';
+  if (status === 429) return 'ส่งคำขอถี่เกินไป รอสักครู่แล้วลองใหม่';
+  if (status === 500) return 'ระบบประมวลผลขัดข้อง ลองอีกครั้ง ถ้ายังไม่ได้ ลองใหม่ในอีกสักครู่';
+  if (status >= 501) return 'ระบบตรวจเสียงไม่พร้อมใช้งานชั่วคราว ลองใหม่ในอีกสักครู่';
+  return null;
 }
 
 // 422 ของ FastAPI: detail เป็น array [{loc, msg, type}]; error อื่นเป็น string
@@ -52,10 +72,13 @@ function detailToMessage(detail: unknown, status: number): string {
       .map((d) => (d && typeof d === 'object' && 'msg' in d ? String(d.msg) : String(d)))
       .join(', ');
   }
-  return `เกิดข้อผิดพลาด (HTTP ${status})`;
+  return `เกิดข้อผิดพลาด ลองอีกครั้ง (รหัส ${status})`;
 }
 
-async function request<T>(path: string, { method = 'GET', json, form, query }: RequestOptions = {}): Promise<T> {
+async function request<T>(
+  path: string,
+  { method = 'GET', json, form, query, timeoutMs = DEFAULT_TIMEOUT_MS, signal }: RequestOptions = {},
+): Promise<T> {
   const headers: Record<string, string> = {};
   const token = getToken();
   if (token) headers.Authorization = `Bearer ${token}`;
@@ -71,25 +94,43 @@ async function request<T>(path: string, { method = 'GET', json, form, query }: R
     if (qs) url += `?${qs}`;
   }
 
+  // ตัดคำขอเมื่อเกินเวลา หรือเมื่อหน้าจอสั่งยกเลิก
+  const controller = new AbortController();
+  let timedOut = false;
+  const timer = window.setTimeout(() => {
+    timedOut = true;
+    controller.abort();
+  }, timeoutMs);
+  const onCancel = () => controller.abort();
+  if (signal?.aborted) controller.abort();
+  signal?.addEventListener('abort', onCancel, { once: true });
+
   let res: Response;
+  let data: unknown;
   try {
     res = await fetch(url, {
       method,
       headers,
       body: form ?? (json !== undefined ? JSON.stringify(json) : undefined),
+      signal: controller.signal,
     });
+    data = res.status === 204 ? undefined : await res.json().catch(() => null);
   } catch {
-    throw new ApiError(0, 'เชื่อมต่อเซิร์ฟเวอร์ไม่ได้ ตรวจสอบว่า backend รันอยู่');
+    if (signal?.aborted) throw new ApiError(STATUS_CANCELLED, 'ยกเลิกแล้ว');
+    if (timedOut) throw new ApiError(STATUS_TIMEOUT, TIMEOUT_MESSAGE);
+    throw new ApiError(STATUS_NETWORK, NETWORK_MESSAGE);
+  } finally {
+    window.clearTimeout(timer);
+    signal?.removeEventListener('abort', onCancel);
   }
 
   if (res.status === 204) return undefined as T;
-  const data: unknown = await res.json().catch(() => null);
 
   if (!res.ok) {
     // token หมดอายุ / บัญชีถูกระงับ → ล้าง session (ยกเว้นตอนยังไม่ได้ login เช่นกรอกรหัสผิด)
     if (res.status === 401 && token) onUnauthorized();
     const detail = data && typeof data === 'object' && 'detail' in data ? data.detail : undefined;
-    throw new ApiError(res.status, detailToMessage(detail, res.status));
+    throw new ApiError(res.status, serverMessage(res.status) ?? detailToMessage(detail, res.status));
   }
   return data as T;
 }
@@ -104,10 +145,10 @@ const realApi = {
   adminLogin: (body: { username: string; password: string }) =>
     request<TokenResponse>('/auth/admin/login', { method: 'POST', json: body }),
 
-  predict: (files: File[]) => {
+  predict: (files: File[], signal?: AbortSignal) => {
     const form = new FormData();
     for (const file of files) form.append('files', file, file.name);
-    return request<BatchDetectionResult>('/predict', { method: 'POST', form });
+    return request<BatchDetectionResult>('/predict', { method: 'POST', form, timeoutMs: PREDICT_TIMEOUT_MS, signal });
   },
 
   listHistory: (limit = 200) => request<DetectionRecord[]>('/history', { query: { limit } }),

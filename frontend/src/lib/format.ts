@@ -20,6 +20,8 @@ const REASON_TEXT: Record<string, string> = {
   file_too_large: 'ไฟล์ใหญ่เกินไป (ไม่เกิน 20 MB)',
   empty_audio: 'ไฟล์นี้ไม่มีเสียง',
   decode_failed: 'เปิดไฟล์ไม่ได้ ไฟล์อาจเสียหาย ลองอัดหรือบันทึกใหม่',
+  // ฝั่ง frontend เช็กเอง (src/lib/audioRules.ts)
+  too_many_files: 'ตรวจได้ครั้งละไม่เกิน 10 ไฟล์ ไฟล์นี้จะไม่ถูกส่ง',
 };
 
 export const failureText = (reason: FailureReason) => REASON_TEXT[reason] ?? 'ไฟล์นี้ตรวจสอบไม่ได้';

@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react';
-import { Link, NavLink, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { Link, NavLink, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { api, ApiError } from '../api/client';
 import type { AdminDetectionDetail, AdminDetectionFilters, AdminDetectionList, FeedbackFilter, Verdict } from '../api/types';
+import { thaiDate, useLatestSearchParams } from '../components/Filters';
 import { Icon } from '../components/Icon';
 import { ResultView, VerdictBadge } from '../components/ResultView';
 import { dateTime, fileSize, pct, seconds } from '../lib/format';
@@ -52,11 +53,27 @@ function filtersFromParams(p: URLSearchParams): AdminDetectionFilters {
     date_to: p.get('to') || undefined,
     min_prob: prob('min'),
     max_prob: prob('max'),
+    model_version: p.get('model') || undefined,
   };
 }
 
+// ปุ่มลัดสำหรับกรณีที่ใช้บ่อย กดอีกครั้งเพื่อเอาออก
+function quickFilters(): { label: string; params: Record<string, string> }[] {
+  const today = thaiDate();
+  return [
+    { label: '👎 ผู้ใช้ไม่เห็นด้วย', params: { feedback: 'disagree' } },
+    { label: '🤖 เสียง AI', params: { verdict: 'spoof' } },
+    { label: 'อาจตัดต่อ', params: { partial: 'true' } },
+    { label: 'วันนี้', params: { from: today, to: today } },
+    { label: '7 วันล่าสุด', params: { from: thaiDate(-6), to: today } },
+    { label: 'ไม่ได้ login', params: { guest: 'true' } },
+  ];
+}
+
+const ADVANCED_KEYS = ['email', 'guest', 'partial', 'from', 'to', 'min', 'max', 'model'];
+
 export function AdminDetectionsPage() {
-  const [params, setParams] = useSearchParams();
+  const [params, setParams] = useLatestSearchParams();
   const navigate = useNavigate();
   const location = useLocation();
   const filters = useMemo(() => filtersFromParams(params), [params]);
@@ -65,7 +82,8 @@ export function AdminDetectionsPage() {
   const [loading, setLoading] = useState(false);
 
   // ช่องพิมพ์ใช้ค่าร่างก่อน แล้วค่อยใส่ URL ตอนกดค้นหา (ไม่ยิง API ทุกตัวอักษร)
-  const [draft, setDraft] = useState({ q: '', email: '', from: '', to: '', min: '', max: '' });
+  const [draft, setDraft] = useState({ q: '', email: '', from: '', to: '', min: '', max: '', model: '' });
+  const [draftError, setDraftError] = useState<string | null>(null);
   useEffect(() => {
     setDraft({
       q: params.get('q') ?? '',
@@ -74,6 +92,7 @@ export function AdminDetectionsPage() {
       to: params.get('to') ?? '',
       min: params.get('min') ?? '',
       max: params.get('max') ?? '',
+      model: params.get('model') ?? '',
     });
   }, [params]);
 
@@ -90,20 +109,42 @@ export function AdminDetectionsPage() {
       .finally(() => setLoading(false));
   }, [filters]);
 
-  const update = (changes: Record<string, string | null>, keepPage = false) => {
-    const next = new URLSearchParams(params);
-    for (const [key, value] of Object.entries(changes)) {
-      if (value === null || value === '') next.delete(key);
-      else next.set(key, value);
-    }
-    if (!keepPage) next.delete('page');
-    setParams(next);
-  };
+  const update = (changes: Record<string, string | null>, keepPage = false) =>
+    setParams((next) => {
+      for (const [key, value] of Object.entries(changes)) {
+        if (value === null || value === '') next.delete(key);
+        else next.set(key, value);
+      }
+      if (!keepPage) next.delete('page');
+    });
 
+  // เช็กค่าก่อนส่ง จะได้บอกผู้ใช้ทันทีว่าช่องไหนผิด แทนที่จะรอ backend ตอบ 422
   const applyDraft = (e: FormEvent) => {
     e.preventDefault();
+    const num = (v: string) => (v === '' ? null : Number(v));
+    const min = num(draft.min);
+    const max = num(draft.max);
+    if ([min, max].some((v) => v !== null && (!Number.isFinite(v) || v < 0 || v > 100))) {
+      setDraftError('คะแนน AI ต้องอยู่ระหว่าง 0 ถึง 100');
+      return;
+    }
+    if (min !== null && max !== null && min > max) {
+      setDraftError('คะแนน AI ขั้นต่ำต้องไม่มากกว่าคะแนนสูงสุด');
+      return;
+    }
+    if (draft.from && draft.to && draft.from > draft.to) {
+      setDraftError('วันที่เริ่มต้องไม่อยู่หลังวันที่สิ้นสุด');
+      return;
+    }
+    setDraftError(null);
     update(draft);
   };
+
+  const quick = quickFilters();
+  const isQuickOn = (q: Record<string, string>) => Object.entries(q).every(([k, v]) => params.get(k) === v);
+  const toggleQuick = (q: Record<string, string>) =>
+    update(Object.fromEntries(Object.entries(q).map(([k, v]) => [k, isQuickOn(q) ? null : v])));
+  const advancedCount = ADVANCED_KEYS.filter((k) => params.get(k)).length;
 
   const userLabel = params.get('user_label');
   const page = Math.floor(filters.offset / PAGE_SIZE) + 1;
@@ -122,14 +163,24 @@ export function AdminDetectionsPage() {
       <AdminTabs />
 
       <form className="card stack-sm" onSubmit={applyDraft}>
-        <div className="filter-grid">
+        <div className="quick-chips" role="group" aria-label="ตัวกรองลัด">
+          {quick.map((q) => (
+            <button
+              key={q.label}
+              type="button"
+              className={`fchip ${isQuickOn(q.params) ? 'is-on' : ''}`}
+              aria-pressed={isQuickOn(q.params)}
+              onClick={() => toggleQuick(q.params)}
+            >
+              {q.label}
+            </button>
+          ))}
+        </div>
+
+        <div className="filter-grid filter-grid-main">
           <label className="field">
             <span>ชื่อไฟล์</span>
             <input value={draft.q} maxLength={100} placeholder="ค้นหาชื่อไฟล์" onChange={(e) => setDraft({ ...draft, q: e.target.value })} />
-          </label>
-          <label className="field">
-            <span>อีเมลผู้ตรวจ</span>
-            <input value={draft.email} maxLength={255} placeholder="บางส่วนก็ได้" onChange={(e) => setDraft({ ...draft, email: e.target.value })} />
           </label>
           <label className="field">
             <span>ผลตรวจ</span>
@@ -148,46 +199,72 @@ export function AdminDetectionsPage() {
               <option value="none">ยังไม่มี feedback</option>
             </select>
           </label>
-          <label className="field">
-            <span>ผู้ตรวจ</span>
-            <select value={params.get('guest') ?? ''} onChange={(e) => update({ guest: e.target.value })}>
-              <option value="">ทุกคน</option>
-              <option value="false">ผู้ใช้ที่ login</option>
-              <option value="true">ไม่ได้ login (guest)</option>
-            </select>
-          </label>
-          <label className="field">
-            <span>อาจตัดต่อ</span>
-            <select value={params.get('partial') ?? ''} onChange={(e) => update({ partial: e.target.value })}>
-              <option value="">ทั้งหมด</option>
-              <option value="true">เฉพาะที่อาจตัดต่อ</option>
-              <option value="false">ไม่สงสัยว่าตัดต่อ</option>
-            </select>
-          </label>
-          <label className="field">
-            <span>ตั้งแต่วันที่</span>
-            <input type="date" value={draft.from} onChange={(e) => setDraft({ ...draft, from: e.target.value })} />
-          </label>
-          <label className="field">
-            <span>ถึงวันที่</span>
-            <input type="date" value={draft.to} onChange={(e) => setDraft({ ...draft, to: e.target.value })} />
-          </label>
-          <label className="field">
-            <span>คะแนน AI ขั้นต่ำ (%)</span>
-            <input type="number" min={0} max={100} value={draft.min} onChange={(e) => setDraft({ ...draft, min: e.target.value })} />
-          </label>
-          <label className="field">
-            <span>คะแนน AI สูงสุด (%)</span>
-            <input type="number" min={0} max={100} value={draft.max} onChange={(e) => setDraft({ ...draft, max: e.target.value })} />
-          </label>
         </div>
+
+        <details className="more-filters" open={advancedCount > 0}>
+          <summary>
+            ตัวกรองเพิ่มเติม{advancedCount > 0 ? ` (ใช้อยู่ ${advancedCount})` : ''}
+          </summary>
+          <div className="filter-grid">
+            <label className="field">
+              <span>อีเมลผู้ตรวจ</span>
+              <input value={draft.email} maxLength={255} placeholder="บางส่วนก็ได้" onChange={(e) => setDraft({ ...draft, email: e.target.value })} />
+            </label>
+            <label className="field">
+              <span>ผู้ตรวจ</span>
+              <select value={params.get('guest') ?? ''} onChange={(e) => update({ guest: e.target.value })}>
+                <option value="">ทุกคน</option>
+                <option value="false">ผู้ใช้ที่ login</option>
+                <option value="true">ไม่ได้ login (guest)</option>
+              </select>
+            </label>
+            <label className="field">
+              <span>อาจตัดต่อ</span>
+              <select value={params.get('partial') ?? ''} onChange={(e) => update({ partial: e.target.value })}>
+                <option value="">ทั้งหมด</option>
+                <option value="true">เฉพาะที่อาจตัดต่อ</option>
+                <option value="false">ไม่สงสัยว่าตัดต่อ</option>
+              </select>
+            </label>
+            <label className="field">
+              <span>เวอร์ชันโมเดล</span>
+              <input value={draft.model} maxLength={50} placeholder="ตรงทุกตัวอักษร" onChange={(e) => setDraft({ ...draft, model: e.target.value })} />
+            </label>
+            <label className="field">
+              <span>ตั้งแต่วันที่</span>
+              <input type="date" value={draft.from} onChange={(e) => setDraft({ ...draft, from: e.target.value })} />
+            </label>
+            <label className="field">
+              <span>ถึงวันที่</span>
+              <input type="date" value={draft.to} onChange={(e) => setDraft({ ...draft, to: e.target.value })} />
+            </label>
+            <label className="field">
+              <span>คะแนน AI ขั้นต่ำ (%)</span>
+              <input type="number" min={0} max={100} value={draft.min} onChange={(e) => setDraft({ ...draft, min: e.target.value })} />
+            </label>
+            <label className="field">
+              <span>คะแนน AI สูงสุด (%)</span>
+              <input type="number" min={0} max={100} value={draft.max} onChange={(e) => setDraft({ ...draft, max: e.target.value })} />
+            </label>
+          </div>
+        </details>
+
+        {draftError && <div className="callout callout-danger">{draftError}</div>}
+
         <div className="row between wrap">
           <div className="row wrap">
             <button className="btn btn-primary btn-small">
-              <Icon name="sparkle" size={14} /> ค้นหา
+              <Icon name="search" size={14} /> ค้นหา
             </button>
             {hasFilters && (
-              <button type="button" className="btn btn-ghost btn-small" onClick={() => setParams(new URLSearchParams())}>
+              <button
+                type="button"
+                className="btn btn-ghost btn-small"
+                onClick={() => {
+                  setDraftError(null);
+                  setParams((next) => [...next.keys()].forEach((k) => next.delete(k)));
+                }}
+              >
                 ล้างตัวกรอง
               </button>
             )}

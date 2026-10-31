@@ -40,7 +40,13 @@ const PATHS: Record<string, ReactNode> = {
   back: <path d="m15 6-6 6 6 6" />,
   chart: <path d="M4 20V10M10 20V4M16 20v-7M22 20H2" />,
   check: <path d="m5 12 5 5 9-10" />,
-  play: <path d="M8 5.5v13a1 1 0 0 0 1.5.9l10-6.5a1 1 0 0 0 0-1.8l-10-6.5A1 1 0 0 0 8 5.5Z" />,
+  search: (
+    <>
+      <circle cx="11" cy="11" r="7" />
+      <path d="m20 20-4-4" />
+    </>
+  ),
+  play:<path d="M8 5.5v13a1 1 0 0 0 1.5.9l10-6.5a1 1 0 0 0 0-1.8l-10-6.5A1 1 0 0 0 8 5.5Z" />,
   pause: <path d="M8 5v14M16 5v14" />,
   info: (
     <>
