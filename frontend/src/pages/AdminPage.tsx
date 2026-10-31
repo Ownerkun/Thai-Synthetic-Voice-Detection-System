@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react';
 import { api, ApiError } from '../api/client';
 import type { AdminUser, AdminUserList, StatsOverview, Threshold } from '../api/types';
+import { Link } from 'react-router-dom';
 import { Icon, type IconName } from '../components/Icon';
+import { AdminTabs } from './AdminDetectionsPages';
 import { dateTime, pct } from '../lib/format';
 
 const errText = (e: unknown, fallback: string) => (e instanceof ApiError ? e.message : fallback);
@@ -27,6 +29,7 @@ export function AdminPage() {
           <p className="muted">ภาพรวมระบบ ปรับเกณฑ์ และจัดการผู้ใช้</p>
         </div>
       </div>
+      <AdminTabs />
 
       {statsError && <div className="callout callout-danger">{statsError}</div>}
       <section className="kpi-grid">
@@ -281,7 +284,14 @@ function UsersCard({ onChanged }: { onChanged: () => void }) {
                 </td>
                 <td className="nowrap">{dateTime(u.created_at)}</td>
                 <td className="nowrap">{dateTime(u.last_login_at)}</td>
-                <td className="num">{u.detection_count}</td>
+                <td className="num">
+                  <Link
+                    to={`/admin/detections?user_id=${u.id}&user_label=${encodeURIComponent(u.email)}`}
+                    title="ดูผลตรวจของผู้ใช้นี้"
+                  >
+                    {u.detection_count}
+                  </Link>
+                </td>
                 <td>
                   <span className={`badge ${u.is_active ? 'badge-real' : 'badge-muted'}`}>
                     {u.is_active ? 'ใช้งานปกติ' : 'ถูกระงับ'}

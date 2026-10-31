@@ -1,4 +1,7 @@
 import type {
+  AdminDetectionDetail,
+  AdminDetectionFilters,
+  AdminDetectionList,
   AdminUser,
   AdminUserList,
   BatchDetectionResult,
@@ -11,6 +14,7 @@ import type {
   Threshold,
   ThresholdUpdateResponse,
   TokenResponse,
+  UserProfile,
 } from './types';
 import { ApiError } from './errors';
 import { demoApi } from './demo';
@@ -19,6 +23,11 @@ const BASE_URL = (import.meta.env.VITE_API_BASE_URL ?? '/api').replace(/\/$/, ''
 
 export { ApiError };
 
+// getToken / onUnauthorized ถูกตั้งค่าโดย AuthProvider (src/auth/AuthContext.tsx) ผ่าน configureApi() ตอนแอปเริ่ม
+// - getToken() คืน JWT ของ session ปัจจุบัน (ได้จาก /auth/login, /auth/register หรือ /auth/admin/login และจำไว้ใน localStorage)
+//   request() เรียกทุกครั้งก่อนยิง API ถ้ามี token จะใส่ header `Authorization: Bearer <token>` ให้
+// - onUnauthorized() ถูกเรียกเมื่อ backend ตอบ 401 ทั้งที่ส่ง token ไป (หมดอายุ/บัญชีถูกระงับ) → logout อัตโนมัติ
+// แยกแบบนี้เพื่อให้ไฟล์นี้ไม่ต้อง import React/AuthContext ตรงๆ ค่าเริ่มต้น = ยังไม่ login (ไม่ส่ง token)
 let getToken: () => string | null = () => null;
 let onUnauthorized: () => void = () => {};
 
@@ -113,12 +122,20 @@ const realApi = {
   listMyFeedback: (limit = 50, offset = 0) =>
     request<FeedbackHistoryItem[]>('/feedback', { query: { limit, offset } }),
 
+  getMe: () => request<UserProfile>('/users/me'),
+  updateMe: (body: { display_name: string | null }) => request<UserProfile>('/users/me', { method: 'PATCH', json: body }),
+  changePassword: (body: { current_password: string; new_password: string }) =>
+    request<void>('/users/me/password', { method: 'PUT', json: body }),
+
   getThreshold: () => request<Threshold | null>('/admin/threshold'),
   setThreshold: (value: number, note?: string) =>
     request<ThresholdUpdateResponse>('/admin/threshold', { method: 'POST', json: { value, note: note || null } }),
   getStats: () => request<StatsOverview>('/admin/stats'),
   listUsers: (params: { q?: string; is_active?: boolean | null; limit: number; offset: number }) =>
     request<AdminUserList>('/admin/users', { query: params }),
+  listDetections: (filters: AdminDetectionFilters) =>
+    request<AdminDetectionList>('/admin/detections', { query: { ...filters } }),
+  getDetection: (id: string) => request<AdminDetectionDetail>(`/admin/detections/${id}`),
   updateUser: (id: string, body: { display_name?: string | null; is_active?: boolean }) =>
     request<AdminUser>(`/admin/users/${id}`, { method: 'PATCH', json: body }),
 };

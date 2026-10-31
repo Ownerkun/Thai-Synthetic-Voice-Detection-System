@@ -44,7 +44,9 @@ base path ค่าเริ่มต้นคือ `/Thai-Synthetic-Voice-Dete
 | `/login`, `/register` | ทุกคน | เข้าสู่ระบบ / สมัครสมาชิก |
 | `/history`, `/history/:id` | user | ประวัติ, รายละเอียด, ให้/แก้ feedback, ลบรายการ |
 | `/feedback` | user | feedback ทั้งหมดที่เคยให้ |
+| `/profile` | user | ดูบัญชี, แก้ชื่อที่แสดง, เปลี่ยนรหัสผ่าน (`/users/me`) |
 | `/admin/login`, `/admin` | admin | สถิติ, ปรับ threshold, จัดการผู้ใช้ (ค้นหา, กรอง, แก้ชื่อ, ระงับ/เปิดใช้) |
+| `/admin/detections`, `/admin/detections/:id` | admin | ผลตรวจทั้งหมด กรองตามผล/วันที่/ไฟล์/ผู้ใช้/guest/feedback/ช่วงคะแนน เรียงลำดับ แบ่งหน้า (ตัวกรองอยู่ใน URL) + รายละเอียดรายช่วง |
 
 ## หมายเหตุการเชื่อมต่อกับ backend
 

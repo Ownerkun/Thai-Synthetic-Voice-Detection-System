@@ -23,7 +23,7 @@ export function Layout() {
 
   const items: NavItem[] = [{ to: '/', label: 'ตรวจเสียง', icon: 'wave', end: true }];
   if (role === 'user') {
-    items.push({ to: '/history', label: 'ประวัติ', icon: 'clock' }, { to: '/feedback', label: 'Feedback', icon: 'heart' });
+    items.push({ to: '/history', label: 'ประวัติ', icon: 'clock' }, { to: '/feedback', label: 'Feedback', icon: 'heart' }, { to: '/profile', label: 'โปรไฟล์', icon: 'user' });
   }
   if (role === 'admin') items.push({ to: '/admin', label: 'แดชบอร์ด', icon: 'shield' });
   items.push({ to: '/about', label: 'เกี่ยวกับ', icon: 'info' });

@@ -2,7 +2,9 @@ import { Link, Route, Routes } from 'react-router-dom';
 import { RequireRole } from './auth/RequireRole';
 import { Layout } from './components/Layout';
 import { AboutPage } from './pages/AboutPage';
+import { AdminDetectionDetailPage, AdminDetectionsPage } from './pages/AdminDetectionsPages';
 import { AdminPage } from './pages/AdminPage';
+import { ProfilePage } from './pages/ProfilePage';
 import { AdminLoginPage, LoginPage, RegisterPage } from './pages/AuthPages';
 import { DetectPage } from './pages/DetectPage';
 import { HistoryDetailPage, HistoryPage, MyFeedbackPage } from './pages/HistoryPages';
@@ -45,6 +47,30 @@ export function App() {
           element={
             <RequireRole role="admin">
               <AdminPage />
+            </RequireRole>
+          }
+        />
+        <Route
+          path="profile"
+          element={
+            <RequireRole role="user">
+              <ProfilePage />
+            </RequireRole>
+          }
+        />
+        <Route
+          path="admin/detections"
+          element={
+            <RequireRole role="admin">
+              <AdminDetectionsPage />
+            </RequireRole>
+          }
+        />
+        <Route
+          path="admin/detections/:id"
+          element={
+            <RequireRole role="admin">
+              <AdminDetectionDetailPage />
             </RequireRole>
           }
         />

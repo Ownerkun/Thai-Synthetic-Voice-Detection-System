@@ -125,3 +125,68 @@ export interface AdminUserList {
   limit: number;
   offset: number;
 }
+
+// ---- /users/me (PR #21) ----
+export interface UserProfile {
+  id: string;
+  email: string;
+  display_name: string | null;
+  created_at: string;
+}
+
+// ---- /admin/detections (PR #20, #22) ----
+export type DetectionSort = 'created_at' | 'mean_probability' | 'processing_ms';
+export type FeedbackFilter = 'agree' | 'disagree' | 'none';
+
+export interface AdminDetectionFilters {
+  limit: number;
+  offset: number;
+  sort?: DetectionSort;
+  order?: 'asc' | 'desc';
+  verdict?: Verdict;
+  date_from?: string; // YYYY-MM-DD ตามเวลาไทย
+  date_to?: string;
+  q?: string;
+  user_id?: string;
+  user_email?: string;
+  guest?: boolean;
+  model_version?: string;
+  partial_spoof?: boolean;
+  feedback?: FeedbackFilter;
+  min_prob?: number;
+  max_prob?: number;
+}
+
+export interface AdminDetectionItem {
+  id: string;
+  created_at: string;
+  original_filename: string;
+  duration_seconds: number;
+  num_segments: number;
+  mean_probability: number;
+  max_probability: number;
+  threshold_used: number;
+  verdict: Verdict;
+  possible_partial_spoof: boolean;
+  model_version: string;
+  processing_ms: number;
+  user_id: string | null;
+  user_email: string | null;
+  feedback: 'agree' | 'disagree' | null;
+}
+
+export interface AdminDetectionList {
+  items: AdminDetectionItem[];
+  total: number;
+  limit: number;
+  offset: number;
+}
+
+export interface AdminDetectionDetail extends AdminDetectionItem {
+  sample_rate: number;
+  file_size_bytes: number;
+  audio_format: string;
+  feedback_created_at: string | null;
+  feedback_updated_at: string | null;
+  segments: SegmentResult[];
+}

@@ -7,6 +7,10 @@
 
 import { ApiError } from './errors';
 import type {
+  AdminDetectionDetail,
+  AdminDetectionFilters,
+  AdminDetectionItem,
+  AdminDetectionList,
   AdminUser,
   AdminUserList,
   BatchDetectionResult,
@@ -22,6 +26,7 @@ import type {
   Threshold,
   ThresholdUpdateResponse,
   TokenResponse,
+  UserProfile,
 } from './types';
 
 export const DEMO_ADMIN = { username: 'admin', password: 'demo1234' };
@@ -47,6 +52,9 @@ interface DemoUser {
 
 interface DemoRecord extends DetectionDetail {
   user_id: string | null;
+  file_size_bytes?: number;
+  audio_format?: string;
+  sample_rate?: number;
 }
 
 interface DemoFeedback extends Feedback {
@@ -332,7 +340,14 @@ export const demoApi = {
       }
       const id = uuid();
       // backend บันทึกทุกผล (guest = user_id null) แต่ guest ไม่เห็นในประวัติ
-      store.records.unshift({ ...report, id, created_at: now(), user_id: user?.id ?? null });
+      store.records.unshift({
+        ...report,
+        id,
+        created_at: now(),
+        user_id: user?.id ?? null,
+        file_size_bytes: file.size,
+        audio_format: file.name.slice(file.name.lastIndexOf('.') + 1).toLowerCase(),
+      });
       results.push({ ...report, id, saved_to_history: user !== null });
     }
     save(store);
@@ -349,8 +364,8 @@ export const demoApi = {
   getHistory: async (id: string): Promise<DetectionDetail> => {
     await delay(150);
     const store = load();
-    const { user_id: _ignored, ...detail } = ownedRecord(store, id, requireUser(store).id);
-    return detail;
+    const r = ownedRecord(store, id, requireUser(store).id);
+    return { ...toRecordOut(r), threshold_used: r.threshold_used, model_version: r.model_version, processing_ms: r.processing_ms, segments: r.segments };
   },
 
   deleteHistory: async (id: string): Promise<void> => {
@@ -418,6 +433,89 @@ export const demoApi = {
           ? [{ ...toFeedbackOut(f), original_filename: record.original_filename, verdict: record.verdict }]
           : [];
       });
+  },
+
+  getMe: async (): Promise<UserProfile> => {
+    await delay(100);
+    return toProfile(requireUser(load()));
+  },
+
+  updateMe: async (body: { display_name: string | null }): Promise<UserProfile> => {
+    await delay();
+    const store = load();
+    const user = requireUser(store);
+    if (body.display_name !== null && (body.display_name.length < 1 || body.display_name.length > 100)) {
+      throw new ApiError(422, 'String should have at most 100 characters');
+    }
+    user.display_name = body.display_name;
+    save(store);
+    return toProfile(user);
+  },
+
+  changePassword: async (body: { current_password: string; new_password: string }): Promise<void> => {
+    await delay();
+    const store = load();
+    const user = requireUser(store);
+    if (body.new_password.length < 8 || body.new_password.length > 128) {
+      throw new ApiError(422, 'String should have at least 8 characters');
+    }
+    if (body.new_password === body.current_password) {
+      throw new ApiError(422, 'New password must be different from the current password');
+    }
+    if (user.password_hash !== (await hashPassword(body.current_password))) {
+      throw new ApiError(400, 'Current password is incorrect');
+    }
+    user.password_hash = await hashPassword(body.new_password);
+    save(store);
+  },
+
+  listDetections: async (f: AdminDetectionFilters): Promise<AdminDetectionList> => {
+    await delay(150);
+    const store = load();
+    requireAdmin(store);
+    if (f.min_prob !== undefined && f.max_prob !== undefined && f.min_prob > f.max_prob) {
+      throw new ApiError(422, 'min_prob must not be greater than max_prob');
+    }
+    if (f.date_from && f.date_to && f.date_from > f.date_to) {
+      throw new ApiError(422, 'date_from must not be after date_to');
+    }
+    const thaiDay = (iso: string) => new Date(new Date(iso).getTime() + 7 * 3600 * 1000).toISOString().slice(0, 10);
+    const items = store.records
+      .map((r) => toDetectionItem(store, r))
+      .filter((d) => !f.verdict || d.verdict === f.verdict)
+      .filter((d) => !f.date_from || thaiDay(d.created_at) >= f.date_from)
+      .filter((d) => !f.date_to || thaiDay(d.created_at) <= f.date_to)
+      .filter((d) => !f.q || d.original_filename.toLowerCase().includes(f.q.toLowerCase()))
+      .filter((d) => !f.user_id || d.user_id === f.user_id)
+      .filter((d) => !f.user_email || (d.user_email ?? '').includes(f.user_email.toLowerCase()))
+      .filter((d) => f.guest === undefined || (d.user_id === null) === f.guest)
+      .filter((d) => !f.model_version || d.model_version === f.model_version)
+      .filter((d) => f.partial_spoof === undefined || d.possible_partial_spoof === f.partial_spoof)
+      .filter((d) => !f.feedback || (f.feedback === 'none' ? d.feedback === null : d.feedback === f.feedback))
+      .filter((d) => f.min_prob === undefined || d.mean_probability >= f.min_prob)
+      .filter((d) => f.max_prob === undefined || d.mean_probability <= f.max_prob);
+    const key = f.sort ?? 'created_at';
+    const dir = f.order === 'asc' ? 1 : -1;
+    items.sort((a, b) => (a[key] < b[key] ? -dir : a[key] > b[key] ? dir : 0));
+    return { items: items.slice(f.offset, f.offset + f.limit), total: items.length, limit: f.limit, offset: f.offset };
+  },
+
+  getDetection: async (id: string): Promise<AdminDetectionDetail> => {
+    await delay(150);
+    const store = load();
+    requireAdmin(store);
+    const r = store.records.find((x) => x.id === id);
+    if (!r) throw new ApiError(404, 'Detection not found');
+    const fb = store.feedback.find((x) => x.detection_id === id);
+    return {
+      ...toDetectionItem(store, r),
+      sample_rate: r.sample_rate ?? 16000,
+      file_size_bytes: r.file_size_bytes ?? 0,
+      audio_format: r.audio_format ?? 'wav',
+      feedback_created_at: fb?.created_at ?? null,
+      feedback_updated_at: fb?.updated_at ?? null,
+      segments: r.segments,
+    };
   },
 
   getThreshold: async (): Promise<Threshold | null> => {
@@ -503,5 +601,30 @@ function toAdminUser(store: DemoStore, u: DemoUser): AdminUser {
     last_login_at: u.last_login_at,
     is_active: u.is_active,
     detection_count: store.records.filter((r) => r.user_id === u.id).length,
+  };
+}
+
+function toProfile(u: DemoUser): UserProfile {
+  return { id: u.id, email: u.email, display_name: u.display_name, created_at: u.created_at };
+}
+
+function toDetectionItem(store: DemoStore, r: DemoRecord): AdminDetectionItem {
+  const fb = store.feedback.find((f) => f.detection_id === r.id);
+  return {
+    id: r.id,
+    created_at: r.created_at,
+    original_filename: r.original_filename,
+    duration_seconds: r.duration_seconds,
+    num_segments: r.segments.length,
+    mean_probability: r.mean_probability,
+    max_probability: r.max_probability,
+    threshold_used: r.threshold_used,
+    verdict: r.verdict,
+    possible_partial_spoof: r.possible_partial_spoof,
+    model_version: r.model_version,
+    processing_ms: r.processing_ms,
+    user_id: r.user_id,
+    user_email: store.users.find((u) => u.id === r.user_id)?.email ?? null,
+    feedback: fb ? (fb.user_agrees ? 'agree' : 'disagree') : null,
   };
 }
