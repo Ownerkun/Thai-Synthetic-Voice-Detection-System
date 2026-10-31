@@ -1,0 +1,163 @@
+from typing import Annotated
+from uuid import UUID
+from datetime import date, datetime, time, timedelta, timezone
+
+from fastapi import APIRouter, Depends, Query, HTTPException, status
+
+from app.deps import DbSession, get_current_admin
+from app.models.admin import AdminAccount
+from app.models.detection import DetectionRecord, Feedback
+from app.models.user import UserAccount
+from app.schemas.admin_detection import (
+    AdminDetectionFilters,
+    AdminDetectionItemOut,
+    AdminDetectionListOut,
+    AdminDetectionDetailOut
+)
+from app.schemas.detection import SegmentResultOut
+
+router = APIRouter(prefix="/detections")
+
+THAI_TZ = timezone(timedelta(hours=7))
+
+SORT_COLUMNS = {
+    "created_at": DetectionRecord.created_at,
+    "mean_probability": DetectionRecord.mean_probability,
+    "processing_ms": DetectionRecord.processing_ms,
+}
+
+CurrentAdmin = Annotated[AdminAccount, Depends(get_current_admin)]
+
+
+@router.get("", response_model=AdminDetectionListOut)
+def list_detections(
+    params: Annotated[AdminDetectionFilters, Query()],
+    db: DbSession,
+    _admin: CurrentAdmin,
+) -> AdminDetectionListOut:
+    # outer join: guest ไม่มี user และผลที่ยังไม่มี feedback ก็แสดงด้วย
+    query = (
+        db.query(DetectionRecord, UserAccount.email, Feedback.user_agrees)
+        .outerjoin(UserAccount, UserAccount.id == DetectionRecord.user_id)
+        .outerjoin(Feedback, Feedback.detection_id == DetectionRecord.id)
+    )
+
+    query = _apply_filters(query, params)
+
+    total = query.count()
+    sort_column = SORT_COLUMNS[params.sort]
+    direction = sort_column.asc() if params.order == "asc" else sort_column.desc()
+    rows = (
+        query.order_by(direction, DetectionRecord.id)  # id ไว้ตัดสินเมื่อค่าเท่ากัน ไม่ให้แบ่งหน้าสลับกัน
+        .offset(params.offset)
+        .limit(params.limit)
+        .all()
+    )
+
+    return AdminDetectionListOut(
+        items=[_to_item(record, email, user_agrees) for record, email, user_agrees in rows],
+        total=total,
+        limit=params.limit,
+        offset=params.offset,
+    )
+
+def _apply_filters(query, params: AdminDetectionFilters):
+    if params.verdict is not None:
+        query = query.filter(DetectionRecord.verdict == params.verdict)
+
+    if params.date_from is not None:
+        query = query.filter(DetectionRecord.created_at >= _start_of_thai_day(params.date_from))
+    if params.date_to is not None:
+        # นับรวมทั้งวัน date_to: เอาก่อน "เที่ยงคืนของวันถัดไป"
+        query = query.filter(DetectionRecord.created_at < _start_of_thai_day(params.date_to + timedelta(days=1)))
+
+    if params.q:
+        # autoescape = ถ้าพิมพ์ % หรือ _ จะค้นหาตัวอักษรนั้นจริงๆ ไม่ใช่ wildcard
+        query = query.filter(DetectionRecord.original_filename.icontains(params.q, autoescape=True))
+
+    if params.user_id is not None:
+        query = query.filter(DetectionRecord.user_id == params.user_id)
+    if params.user_email:
+        query = query.filter(UserAccount.email.icontains(params.user_email, autoescape=True))
+    if params.guest is True:
+        query = query.filter(DetectionRecord.user_id.is_(None))
+    elif params.guest is False:
+        query = query.filter(DetectionRecord.user_id.is_not(None))
+
+    if params.model_version is not None:
+        query = query.filter(DetectionRecord.model_version == params.model_version)
+    if params.partial_spoof is not None:
+        query = query.filter(DetectionRecord.possible_partial_spoof.is_(params.partial_spoof))
+
+    if params.feedback == "agree":
+        query = query.filter(Feedback.user_agrees.is_(True))
+    elif params.feedback == "disagree":
+        query = query.filter(Feedback.user_agrees.is_(False))
+    elif params.feedback == "none":
+        query = query.filter(Feedback.id.is_(None))  # outer join แล้วไม่เจอ feedback
+
+    if params.min_prob is not None:
+        query = query.filter(DetectionRecord.mean_probability >= params.min_prob)
+    if params.max_prob is not None:
+        query = query.filter(DetectionRecord.mean_probability <= params.max_prob)
+
+
+    return query
+
+def _start_of_thai_day(day: date) -> datetime:
+    return datetime.combine(day, time.min, tzinfo=THAI_TZ).astimezone(timezone.utc)
+
+def _to_item(record: DetectionRecord, user_email: str | None, user_agrees: bool | None) -> AdminDetectionItemOut:
+    if user_agrees is None:
+        feedback = None
+    else:
+        feedback = "agree" if user_agrees else "disagree"
+
+    return AdminDetectionItemOut(
+        id=record.id,
+        created_at=record.created_at,
+        original_filename=record.original_filename,
+        duration_seconds=record.duration_seconds,
+        num_segments=record.num_segments,
+        mean_probability=record.mean_probability,
+        max_probability=record.max_probability,
+        threshold_used=record.threshold_used,
+        verdict=record.verdict,
+        possible_partial_spoof=record.possible_partial_spoof,
+        model_version=record.model_version,
+        processing_ms=record.processing_ms,
+        user_id=record.user_id,
+        user_email=user_email,
+        feedback=feedback,
+    )
+
+@router.get("/{detection_id}", response_model=AdminDetectionDetailOut)
+def get_detection(detection_id: UUID, db: DbSession, _admin: CurrentAdmin) -> AdminDetectionDetailOut:
+    record = db.get(DetectionRecord, detection_id)
+    if record is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Detection not found")
+
+    feedback = record.feedback
+    item = _to_item(
+        record,
+        record.user.email if record.user else None,  # user เป็น None = guest
+        feedback.user_agrees if feedback else None,
+    )
+    return AdminDetectionDetailOut(
+        **item.model_dump(),
+        sample_rate=record.sample_rate,
+        file_size_bytes=record.file_size_bytes,
+        audio_format=record.audio_format,
+        feedback_created_at=feedback.created_at if feedback else None,
+        feedback_updated_at=feedback.updated_at if feedback else None,
+        segments=[
+            SegmentResultOut(
+                index=s.segment_index,
+                start_seconds=s.start_seconds,
+                end_seconds=s.end_seconds,
+                spoof_probability=s.spoof_probability,
+                is_spoof=s.spoof_probability >= record.threshold_used,  # เกณฑ์เดียวกับ /history/{id}
+            )
+            for s in record.segments  # relationship เรียงตาม segment_index อยู่แล้ว
+        ],
+    )
