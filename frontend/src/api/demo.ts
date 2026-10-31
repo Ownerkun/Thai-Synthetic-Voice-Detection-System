@@ -316,8 +316,12 @@ export const demoApi = {
     return makeToken(load().admin_id, 'admin');
   },
 
-  predict: async (files: File[]): Promise<BatchDetectionResult> => {
-    await delay(400);
+  predict: async (files: File[], _signal?: AbortSignal, onProgress?: (ratio: number) => void): Promise<BatchDetectionResult> => {
+    // จำลองความคืบหน้าการส่งไฟล์ให้เหมือนของจริง
+    for (const ratio of [0.35, 0.7, 1]) {
+      await delay(120);
+      onProgress?.(ratio);
+    }
     const store = load();
     const threshold = currentThreshold(store);
     const user = optionalUser(store);

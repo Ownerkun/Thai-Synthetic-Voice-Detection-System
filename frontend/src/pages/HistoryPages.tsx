@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { Link, NavLink, useNavigate, useParams } from 'react-router-dom';
 import { api, ApiError } from '../api/client';
 import type { DetectionDetail, DetectionRecord, Feedback, FeedbackHistoryItem } from '../api/types';
 import { ChipGroup, FilterSummary, inPeriod, SearchBox, useUrlFilters } from '../components/Filters';
 import { Icon } from '../components/Icon';
 import { ResultView, VerdictBadge } from '../components/ResultView';
+import { SkeletonCard, SkeletonList } from '../components/Skeleton';
 import { useUi } from '../components/UiProvider';
 import { dateTime, pct, seconds, verdictEmoji } from '../lib/format';
 
@@ -22,6 +23,20 @@ const HISTORY_SORTS: Record<string, { label: string; compare: (a: DetectionRecor
   low: { label: 'คะแนน AI ต่ำสุด', compare: (a, b) => a.mean_probability - b.mean_probability },
 };
 const HISTORY_KEYS = ['q', 'verdict', 'vote', 'period', 'partial', 'sort'] as const;
+
+/** สลับระหว่างประวัติทั้งหมด กับผลที่เคยโหวต (แทนเมนู Feedback แยก ทำให้เมนูล่างเหลือ 4 ปุ่ม) */
+function HistoryTabs() {
+  return (
+    <nav className="seg-tabs" aria-label="มุมมองประวัติ">
+      <NavLink to="/history">
+        <Icon name="clock" size={16} /> ประวัติทั้งหมด
+      </NavLink>
+      <NavLink to="/feedback">
+        <Icon name="heart" size={16} /> ผลที่ฉันโหวต
+      </NavLink>
+    </nav>
+  );
+}
 
 export function HistoryPage() {
   const [items, setItems] = useState<DetectionRecord[] | null>(null);
@@ -69,9 +84,10 @@ export function HistoryPage() {
           <Icon name="sparkle" size={16} /> เช็กเสียงใหม่
         </Link>
       </div>
+      <HistoryTabs />
 
       {error && <div className="callout callout-danger">{error}</div>}
-      {!items && !error && <p className="muted">กำลังโหลด…</p>}
+      {!items && !error && <SkeletonList />}
       {items && items.length === 0 && (
         <div className="card empty">
           <span className="empty-emoji">🎧</span>
@@ -154,7 +170,7 @@ export function HistoryPage() {
                     </span>
                     <span className="list-side">
                       {pct(r.mean_probability, 0)}
-                      <small>โอกาสเป็น AI</small>
+                      <small>คะแนนน่าสงสัย</small>
                     </span>
                   </Link>
                 );
@@ -238,7 +254,7 @@ export function HistoryDetailPage() {
       </div>
     );
   }
-  if (!record) return <p className="muted">กำลังโหลด…</p>;
+  if (!record) return <SkeletonCard lines={5} />;
 
   return (
     <div className="stack">
@@ -250,6 +266,7 @@ export function HistoryDetailPage() {
       </div>
 
       <ResultView
+        checkedAt={record.created_at}
         filename={record.original_filename}
         verdict={record.verdict}
         meanProbability={record.mean_probability}
@@ -332,12 +349,13 @@ export function MyFeedbackPage() {
     <div className="stack">
       <div className="page-head">
         <div>
-          <h1>Feedback ของฉัน</h1>
+          <h1>ผลที่ฉันโหวต</h1>
           <p className="muted">ผลที่คุณบอกเราว่าถูกหรือไม่ถูก</p>
         </div>
       </div>
+      <HistoryTabs />
       {error && <div className="callout callout-danger">{error}</div>}
-      {!items && !error && <p className="muted">กำลังโหลด…</p>}
+      {!items && !error && <SkeletonList />}
       {items && items.length === 0 && (
         <div className="card empty">
           <span className="empty-emoji">💬</span>

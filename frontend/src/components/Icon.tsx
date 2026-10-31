@@ -40,6 +40,14 @@ const PATHS: Record<string, ReactNode> = {
   back: <path d="m15 6-6 6 6 6" />,
   chart: <path d="M4 20V10M10 20V4M16 20v-7M22 20H2" />,
   check: <path d="m5 12 5 5 9-10" />,
+  image: (
+    <>
+      <rect x="3" y="4" width="18" height="16" rx="3" />
+      <circle cx="9" cy="10" r="2" />
+      <path d="m21 16-5-5-9 9" />
+    </>
+  ),
+  download: <path d="M12 4v11m0 0 4-4m-4 4-4-4M4 19h16" />,
   search: (
     <>
       <circle cx="11" cy="11" r="7" />

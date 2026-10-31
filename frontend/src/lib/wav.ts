@@ -24,7 +24,7 @@ export async function blobToWavFile(blob: Blob, filename: string): Promise<File>
   return new File([encodeWav(rendered.getChannelData(0), TARGET_SAMPLE_RATE)], filename, { type: 'audio/wav' });
 }
 
-function encodeWav(samples: Float32Array, sampleRate: number): ArrayBuffer {
+export function encodeWav(samples: Float32Array, sampleRate: number): ArrayBuffer {
   const bytesPerSample = 2;
   const dataSize = samples.length * bytesPerSample;
   const buffer = new ArrayBuffer(44 + dataSize);

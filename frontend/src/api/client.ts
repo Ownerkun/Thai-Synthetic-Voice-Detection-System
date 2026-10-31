@@ -135,6 +135,66 @@ async function request<T>(
   return data as T;
 }
 
+/**
+ * ส่งไฟล์ด้วย XMLHttpRequest แทน fetch เพราะ fetch รายงานความคืบหน้าการอัปโหลดไม่ได้ (A2)
+ * กติกา timeout / ยกเลิก / ข้อความ error เหมือน request() ทุกอย่าง
+ */
+function upload<T>(
+  path: string,
+  form: FormData,
+  { timeoutMs, signal, onProgress }: { timeoutMs: number; signal?: AbortSignal; onProgress?: (ratio: number) => void },
+): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    if (signal?.aborted) {
+      reject(new ApiError(STATUS_CANCELLED, 'ยกเลิกแล้ว'));
+      return;
+    }
+    const xhr = new XMLHttpRequest();
+    xhr.open('POST', BASE_URL + path);
+    const token = getToken();
+    if (token) xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+    xhr.timeout = timeoutMs;
+
+    const onCancel = () => xhr.abort();
+    signal?.addEventListener('abort', onCancel, { once: true });
+    const cleanup = () => signal?.removeEventListener('abort', onCancel);
+
+    if (onProgress) {
+      xhr.upload.onprogress = (e) => e.lengthComputable && onProgress(e.loaded / e.total);
+      xhr.upload.onload = () => onProgress(1);
+    }
+    xhr.onload = () => {
+      cleanup();
+      let data: unknown = null;
+      try {
+        data = xhr.responseText ? JSON.parse(xhr.responseText) : null;
+      } catch {
+        data = null;
+      }
+      if (xhr.status >= 200 && xhr.status < 300) {
+        resolve(data as T);
+        return;
+      }
+      if (xhr.status === 401 && token) onUnauthorized();
+      const detail = data && typeof data === 'object' && 'detail' in data ? data.detail : undefined;
+      reject(new ApiError(xhr.status, serverMessage(xhr.status) ?? detailToMessage(detail, xhr.status)));
+    };
+    xhr.onerror = () => {
+      cleanup();
+      reject(new ApiError(STATUS_NETWORK, NETWORK_MESSAGE));
+    };
+    xhr.ontimeout = () => {
+      cleanup();
+      reject(new ApiError(STATUS_TIMEOUT, TIMEOUT_MESSAGE));
+    };
+    xhr.onabort = () => {
+      cleanup();
+      reject(new ApiError(STATUS_CANCELLED, 'ยกเลิกแล้ว'));
+    };
+    xhr.send(form);
+  });
+}
+
 const realApi = {
   health: () => request<Health>('/health'),
 
@@ -145,10 +205,10 @@ const realApi = {
   adminLogin: (body: { username: string; password: string }) =>
     request<TokenResponse>('/auth/admin/login', { method: 'POST', json: body }),
 
-  predict: (files: File[], signal?: AbortSignal) => {
+  predict: (files: File[], signal?: AbortSignal, onProgress?: (ratio: number) => void) => {
     const form = new FormData();
     for (const file of files) form.append('files', file, file.name);
-    return request<BatchDetectionResult>('/predict', { method: 'POST', form, timeoutMs: PREDICT_TIMEOUT_MS, signal });
+    return upload<BatchDetectionResult>('/predict', form, { timeoutMs: PREDICT_TIMEOUT_MS, signal, onProgress });
   },
 
   listHistory: (limit = 200) => request<DetectionRecord[]>('/history', { query: { limit } }),

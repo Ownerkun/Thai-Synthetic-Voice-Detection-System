@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { api } from '../api/client';
 import type { Health } from '../api/types';
 import { Icon, type IconName } from '../components/Icon';
@@ -15,9 +15,16 @@ const STEPS: { icon: IconName; title: string; text: string }[] = [
 export function AboutPage() {
   const [health, setHealth] = useState<Health | null>(null);
 
+  const { hash } = useLocation();
+
   useEffect(() => {
     api.health().then(setHealth).catch(() => setHealth(null));
   }, []);
+
+  // มาจากลิงก์ "คะแนนนี้คืออะไร" (/about#read) → เลื่อนไปที่หัวข้ออ่านผล
+  useEffect(() => {
+    if (hash) document.getElementById(hash.slice(1))?.scrollIntoView({ block: 'start' });
+  }, [hash]);
 
   return (
     <div className="stack">
@@ -43,13 +50,14 @@ export function AboutPage() {
         ))}
       </section>
 
-      <section className="card stack-sm">
+      <section className="card stack-sm" id="read">
         <h2>อ่านผลยังไง</h2>
         <div className="about-legend">
           <Gauge value={0.82} verdict="spoof" size={96} />
           <div>
             <p>
-              <strong>เปอร์เซ็นต์ในวงกลม</strong> = โอกาสที่เสียงนี้เป็นเสียง AI (เฉลี่ยจากทุกช่วง) ยิ่งสูงยิ่งน่าสงสัย
+              <strong>เปอร์เซ็นต์ในวงกลม</strong> = คะแนนความน่าสงสัยว่าเป็นเสียง AI (เฉลี่ยจากทุกช่วง) ยิ่งสูงยิ่งน่าสงสัย
+              คะแนนนี้ยังไม่ใช่ความน่าจะเป็นที่วัดเทียบกับข้อมูลจริง จึงใช้เปรียบเทียบกับเกณฑ์เท่านั้น
             </p>
             <p>
               <strong>เกณฑ์ตัดสิน</strong> = เส้นแบ่งที่ผู้ดูแลตั้งไว้ ถ้าคะแนนเฉลี่ยถึงเกณฑ์ ระบบจะบอกว่า 🤖 เสียง AI
@@ -65,6 +73,9 @@ export function AboutPage() {
           <li>
             <span className="tag">อาจตัดต่อ</span> จะขึ้นเมื่อคะแนนแต่ละช่วงต่างกันมาก เช่น บางช่วงเป็นเสียงจริง
             บางช่วงถูกแทรกเสียง AI
+          </li>
+          <li>
+            <span className="tag tag-mid">⚖️ ก้ำกึ่ง</span> จะขึ้นเมื่อคะแนนเฉลี่ยห่างจากเกณฑ์ไม่เกิน 5 จุด ผลแบบนี้ไม่ชัดเจน ควรฟังประกอบ
           </li>
           <li>ผลเป็นการประเมินด้วยสถิติ ไม่ใช่คำตัดสินที่ถูก 100% ควรใช้ประกอบกับหลักฐานอื่นเสมอ</li>
         </ul>
@@ -94,7 +105,7 @@ export function AboutPage() {
       <section className="card stack-sm">
         <h2>ข้อจำกัดตอนนี้</h2>
         <ul className="about-list">
-          <li>รองรับเฉพาะไฟล์ .wav และ .flac ขนาดไม่เกิน 20 MB</li>
+          <li>รองรับเฉพาะไฟล์ .wav และ .flac ขนาดไม่เกิน 20 MB ตรวจได้ครั้งละไม่เกิน 10 ไฟล์</li>
           <li>วิเคราะห์ 10 วินาทีแรกของไฟล์เท่านั้น เสียงหลังจากนั้นจะไม่ถูกนำมาคิด</li>
           <li>ยังไม่มีโหมดฟังสดแบบเรียลไทม์</li>
           <li>

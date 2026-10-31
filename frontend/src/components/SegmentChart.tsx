@@ -1,5 +1,6 @@
 import type { SegmentResult } from '../api/types';
 import { pct } from '../lib/format';
+import { Icon } from './Icon';
 
 interface Props {
   segments: SegmentResult[];
@@ -29,6 +30,11 @@ export function SegmentChart({ segments, threshold, onPlay, playingIndex }: Prop
               style={{ height: `${Math.max(s.spoof_probability * 100, 2)}%` }}
             >
               <span className="segchart-value">{pct(s.spoof_probability, 0)}</span>
+              {onPlay && (
+                <span className="segchart-play" aria-hidden>
+                  <Icon name={playingIndex === s.index ? 'pause' : 'play'} size={10} />
+                </span>
+              )}
             </div>
           );
           return onPlay ? (

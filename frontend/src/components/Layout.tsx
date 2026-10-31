@@ -1,4 +1,4 @@
-import { NavLink, Outlet, useNavigate } from 'react-router-dom';
+import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
 import { useTheme } from '../lib/theme';
 import { HealthBanner } from './HealthBanner';
@@ -9,12 +9,17 @@ interface NavItem {
   label: string;
   icon: IconName;
   end?: boolean;
+  /** path อื่นที่นับว่าอยู่เมนูนี้ด้วย */
+  also?: string[];
 }
 
 export function Layout() {
   const { role, signOut } = useAuth();
   const { theme, toggle } = useTheme();
   const navigate = useNavigate();
+  const { pathname } = useLocation();
+  const activeClass = (item: NavItem) => ({ isActive }: { isActive: boolean }) =>
+    isActive || item.also?.some((p) => pathname.startsWith(p)) ? 'active' : '';
 
   const logout = () => {
     signOut();
@@ -23,7 +28,11 @@ export function Layout() {
 
   const items: NavItem[] = [{ to: '/', label: 'ตรวจเสียง', icon: 'wave', end: true }];
   if (role === 'user') {
-    items.push({ to: '/history', label: 'ประวัติ', icon: 'clock' }, { to: '/feedback', label: 'Feedback', icon: 'heart' }, { to: '/profile', label: 'โปรไฟล์', icon: 'user' });
+    // เมนูล่างเหลือ 4 ปุ่ม: "ผลที่ฉันโหวต" เป็นแท็บในหน้าประวัติ
+    items.push(
+      { to: '/history', label: 'ประวัติ', icon: 'clock', also: ['/feedback'] },
+      { to: '/profile', label: 'โปรไฟล์', icon: 'user' },
+    );
   }
   if (role === 'admin') items.push({ to: '/admin', label: 'แดชบอร์ด', icon: 'shield' });
   items.push({ to: '/about', label: 'เกี่ยวกับ', icon: 'info' });
@@ -45,7 +54,7 @@ export function Layout() {
 
           <nav className="nav-pills" aria-label="เมนูหลัก">
             {items.map((item) => (
-              <NavLink key={item.to} to={item.to} end={item.end}>
+              <NavLink key={item.to} to={item.to} end={item.end} className={activeClass(item)}>
                 <Icon name={item.icon} size={18} />
                 {item.label}
               </NavLink>
@@ -99,7 +108,7 @@ export function Layout() {
       {/* แถบเมนูล่างแบบแอปมือถือ (แสดงเฉพาะจอเล็ก) */}
       <nav className="tabbar" aria-label="เมนูหลัก">
         {items.map((item) => (
-          <NavLink key={item.to} to={item.to} end={item.end}>
+          <NavLink key={item.to} to={item.to} end={item.end} className={activeClass(item)}>
             <Icon name={item.icon} size={22} />
             <span>{item.label}</span>
           </NavLink>

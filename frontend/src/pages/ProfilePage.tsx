@@ -2,6 +2,7 @@ import { useEffect, useState, type FormEvent } from 'react';
 import { api, ApiError } from '../api/client';
 import type { UserProfile } from '../api/types';
 import { Icon } from '../components/Icon';
+import { SkeletonCard } from '../components/Skeleton';
 import { dateTime } from '../lib/format';
 
 type Message = { kind: 'ok' | 'error'; text: string } | null;
@@ -23,7 +24,7 @@ export function ProfilePage() {
   }, []);
 
   if (loadError) return <div className="callout callout-danger">{loadError}</div>;
-  if (!profile) return <p className="muted">กำลังโหลด…</p>;
+  if (!profile) return <SkeletonCard lines={2} />;
 
   const initial = (profile.display_name || profile.email).trim().charAt(0).toUpperCase();
 

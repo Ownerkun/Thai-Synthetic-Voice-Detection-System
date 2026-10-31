@@ -4,6 +4,7 @@ import type { AdminUser, AdminUserList, StatsOverview, Threshold } from '../api/
 import { Link } from 'react-router-dom';
 import { Icon, type IconName } from '../components/Icon';
 import { useUi } from '../components/UiProvider';
+import { thaiDate } from '../components/Filters';
 import { AdminTabs } from './AdminDetectionsPages';
 import { dateTime, pct } from '../lib/format';
 
@@ -46,6 +47,7 @@ export function AdminPage() {
         />
       </section>
 
+      <TrendCard />
       <ThresholdCard />
       <UsersCard onChanged={loadStats} />
     </div>
@@ -92,6 +94,76 @@ async function estimateImpact(newValue: number) {
     if (offset >= page.total || page.items.length === 0) break;
   }
   return { checked, toReal, toSpoof };
+}
+
+const TREND_DAYS = 7;
+
+/** จำนวนตรวจรายวัน 7 วันล่าสุด แยกเสียงจริง / AI (A7) คำนวณจาก /admin/detections ไม่ต้องแก้ backend */
+function TrendCard() {
+  const [days, setDays] = useState<{ day: string; real: number; spoof: number }[] | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    (async () => {
+      const keys = Array.from({ length: TREND_DAYS }, (_, i) => thaiDate(i - (TREND_DAYS - 1)));
+      const counts = new Map(keys.map((k) => [k, { day: k, real: 0, spoof: 0 }]));
+      for (let offset = 0; offset < 2000; offset += 200) {
+        const page = await api.listDetections({ limit: 200, offset, date_from: keys[0], date_to: keys[keys.length - 1] });
+        for (const d of page.items) {
+          const withZone = /[zZ]|[+-]\d\d:?\d\d$/.test(d.created_at) ? d.created_at : `${d.created_at}Z`;
+          const key = new Date(new Date(withZone).getTime() + 7 * 3600_000).toISOString().slice(0, 10);
+          const c = counts.get(key);
+          if (c) c[d.verdict] += 1;
+        }
+        if (page.items.length === 0 || offset + 200 >= page.total) break;
+      }
+      setDays([...counts.values()]);
+    })().catch((e) => setError(errText(e, 'โหลดกราฟไม่สำเร็จ')));
+  }, []);
+
+  const max = Math.max(1, ...(days ?? []).map((d) => d.real + d.spoof));
+  const sum = (days ?? []).reduce((a, d) => a + d.real + d.spoof, 0);
+  const label = (iso: string) =>
+    new Date(`${iso}T00:00:00Z`).toLocaleDateString('th-TH', { day: 'numeric', month: 'short', timeZone: 'UTC' });
+
+  return (
+    <section className="card stack-sm">
+      <div className="row between wrap">
+        <h3>
+          <Icon name="chart" size={18} /> จำนวนตรวจ {TREND_DAYS} วันล่าสุด
+        </h3>
+        <span className="segchart-legend" style={{ marginTop: 0 }}>
+          <span>
+            <i className="dot is-spoof" /> เสียง AI
+          </span>
+          <span>
+            <i className="dot is-real" /> เสียงจริง
+          </span>
+        </span>
+      </div>
+      {error && <div className="callout callout-danger">{error}</div>}
+      {!days && !error && <div className="sk sk-line" style={{ height: 140 }} />}
+      {days && (
+        <>
+          <div className="trend" role="img" aria-label={`จำนวนตรวจ ${TREND_DAYS} วันล่าสุด รวม ${sum} ครั้ง`}>
+            {days.map((d) => (
+              <div key={d.day} className="trend-col" title={`${label(d.day)}: เสียง AI ${d.spoof} · เสียงจริง ${d.real}`}>
+                <span className="trend-total">{d.real + d.spoof || ''}</span>
+                <div className="trend-stack" style={{ height: `${((d.real + d.spoof) / max) * 100}%` }}>
+                  {d.spoof > 0 && <span className="trend-spoof" style={{ flexGrow: d.spoof }} />}
+                  {d.real > 0 && <span className="trend-real" style={{ flexGrow: d.real }} />}
+                </div>
+                <span className="trend-day">{label(d.day)}</span>
+              </div>
+            ))}
+          </div>
+          <p className="muted small" style={{ margin: 0 }}>
+            {sum === 0 ? `ยังไม่มีการตรวจใน ${TREND_DAYS} วันล่าสุด` : `รวม ${sum.toLocaleString('th-TH')} ครั้ง (นับตามเวลาไทย)`}
+          </p>
+        </>
+      )}
+    </section>
+  );
 }
 
 function ThresholdCard() {
@@ -325,7 +397,7 @@ function UsersCard({ onChanged }: { onChanged: () => void }) {
       {error && <div className="callout callout-danger">{error}</div>}
 
       <div className="table-wrap">
-        <table className="table">
+        <table className="table cards">
           <thead>
             <tr>
               <th>อีเมล</th>
@@ -340,8 +412,8 @@ function UsersCard({ onChanged }: { onChanged: () => void }) {
           <tbody>
             {data?.items.map((u) => (
               <tr key={u.id}>
-                <td>{u.email}</td>
-                <td>
+                <td data-label="อีเมล">{u.email}</td>
+                <td data-label="ชื่อที่แสดง">
                   {editing?.id === u.id ? (
                     <span className="row">
                       <input
@@ -364,9 +436,9 @@ function UsersCard({ onChanged }: { onChanged: () => void }) {
                     </button>
                   )}
                 </td>
-                <td className="nowrap">{dateTime(u.created_at)}</td>
-                <td className="nowrap">{dateTime(u.last_login_at)}</td>
-                <td className="num">
+                <td data-label="สมัครเมื่อ" className="nowrap">{dateTime(u.created_at)}</td>
+                <td data-label="เข้าระบบล่าสุด" className="nowrap">{dateTime(u.last_login_at)}</td>
+                <td data-label="ตรวจ" className="num">
                   <Link
                     to={`/admin/detections?user_id=${u.id}&user_label=${encodeURIComponent(u.email)}`}
                     title="ดูผลตรวจของผู้ใช้นี้"
@@ -374,7 +446,7 @@ function UsersCard({ onChanged }: { onChanged: () => void }) {
                     {u.detection_count}
                   </Link>
                 </td>
-                <td>
+                <td data-label="สถานะ">
                   <span className={`badge ${u.is_active ? 'badge-real' : 'badge-muted'}`}>
                     {u.is_active ? 'ใช้งานปกติ' : 'ถูกระงับ'}
                   </span>

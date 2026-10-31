@@ -1,10 +1,13 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import { Link, NavLink, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { api, ApiError } from '../api/client';
-import type { AdminDetectionDetail, AdminDetectionFilters, AdminDetectionList, FeedbackFilter, Verdict } from '../api/types';
+import type { AdminDetectionDetail, AdminDetectionFilters, AdminDetectionItem, AdminDetectionList, FeedbackFilter, Verdict } from '../api/types';
 import { thaiDate, useLatestSearchParams } from '../components/Filters';
 import { Icon } from '../components/Icon';
-import { ResultView, VerdictBadge } from '../components/ResultView';
+import { BorderlineTag, ResultView, VerdictBadge } from '../components/ResultView';
+import { SkeletonList } from '../components/Skeleton';
+import { useUi } from '../components/UiProvider';
+import { downloadBlob, toCsv } from '../lib/csv';
 import { dateTime, fileSize, pct, seconds } from '../lib/format';
 
 const PAGE_SIZE = 20;
@@ -72,6 +75,40 @@ function quickFilters(): { label: string; params: Record<string, string> }[] {
 
 const ADVANCED_KEYS = ['email', 'guest', 'partial', 'from', 'to', 'min', 'max', 'model'];
 
+const CSV_MAX_ROWS = 10_000;
+
+/** ดึงผลตรวจทุกหน้าตามตัวกรองปัจจุบัน แล้วแปลงเป็น CSV (A9) */
+async function buildCsv(filters: AdminDetectionFilters): Promise<{ csv: string; count: number; capped: boolean }> {
+  const rows: AdminDetectionItem[] = [];
+  let total = 0;
+  for (let offset = 0; offset < CSV_MAX_ROWS; offset += 200) {
+    const page = await api.listDetections({ ...filters, limit: 200, offset });
+    rows.push(...page.items);
+    total = page.total;
+    if (page.items.length === 0 || offset + 200 >= page.total) break;
+  }
+  const csv = toCsv(
+    ['เวลาตรวจ', 'ไฟล์', 'ผู้ตรวจ', 'ผล', 'คะแนนเฉลี่ย (%)', 'คะแนนสูงสุด (%)', 'เกณฑ์ (%)', 'อาจตัดต่อ', 'Feedback', 'ความยาว (วิ)', 'จำนวนช่วง', 'โมเดล', 'ใช้เวลา (ms)', 'รหัสผลตรวจ'],
+    rows.map((d) => [
+      dateTime(d.created_at),
+      d.original_filename,
+      d.user_email ?? 'ไม่ได้ login',
+      d.verdict === 'spoof' ? 'เสียง AI' : 'เสียงจริง',
+      (d.mean_probability * 100).toFixed(1),
+      (d.max_probability * 100).toFixed(1),
+      (d.threshold_used * 100).toFixed(0),
+      d.possible_partial_spoof ? 'ใช่' : '',
+      d.feedback === 'agree' ? 'เห็นด้วย' : d.feedback === 'disagree' ? 'ไม่เห็นด้วย' : '',
+      d.duration_seconds.toFixed(1),
+      d.num_segments,
+      d.model_version,
+      d.processing_ms,
+      d.id,
+    ]),
+  );
+  return { csv, count: rows.length, capped: rows.length < total };
+}
+
 export function AdminDetectionsPage() {
   const [params, setParams] = useLatestSearchParams();
   const navigate = useNavigate();
@@ -80,6 +117,21 @@ export function AdminDetectionsPage() {
   const [data, setData] = useState<AdminDetectionList | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [exporting, setExporting] = useState(false);
+  const { toast } = useUi();
+
+  const exportCsv = async () => {
+    setExporting(true);
+    try {
+      const { csv, count, capped } = await buildCsv(filters);
+      downloadBlob(new Blob([csv], { type: 'text/csv;charset=utf-8' }), `ผลตรวจ-${thaiDate()}.csv`);
+      toast(capped ? `ดาวน์โหลด ${count.toLocaleString('th-TH')} รายการแรก (สูงสุด ${CSV_MAX_ROWS.toLocaleString('th-TH')})` : `ดาวน์โหลด ${count.toLocaleString('th-TH')} รายการแล้ว`);
+    } catch (e) {
+      toast(e instanceof ApiError ? e.message : 'ดาวน์โหลด CSV ไม่สำเร็จ', 'error');
+    } finally {
+      setExporting(false);
+    }
+  };
 
   // ช่องพิมพ์ใช้ค่าร่างก่อน แล้วค่อยใส่ URL ตอนกดค้นหา (ไม่ยิง API ทุกตัวอักษร)
   const [draft, setDraft] = useState({ q: '', email: '', from: '', to: '', min: '', max: '', model: '' });
@@ -269,6 +321,10 @@ export function AdminDetectionsPage() {
               </button>
             )}
           </div>
+          <div className="row wrap">
+          <button type="button" className="btn btn-ghost btn-small" onClick={exportCsv} disabled={exporting || total === 0}>
+            <Icon name="download" size={14} /> {exporting ? 'กำลังเตรียมไฟล์…' : 'ดาวน์โหลด CSV'}
+          </button>
           <label className="row small">
             <span className="muted">เรียง</span>
             <select value={params.get('sort') ?? 'created_at:desc'} onChange={(e) => update({ sort: e.target.value })}>
@@ -279,6 +335,7 @@ export function AdminDetectionsPage() {
               ))}
             </select>
           </label>
+          </div>
         </div>
         {params.get('user_id') && (
           <div>
@@ -305,9 +362,11 @@ export function AdminDetectionsPage() {
               <span className="empty-emoji">🔍</span>
               ไม่พบผลตรวจที่ตรงกับตัวกรอง
             </div>
+          ) : !data ? (
+            <SkeletonList rows={5} />
           ) : (
             <div className="table-wrap">
-              <table className="table">
+              <table className="table cards">
                 <thead>
                   <tr>
                     <th>เวลา</th>
@@ -326,18 +385,19 @@ export function AdminDetectionsPage() {
                       className="clickable"
                       onClick={() => navigate(`/admin/detections/${d.id}`, { state: { from: location.search } })}
                     >
-                      <td>{dateTime(d.created_at)}</td>
-                      <td className="cell-file" title={d.original_filename}>
+                      <td data-label="เวลา">{dateTime(d.created_at)}</td>
+                      <td data-label="ไฟล์" className="cell-file" title={d.original_filename}>
                         {d.original_filename}
                       </td>
-                      <td>{d.user_email ?? <span className="muted">ไม่ได้ login</span>}</td>
-                      <td>
+                      <td data-label="ผู้ตรวจ">{d.user_email ?? <span className="muted">ไม่ได้ login</span>}</td>
+                      <td data-label="ผล">
                         <VerdictBadge verdict={d.verdict} />
                         {d.possible_partial_spoof && <span className="tag">อาจตัดต่อ</span>}
+                        <BorderlineTag mean={d.mean_probability} threshold={d.threshold_used} />
                       </td>
-                      <td className="num">{pct(d.mean_probability)}</td>
-                      <td>{d.feedback === 'agree' ? '👍' : d.feedback === 'disagree' ? '👎' : <span className="muted">–</span>}</td>
-                      <td className="num">{d.processing_ms} ms</td>
+                      <td data-label="คะแนน AI" className="num">{pct(d.mean_probability)}</td>
+                      <td data-label="Feedback">{d.feedback === 'agree' ? '👍' : d.feedback === 'disagree' ? '👎' : <span className="muted">–</span>}</td>
+                      <td data-label="ใช้เวลา" className="num">{d.processing_ms} ms</td>
                     </tr>
                   ))}
                 </tbody>
@@ -430,6 +490,8 @@ export function AdminDetectionDetailPage() {
         durationSeconds={detail.duration_seconds}
         modelVersion={detail.model_version}
         processingMs={detail.processing_ms}
+        checkedAt={detail.created_at}
+        showTiming
         segments={detail.segments}
       />
 
