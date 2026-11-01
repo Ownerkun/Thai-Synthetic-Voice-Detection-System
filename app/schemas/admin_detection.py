@@ -5,6 +5,7 @@ from uuid import UUID
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from app.schemas.detection import SegmentResultOut
+from app.schemas.feedback import AudioIssue, AudioSource, Environment, FeedbackDetailsOut, SpeakerAccent, SpeakerAgeGroup, TruthBasis
 
 
 class AdminDetectionFilters(BaseModel):
@@ -33,6 +34,14 @@ class AdminDetectionFilters(BaseModel):
     # ช่วงของ mean_probability (ความน่าจะเป็นที่เป็นเสียงปลอมโดยเฉลี่ย) 0.0 - 1.0
     feedback: Literal["agree", "disagree", "none"] | None = Field(
         default=None, description="agree/disagree = ผู้ใช้กด feedback แบบนั้น, none = ยังไม่มี feedback")
+    # --- คำตอบแบบสอบถามของผู้ใช้ (ตรงกับตัวเลือกใน GET /feedback/options) ---
+    # ผลที่ไม่มี feedback หรือผู้ใช้ไม่ได้ตอบข้อนั้น จะไม่ตรงเงื่อนไขเหล่านี้
+    audio_source: AudioSource | None = None
+    environment: Environment | None = None
+    audio_issue: AudioIssue | None = Field(default=None, description="เฉพาะผลที่ผู้ใช้เลือกปัญหานี้ไว้")
+    truth_basis: TruthBasis | None = None
+    speaker_accent: SpeakerAccent | None = None
+    speaker_age_group: SpeakerAgeGroup | None = None
     min_prob: float | None = Field(default=None, ge=0.0, le=1.0)
     max_prob: float | None = Field(default=None, ge=0.0, le=1.0)
 
@@ -77,4 +86,5 @@ class AdminDetectionDetailOut(AdminDetectionItemOut):
     audio_format: str
     feedback_created_at: datetime | None
     feedback_updated_at: datetime | None
+    feedback_details: FeedbackDetailsOut | None  # คำตอบแบบสอบถาม None = ยังไม่มี feedback, มี feedback แต่ไม่ได้ตอบ = object ที่ทุกฟิลด์เป็น null
     segments: list[SegmentResultOut]

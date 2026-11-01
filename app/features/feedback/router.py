@@ -6,7 +6,8 @@ from sqlalchemy.orm import joinedload
 from app.deps import DbSession, get_current_user
 from app.models.detection import Feedback
 from app.models.user import UserAccount
-from app.schemas.feedback import FeedbackHistoryItemOut
+from app.schemas.feedback import FeedbackHistoryItemOut, extract_details
+from app.schemas.feedback_options import NOTICE, QUESTIONS, FeedbackOptionsOut
 
 router = APIRouter(prefix="/feedback", tags=["feedback"])
 
@@ -38,6 +39,11 @@ def list_my_feedback(
             user_agrees=fb.user_agrees,
             created_at=fb.created_at,
             updated_at=fb.updated_at,
+            **extract_details(fb),
         )
         for fb in rows
     ]
+
+@router.get("/options", response_model=FeedbackOptionsOut)
+def get_feedback_options() -> FeedbackOptionsOut:
+    return FeedbackOptionsOut(notice=NOTICE, questions=QUESTIONS)

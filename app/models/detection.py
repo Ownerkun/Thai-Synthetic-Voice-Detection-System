@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime
 
-from sqlalchemy import Boolean, DateTime, Float, ForeignKey, Integer, String, func
+from sqlalchemy import JSON, Boolean, DateTime, Float, ForeignKey, Integer, String, func
 from app.core.types import GUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -73,6 +73,21 @@ class Feedback(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime | None] = mapped_column((DateTime(timezone=True)), nullable=True, onupdate=func.now())
     user_agrees: Mapped[bool] = mapped_column(Boolean, nullable=False)
+
+    # --- แบบสอบถามรายละเอียด (ทุกช่องไม่บังคับ NULL = ผู้ใช้ไม่ได้ตอบข้อนั้น) ---
+    # เก็บเป็น string ธรรมดา ไม่ใช่ DB enum จะได้เพิ่มตัวเลือกใหม่ได้โดยไม่ต้อง migration (ค่าที่ยอมรับตรวจที่ schema)
+    audio_source: Mapped[str | None] = mapped_column(String(30), nullable=True)  # เสียงนี้ได้มาอย่างไร (เช่น เปิดจากอีกเครื่องผ่านลำโพง)
+    input_method: Mapped[str | None] = mapped_column(String(30), nullable=True)  # อัดในเว็บ / อัปโหลดไฟล์
+    environment: Mapped[str | None] = mapped_column(String(30), nullable=True)  # สถานที่อัด
+    mic_distance: Mapped[str | None] = mapped_column(String(30), nullable=True)
+    # none_as_null: ไม่ตอบ = SQL NULL จริง (ไม่งั้น SQLAlchemy เก็บเป็น JSON 'null' แล้ว IS NULL ใช้ไม่ได้) / [] = ตอบว่าไม่มีปัญหา
+    audio_issues: Mapped[list[str] | None] = mapped_column(JSON(none_as_null=True), nullable=True)
+    recording_device: Mapped[str | None] = mapped_column(String(100), nullable=True)  # รุ่นอุปกรณ์ที่ใช้อัด (พิมพ์เอง)
+    playback_device: Mapped[str | None] = mapped_column(String(100), nullable=True)  # รุ่นอุปกรณ์ที่เปิดเสียง (เฉพาะกรณี audio_source = speaker_replay)
+    truth_basis: Mapped[str | None] = mapped_column(String(30), nullable=True)  # ผู้ใช้รู้ได้อย่างไรว่าเสียงนี้จริง/สังเคราะห์ (ความน่าเชื่อถือของ label)
+    speaker_accent: Mapped[str | None] = mapped_column(String(30), nullable=True)
+    speaker_age_group: Mapped[str | None] = mapped_column(String(30), nullable=True)
+    comment: Mapped[str | None] = mapped_column(String(300), nullable=True)
 
     detection: Mapped["DetectionRecord"] = relationship(back_populates="feedback")
     user: Mapped["UserAccount"] = relationship(back_populates="feedbacks")  # type: ignore[name-defined]
