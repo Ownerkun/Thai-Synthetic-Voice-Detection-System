@@ -6,7 +6,7 @@ from sqlalchemy.orm import joinedload
 from app.deps import DbSession, get_current_user
 from app.models.detection import Feedback
 from app.models.user import UserAccount
-from app.schemas.feedback import FeedbackHistoryItemOut
+from app.schemas.feedback import FeedbackHistoryItemOut, extract_details
 
 router = APIRouter(prefix="/feedback", tags=["feedback"])
 
@@ -38,6 +38,7 @@ def list_my_feedback(
             user_agrees=fb.user_agrees,
             created_at=fb.created_at,
             updated_at=fb.updated_at,
+            **extract_details(fb),
         )
         for fb in rows
     ]

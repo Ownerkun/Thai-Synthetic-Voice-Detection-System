@@ -7,7 +7,7 @@ from app.deps import DbSession, get_current_user
 from app.models.detection import DetectionRecord, Feedback
 from app.models.user import UserAccount
 from app.schemas.detection import DetectionDetailOut, DetectionRecordOut, SegmentResultOut
-from app.schemas.feedback import FeedbackOut, FeedbackRequest
+from app.schemas.feedback import FeedbackOut, FeedbackRequest, extract_details
 
 router = APIRouter(prefix="/history", tags=["history"])
 
@@ -55,13 +55,13 @@ def delete_history_item(detection_id: UUID, db: DbSession, user: CurrentUser) ->
 
 @router.post("/{detection_id}/feedback", response_model=FeedbackOut, status_code=status.HTTP_201_CREATED)
 def submit_feedback(detection_id: UUID, payload: FeedbackRequest, db: DbSession, user: CurrentUser) -> Feedback:
-    """UC6: Submit accuracy feedback — login required; guest users cannot give feedback.
-    Feedback.user_id is NOT NULL so it must be tied to an authenticated account."""
     record = _get_owned_record_or_404(db, detection_id, user.id)
     if record.feedback is not None:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Feedback already submitted for this record")
 
-    feedback = Feedback(detection_id=record.id, user_id=user.id, user_agrees=payload.user_agrees)
+    feedback = Feedback(
+        detection_id=record.id, user_id=user.id, user_agrees=payload.user_agrees, **extract_details(payload)
+    )
     db.add(feedback)
     db.commit()
     db.refresh(feedback)
@@ -81,6 +81,8 @@ def update_feedback(detection_id: UUID, payload: FeedbackRequest, db: DbSession,
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No feedback submitted for this record yet. submit it with POST first")
     
     record.feedback.user_agrees = payload.user_agrees
+    for name, value in extract_details(payload).items():  # ข้อที่ไม่ส่งมา = ล้างเป็น None
+        setattr(record.feedback, name, value)
     db.commit()
     db.refresh(record.feedback)
     return record.feedback
