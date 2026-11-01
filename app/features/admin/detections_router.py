@@ -3,6 +3,7 @@ from uuid import UUID
 from datetime import date, datetime, time, timedelta, timezone
 
 from fastapi import APIRouter, Depends, Query, HTTPException, status
+from sqlalchemy import String, cast
 
 from app.deps import DbSession, get_current_admin
 from app.models.admin import AdminAccount
@@ -15,6 +16,7 @@ from app.schemas.admin_detection import (
     AdminDetectionDetailOut
 )
 from app.schemas.detection import SegmentResultOut
+from app.schemas.feedback import FeedbackDetailsOut, extract_details
 
 router = APIRouter(prefix="/detections")
 
@@ -96,6 +98,14 @@ def _apply_filters(query, params: AdminDetectionFilters):
     elif params.feedback == "none":
         query = query.filter(Feedback.id.is_(None))  # outer join แล้วไม่เจอ feedback
 
+    for name in ("audio_source", "environment", "truth_basis", "speaker_accent", "speaker_age_group"):
+        value = getattr(params, name)
+        if value is not None:
+            query = query.filter(getattr(Feedback, name) == value)
+    if params.audio_issue is not None:
+        # audio_issues เป็น JSON list เช่น ["echo", "uneven_volume"] แปลงเป็นข้อความแล้วหา "echo" (ใส่เครื่องหมายคำพูดไว้ให้ตรงทั้งคำ)
+        query = query.filter(cast(Feedback.audio_issues, String).contains(f'"{params.audio_issue}"', autoescape=True))
+
     if params.min_prob is not None:
         query = query.filter(DetectionRecord.mean_probability >= params.min_prob)
     if params.max_prob is not None:
@@ -150,6 +160,7 @@ def get_detection(detection_id: UUID, db: DbSession, _admin: CurrentAdmin) -> Ad
         audio_format=record.audio_format,
         feedback_created_at=feedback.created_at if feedback else None,
         feedback_updated_at=feedback.updated_at if feedback else None,
+        feedback_details=FeedbackDetailsOut(**extract_details(feedback)) if feedback else None,
         segments=[
             SegmentResultOut(
                 index=s.segment_index,
