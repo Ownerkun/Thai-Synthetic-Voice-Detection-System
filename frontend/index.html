@@ -1,0 +1,603 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#FCFAFF" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#171424" media="(prefers-color-scheme: dark)">
+<title>เสียงจริงไหม? — ตรวจเสียง AI</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@200;300;400;500&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#FCFAFF;--surf:#F3EFFC;--line:#E6DFF5;--ink:#2E2A44;--mute:#7E789A;--accent:#8E7CE0;--real:#2E9E78;--fake:#E0626F;--btn:#D3C7F8;--on-btn:#2E2A44;--sky:#D8EDFA;--rose:#FADDE1;--mint:#D6F0E5;--lilac:#E4DCFB;--peach:#FDE6D5;color-scheme:light}
+@media (prefers-color-scheme:dark){:root{--bg:#171424;--surf:#221E34;--line:#352F4D;--ink:#EFEBFA;--mute:#A9A2C4;--accent:#B5A6FF;--real:#6FD3A8;--fake:#FF8D98;--btn:#4A3F82;--on-btn:#F3F0FF;--sky:#1F3A4D;--rose:#4A2A33;--mint:#1F4236;--lilac:#3A3066;--peach:#4A3427;color-scheme:dark}}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font:400 16px/1.75 'IBM Plex Sans Thai','Noto Sans Thai',system-ui,sans-serif}
+b,strong{font-weight:500}
+h1,h2,h3{font-weight:300;margin:0;line-height:1.35}
+h1{font-size:clamp(30px,6vw,44px)}h2{font-size:24px}h3{font-size:18px;font-weight:500}
+p{margin:0}
+button{font:inherit;color:inherit;cursor:pointer}
+svg.i{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round;flex:none}
+.num{font-variant-numeric:tabular-nums}
+.mute{color:var(--mute)}.small{font-size:14px}.center{text-align:center}
+:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+.row{display:flex;gap:16px;align-items:center;flex-wrap:wrap}
+.err{color:var(--fake);margin-top:14px}
+.ok{color:var(--real);margin-top:14px;display:flex;gap:8px;align-items:center}
+
+/* header + navigation */
+.bar{position:sticky;top:0;z-index:5;background:var(--bg);padding-top:env(safe-area-inset-top,0px)}
+.bar>div{max-width:960px;margin:0 auto;display:flex;align-items:center;gap:28px;padding:20px 24px}
+.brand{display:flex;align-items:center;gap:12px;font-size:17px;font-weight:500;margin-right:auto}
+.logo{display:flex;align-items:center;gap:3px;height:24px}
+.logo i{width:2.5px;border-radius:2px;background:var(--ink)}
+.tag{font-size:12px;border:1px solid var(--line);border-radius:999px;padding:0 10px;color:var(--mute);font-weight:400}
+.nav{display:flex;gap:28px}
+.nav button{border:0;background:none;color:var(--mute);padding:6px 0;border-bottom:2px solid transparent}
+.nav button svg{display:none}
+.nav button:hover{color:var(--ink)}
+.nav button.on{color:var(--ink);font-weight:500;border-color:var(--ink)}
+.out{border:0;background:none;color:var(--mute);padding:6px 0}
+.dock{display:none}
+.page{max-width:560px;margin:0 auto;padding:40px 24px 96px}
+.page.wide{max-width:960px}
+@media(max-width:720px){
+  .nav{display:none}
+  .bar>div{padding:14px 20px}
+  .dock{display:flex;position:fixed;left:0;right:0;bottom:0;z-index:5;background:var(--bg);border-top:1px solid var(--line);padding:8px 8px calc(8px + env(safe-area-inset-bottom,0px))}
+  .dock button{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;border:0;background:none;color:var(--mute);font-size:12px;padding:6px 0}
+  .dock button.on{color:var(--ink);font-weight:500}
+  .page{padding:24px 20px 120px}
+}
+
+/* shared parts */
+.card{margin-top:56px;padding-top:28px;border-top:1px solid var(--line)}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:48px;padding:0 28px;border:0;border-radius:999px;background:var(--btn);color:var(--on-btn);font-weight:500}
+.btn.block{width:100%}
+.btn.ghost{background:none;color:var(--ink);border:1px solid var(--line)}
+.btn.ghost:hover{border-color:var(--ink)}
+.btn.sm{min-height:36px;padding:0 18px;font-size:14px}
+.in{width:100%;min-height:48px;padding:10px 0;border:0;border-bottom:1px solid var(--line);border-radius:0;background:none;color:var(--ink);font:inherit}
+.in:focus{outline:none;border-bottom-color:var(--ink);box-shadow:0 1px 0 var(--ink)}
+textarea.in{min-height:96px;resize:vertical;border:1px solid var(--line);border-radius:14px;padding:12px 14px}
+textarea.in:focus{box-shadow:none;border-color:var(--ink)}
+label.f{display:block;margin-top:20px;color:var(--mute);font-size:14px}
+label.f .in{margin-top:2px;color:var(--ink);font-size:16px}
+.pill{display:inline-flex;align-items:center;gap:6px;font-size:14px;color:var(--mute);margin-right:10px}
+.pill::before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor}
+.pill.real{color:var(--real)}.pill.fake{color:var(--fake)}
+.seg2{display:flex;gap:28px;border-bottom:1px solid var(--line)}
+.seg2 button{border:0;background:none;padding:10px 0;color:var(--mute);border-bottom:2px solid transparent;margin-bottom:-1px}
+.seg2 button.on{color:var(--ink);font-weight:500;border-color:var(--ink)}
+.chips{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:28px}
+.chip{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);background:none;border-radius:999px;padding:5px 16px;color:var(--mute)}
+.chip svg.i{width:18px;height:18px}
+.chip:hover{border-color:var(--ink);color:var(--ink)}
+.chip.on{background:var(--ink);border-color:var(--ink);color:var(--bg);font-weight:500}
+.empty{text-align:center;padding:64px 16px;color:var(--mute)}
+.iconbtn{border:0;background:none;color:var(--mute);padding:6px;border-radius:10px}
+.iconbtn:hover{color:var(--fake)}
+
+/* login */
+.login{min-height:100vh;display:grid;place-items:center;padding:48px 24px 200px;position:relative;overflow:hidden}
+.lg{width:100%;max-width:400px;position:relative;z-index:1}
+.bars{position:absolute;left:0;right:0;bottom:0;height:150px;display:flex;align-items:flex-end;gap:6px;padding:0 24px;pointer-events:none}
+.bars i{flex:1;background:color-mix(in srgb,var(--ink) 11%,var(--bg));border-radius:2px 2px 0 0;transform-origin:bottom;animation:rise .9s cubic-bezier(.2,.8,.2,1) both;animation-delay:calc(var(--n)*18ms)}
+@keyframes rise{from{transform:scaleY(.04);opacity:0}to{transform:scaleY(1);opacity:1}}
+
+/* home */
+.stage{margin-top:36px}
+.live{display:block;width:100%;height:84px;margin-top:36px}
+.timer{font-size:72px;font-weight:200;line-height:1;text-align:center;margin-top:12px}
+.rec{position:relative;width:112px;height:112px;border-radius:50%;border:1.5px solid var(--ink);background:none;color:var(--ink);display:grid;place-items:center;margin:28px auto 14px}
+.rec:hover{background:var(--surf)}
+.rec svg.i{width:34px;height:34px}
+.rec.on{border-color:var(--fake);color:var(--fake)}
+.rec.on::after{content:"";position:absolute;inset:-9px;border-radius:50%;border:1px solid var(--fake);animation:ping 1.5s ease-out infinite}
+@keyframes ping{from{opacity:.9;transform:scale(.92)}to{opacity:0;transform:scale(1.2)}}
+.drop{display:grid;place-items:center;gap:8px;text-align:center;border:1px dashed var(--line);border-radius:28px;padding:80px 16px;margin-top:32px;cursor:pointer;position:relative}
+.drop:hover,.drop:focus-within{border-color:var(--ink)}
+.drop input{position:absolute;opacity:0;width:1px;height:1px}
+.drop svg.i{width:32px;height:32px;color:var(--mute)}
+.spin{width:36px;height:36px;border-radius:50%;border:2px solid var(--line);border-top-color:var(--ink);margin:20px auto;animation:sp 1s linear infinite}
+@keyframes sp{to{transform:rotate(360deg)}}
+
+/* result */
+.res{--c:var(--real);margin-top:36px}
+.res.fake{--c:var(--fake)}
+.bignum{font-size:clamp(112px,34vw,200px);font-weight:200;line-height:.95;color:var(--c);letter-spacing:-.04em}
+.bignum small{font-size:.26em;font-weight:300;letter-spacing:0;margin-left:.08em}
+.vword{font-size:26px;font-weight:500;margin-top:14px}
+audio{display:block;width:100%;height:36px;margin-top:28px}
+.scope{margin-top:28px}
+canvas#wave{display:block;width:100%;height:88px}
+.segs{display:flex;gap:4px;margin-top:14px}
+.sg{min-width:0}
+.sg i{display:block;height:6px;border-radius:3px}
+.sg span{display:block;margin-top:6px;font-size:12px;color:var(--mute)}
+.axis{display:flex;justify-content:space-between;font-size:13px;color:var(--mute);margin-top:4px}
+.choices{display:flex;gap:12px;margin-top:16px}
+.choice{flex:1;display:flex;align-items:center;justify-content:center;gap:8px;min-height:48px;border:1px solid var(--line);background:none;border-radius:999px;font-weight:500}
+.choice:hover{border-color:var(--ink)}
+.choice.yes.on{background:var(--real);border-color:var(--real);color:var(--bg)}
+.choice.no.on{background:var(--fake);border-color:var(--fake);color:var(--bg)}
+
+/* history */
+.hlist{margin-top:24px;border-bottom:1px solid var(--line)}
+.hrow{--c:var(--real);display:grid;grid-template-columns:auto 1fr auto auto;gap:16px;align-items:start;padding:22px 0;border-top:1px solid var(--line)}
+.hrow.fake{--c:var(--fake)}
+.hrow .dot{width:8px;height:8px;border-radius:50%;background:var(--c);margin-top:11px}
+.hrow .g{min-width:0;overflow-wrap:anywhere}
+.hrow .sc{text-align:right}
+.bigpct{font-size:40px;font-weight:200;line-height:1.1;color:var(--c)}
+.cmt{margin-top:10px;padding-left:12px;border-left:2px solid var(--line);font-size:14px;color:var(--mute);white-space:pre-wrap;overflow-wrap:anywhere}
+.dbg{margin-top:16px;padding:12px;border:1px dashed var(--line);border-radius:12px;font-size:12px;overflow:auto;white-space:pre-wrap;overflow-wrap:anywhere}
+@media(max-width:560px){.hrow{grid-template-columns:auto 1fr auto}.hrow .iconbtn{grid-column:3;grid-row:2;justify-self:end}}
+
+/* calendar */
+.datewrap{position:relative}
+.cal{position:absolute;top:calc(100% + 8px);left:0;z-index:6;width:300px;max-width:calc(100vw - 40px);background:var(--bg);border:1px solid var(--line);border-radius:20px;padding:16px}
+.calh{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+.calg{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;text-align:center}
+.calg i{font-style:normal;color:var(--mute);font-size:13px;padding:4px 0}
+.day{border:0;background:none;border-radius:999px;min-height:36px;color:var(--ink)}
+.day:hover{background:var(--surf)}
+.day.today{box-shadow:inset 0 0 0 1px var(--ink)}
+.day.sel{background:var(--ink);color:var(--bg);font-weight:500}
+.calf{display:flex;gap:8px;justify-content:space-between;margin-top:12px}
+@media(max-width:720px){.cal{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);width:min(320px,90vw)}}
+
+/* profile */
+.avatar{width:88px;height:88px;border-radius:50%;background:var(--surf);display:grid;place-items:center;font-size:34px;font-weight:200;overflow:hidden}
+.avatar img{width:100%;height:100%;object-fit:cover}
+.dl{margin:20px 0 0}
+.dl div{display:flex;justify-content:space-between;gap:16px;padding:14px 0;border-top:1px solid var(--line)}
+.dl dt{color:var(--mute)}.dl dd{margin:0;text-align:right;overflow-wrap:anywhere}
+
+/* admin */
+.stats{display:grid;grid-template-columns:repeat(4,1fr);margin-top:36px;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+.stat{--c:var(--mute);background:none;border:0;color:inherit;text-align:left;padding:24px 0 24px 24px;display:block;width:100%}
+.stat:first-child{padding-left:0}
+.stat+.stat{border-left:1px solid var(--line)}
+button.stat:hover strong{color:var(--accent)}
+.stat .k{display:flex;align-items:center;gap:8px;color:var(--mute);font-size:14px}
+.stat .k i{width:8px;height:8px;border-radius:50%;background:var(--c)}
+.stat strong{display:block;font-size:56px;font-weight:200;line-height:1.1;margin-top:8px}
+@media(max-width:720px){.stats{grid-template-columns:1fr 1fr}.stat{padding:20px 0 20px 20px}.stat:nth-child(odd){padding-left:0;border-left:0}.stat:nth-child(n+3){border-top:1px solid var(--line)}}
+.ratio{display:flex;height:8px;gap:3px;margin-top:18px}
+.ratio button{border:0;min-width:8px;border-radius:4px;padding:0}
+.ratio .rf{background:var(--fake)}.ratio .rr{background:var(--real)}
+.legend{display:flex;gap:24px;flex-wrap:wrap;margin-top:12px;color:var(--mute);font-size:14px}
+.chart{display:flex;align-items:flex-end;gap:12px;height:160px;margin-top:20px}
+.chart div{flex:1;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;font-size:13px;color:var(--mute);height:100%}
+.chart i{display:block;width:100%;max-width:28px;background:color-mix(in srgb,var(--ink) 16%,var(--bg));border-radius:4px 4px 0 0;margin:6px 0}
+.chart div.today i{background:var(--ink)}
+.chart b{color:var(--ink);font-weight:500}
+.tw{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:15px;min-width:640px}
+th,td{text-align:left;padding:14px 12px 14px 0;border-top:1px solid var(--line);vertical-align:top}
+th{border-top:0;color:var(--mute);font-weight:400;font-size:13px}
+.thbig{font-size:clamp(96px,22vw,140px);font-weight:200;line-height:1;text-align:center;margin-top:20px;letter-spacing:-.04em}
+input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:4px;border-radius:2px;background:linear-gradient(to right,var(--real) 0 var(--x,70%),var(--fake) var(--x,70%) 100%);margin:36px 0 14px}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:24px;height:24px;border-radius:50%;background:var(--bg);border:2px solid var(--ink);cursor:grab}
+input[type=range]::-moz-range-thumb{width:18px;height:18px;border-radius:50%;background:var(--bg);border:2px solid var(--ink)}
+.zones{display:flex;justify-content:space-between;gap:12px;font-size:14px}
+
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important}}
+
+/* pastel colour layer */
+body{background:linear-gradient(180deg,var(--lilac) 0,var(--bg) 320px) no-repeat,var(--bg)}
+.bar{background:color-mix(in srgb,var(--lilac) 90%,transparent);backdrop-filter:blur(8px)}
+.btn{box-shadow:none;transition:none}.btn:hover{background:color-mix(in srgb,var(--btn) 80%,var(--accent))}
+.btn:hover,.btn:active{transform:none;box-shadow:none}
+.btn.ghost{background:var(--surf);border:0}.btn.ghost:hover{background:var(--lilac)}
+.chip{background:var(--surf);border-color:transparent}.chip:hover{background:var(--lilac);color:var(--ink)}
+.chip.on{background:var(--btn);color:var(--on-btn);border-color:transparent}
+.tag{background:var(--surf);border-color:transparent}
+.nav button.on,.seg2 button.on{border-color:var(--accent)}
+.in{border-bottom-color:color-mix(in srgb,var(--accent) 45%,var(--line))}
+.in:focus{border-bottom-color:var(--accent);box-shadow:0 1px 0 var(--accent)}
+textarea.in{background:var(--surf);border-color:transparent;box-shadow:none}textarea.in:focus{border-color:var(--accent);box-shadow:none}
+.drop{background:var(--peach);border:0;color:var(--ink)}.drop:hover{background:color-mix(in srgb,var(--peach) 70%,var(--lilac))}
+.drop svg.i{color:var(--accent);border:0;padding:0;background:none;width:32px;height:32px}
+.rec{background:var(--rose);border:0;color:var(--fake);width:120px;height:120px;box-shadow:none;transition:none}
+.rec:hover,.rec:active{transform:none;box-shadow:none;background:color-mix(in srgb,var(--rose) 70%,var(--lilac))}
+.rec.on{background:var(--fake);color:#fff}.rec svg.i{width:34px;height:34px}
+.live{background:none;border:0;border-radius:0;height:84px;margin-top:36px}
+.timer{font-family:inherit;font-size:72px;font-weight:200}
+.stage{padding:0;background:none;border:0;box-shadow:none;margin-top:36px}
+.stage .seg2{background:none;padding:0;border:0;border-radius:0;border-bottom:1px solid var(--line);gap:28px}
+.seg2{padding:0;border:0;border-radius:0;background:none;border-bottom:1px solid var(--line);gap:28px}
+.seg2 button{flex:none;border:0;border-bottom:2px solid transparent;border-radius:0;padding:10px 0;margin-bottom:-1px;background:none;box-shadow:none}
+.seg2 button.on{background:none;box-shadow:none;border-color:var(--accent);color:var(--ink)}
+.bars i{background:color-mix(in srgb,var(--accent) 22%,var(--bg))}
+.bars i:nth-child(3n){background:color-mix(in srgb,var(--real) 22%,var(--bg))}
+.bars i:nth-child(5n){background:color-mix(in srgb,var(--fake) 20%,var(--bg))}
+.res{background:color-mix(in srgb,var(--c) 12%,var(--bg));border:0;border-radius:32px;padding:28px 24px 24px;margin:36px -8px 0;box-shadow:none}
+.hrow{background:var(--surf);border:0;border-radius:22px;padding:18px 20px;margin-bottom:10px;box-shadow:none}
+.hrow.real{background:var(--mint)}.hrow.fake{background:var(--rose)}
+.hlist{border-bottom:0}
+.cmt{background:color-mix(in srgb,var(--bg) 70%,transparent);border:0;border-radius:12px;padding:8px 12px}
+.cal{box-shadow:0 12px 40px rgba(60,40,110,.16);border-color:transparent}
+.day.sel{background:var(--btn);color:var(--on-btn)}.day:hover{background:var(--lilac)}.day.today{box-shadow:inset 0 0 0 1px var(--accent)}
+.avatar{background:var(--lilac)}
+.dock{background:color-mix(in srgb,var(--lilac) 90%,transparent)}.dock button.on{color:var(--accent)}
+.stats{border:0;gap:12px}
+.stat,.stat:first-child{padding:20px 22px;border:0!important;border-radius:24px;background:var(--surf)}
+.stats>:nth-child(1){background:var(--sky)}.stats>:nth-child(2){background:var(--rose)}.stats>:nth-child(3){background:var(--mint)}.stats>:nth-child(4){background:var(--lilac)}
+.stat+.stat{border-left:0}
+@media(max-width:720px){.stat:nth-child(odd){padding-left:22px}.stat:nth-child(n+3){border-top:0}}
+.ratio .rf{background:var(--fake)}.ratio .rr{background:var(--real)}
+.chart i{background:color-mix(in srgb,var(--accent) 30%,var(--bg))}.chart div.today i{background:var(--accent)}
+.card{margin-top:44px}
+input[type=range]{background:linear-gradient(to right,var(--mint) 0 var(--x,70%),var(--rose) var(--x,70%) 100%);height:8px;border:0;margin:36px 0 14px}
+input[type=range]::-webkit-slider-thumb{width:26px;height:26px;background:var(--bg);border:3px solid var(--accent);box-shadow:none}
+input[type=range]::-moz-range-thumb{width:20px;height:20px;background:var(--bg);border:3px solid var(--accent);box-shadow:none}
+.thbig{font-family:inherit;font-weight:200;color:var(--ink);-webkit-text-stroke:0;text-shadow:none;margin-top:20px}
+.err{background:none;border:0;padding:0;color:var(--fake);border-radius:0}
+.ok{background:none;border:0;padding:0;color:var(--real)}
+
+/* shims for features added later (mascot hidden, plain layout) */
+.mc,.sticker,.hero::before,.hero::after{display:none}
+.logo{display:flex;align-items:center;gap:3px;height:24px;width:auto;border:0;background:none;box-shadow:none;transform:none}
+.logo b{display:flex;align-items:center;gap:3px;height:24px}.logo i{width:2.5px;border-radius:2px;background:var(--accent)}
+.brand{font-family:inherit}
+.hello{display:block}.bubble{background:none;border:0;box-shadow:none;padding:0;margin:0;color:var(--mute);border-radius:0;font-size:16px}
+.hero{background:none;border:0;box-shadow:none;padding:0;display:block}
+.hero h1{margin:6px 0 0}.hero p{color:var(--mute);margin:14px 0 28px}
+.login{display:block;max-width:none;min-height:100vh;padding:48px 24px 200px;position:relative;margin:0}
+.login .hero,.login .lg{max-width:400px;margin:0 auto}.login .hero{margin-top:28px;text-align:left}
+.lg{position:relative;z-index:1;margin-top:20px}.lg>.brand{display:none}.hero::before{display:none}
+.lg .card{margin-top:0;padding:0;border:0;box-shadow:none;background:none}
+.login::after{content:"";position:absolute;left:0;right:0;bottom:0;height:150px;background:repeating-linear-gradient(90deg,color-mix(in srgb,var(--accent) 22%,var(--bg)) 0 10px,transparent 10px 20px,color-mix(in srgb,var(--real) 22%,var(--bg)) 20px 30px,transparent 30px 44px,color-mix(in srgb,var(--fake) 20%,var(--bg)) 44px 54px,transparent 54px 70px);-webkit-mask:linear-gradient(0deg,#000,transparent);mask:linear-gradient(0deg,#000,transparent);pointer-events:none;opacity:.8}
+.reshead{display:block}.reshead>div{display:flex;flex-direction:column-reverse}
+.vword{background:none;border:0;border-radius:0;box-shadow:none;transform:none;padding:0;font-family:inherit;font-size:26px;font-weight:500;margin-top:14px}
+.bignum{font-family:inherit;font-size:clamp(112px,34vw,200px);font-weight:200;color:var(--c);-webkit-text-stroke:0;text-shadow:none;letter-spacing:-.04em;line-height:.95;margin:0}
+.bignum small{-webkit-text-stroke:0;font-weight:300}
+.resmeta{color:var(--mute);margin-top:4px;opacity:1}
+.warn{border:0;background:var(--peach);border-radius:12px}
+.scope{background:none;border:0;padding:0;border-radius:0;margin-top:28px}
+.sg i{border:0;height:6px;border-radius:3px}.sg span{text-align:left;font-weight:400;color:var(--mute)}
+.choice{background:var(--surf);border:0;box-shadow:none;border-radius:999px;transition:none}
+.choice:hover,.choice.yes.on,.choice.no.on{transform:none;box-shadow:none}
+.choice.yes.on{background:var(--mint)}.choice.no.on{background:var(--rose)}
+.hrow .dot{width:10px;height:10px;border:0;background:var(--c);margin-top:10px;display:block}.hrow .dot svg{display:none}
+.bigpct{font-family:inherit;font-weight:200;font-size:40px;-webkit-text-stroke:0}
+.pill{border:0;background:var(--surf);padding:0 10px;margin:0 6px 4px 0;border-radius:999px}.pill.real{background:var(--mint)}.pill.fake{background:var(--rose)}
+.cmt{border:0}
+.empty .mc{display:none}
+.stage.center::before{content:"";display:block;width:36px;height:36px;border-radius:50%;border:2px solid var(--line);border-top-color:var(--accent);margin:20px auto;animation:sp 1s linear infinite}
+.stat strong,.stat .k i{font-family:inherit}.stat strong{font-weight:200;font-size:56px}
+.stat .k i{border:0;width:8px;height:8px}
+.pctbadge{font-family:inherit;font-weight:300;-webkit-text-stroke:0;font-size:28px}
+.agree{background:var(--peach);border:0;border-radius:14px}.agree b{font-family:inherit;font-weight:500}
+.stat .sub{border:0;border-radius:999px;padding:0 10px;background:color-mix(in srgb,var(--bg) 60%,transparent)}
+.pwd{position:relative;display:block}.pwd .in{padding-right:48px}
+.eye{position:absolute;right:4px;top:50%;transform:translateY(-50%);border:0;background:none;border-radius:10px;padding:5px;color:var(--mute);display:grid;place-items:center}
+.eye:hover,.eye.on{color:var(--accent)}
+label.f .pwd{margin-top:2px}label.f .pwd .in{margin-top:0}
+.linkbtn{border:0;background:none;padding:0;color:var(--mute);font-size:14px;text-decoration:underline;text-underline-offset:3px}.linkbtn:hover{color:var(--accent)}
+.pl{margin-top:8px}.pl audio{margin-top:0;height:36px;min-width:220px}.pl .nofile{margin-top:6px;max-width:260px}
+audio{border-radius:999px}
+.tag{font-family:inherit}
+h1,h2,h3,.disp{font-family:inherit;font-weight:300}h3{font-weight:500}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important}}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script>
+// ===== ตั้งค่า: แก้ที่อยู่ของ backend ตรงนี้ =====
+const API=window.API_BASE||'http://localhost:8000';
+
+const $=s=>document.querySelector(s),esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const D=d=>d.toLocaleDateString('th-TH',{day:'numeric',month:'short',year:'numeric'}),T=d=>d.toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit'});
+const dk=d=>d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+const mmss=s=>Math.floor(s/60)+':'+String(s%60).padStart(2,'0');
+const store={get:k=>{try{return sessionStorage.getItem(k)}catch(e){return null}},set:(k,v)=>{try{v==null?sessionStorage.removeItem(k):sessionStorage.setItem(k,v)}catch(e){}}};
+const S={fp:0,fpEmail:'',token:null,user:null,role:'user',page:'home',tab:'rec',phase:'idle',cur:null,rec:null,f:{date:'',res:''},reg:false,err:'',msg:'',loading:false,th:.8,hist:[],adet:[],stats:{},thinfo:{}};
+
+S.cal={open:false,y:new Date().getFullYear(),m:new Date().getMonth()};
+// ===== ชั้นเรียก API =====
+async function api(path,o={}){
+  const h={};if(S.token)h.Authorization='Bearer '+S.token;if(o.body)h['Content-Type']='application/json';
+  let r;try{r=await fetch(API+path,{method:o.method||'GET',headers:h,body:o.form||(o.body?JSON.stringify(o.body):undefined)})}
+  catch(e){throw new Error('เชื่อมต่อ API ที่ '+API+' ไม่ได้ ตรวจว่า backend เปิดอยู่และตั้ง CORS ไว้แล้ว')}
+  if(r.status==401&&S.token&&!o.noAuthRedirect){logout();throw new Error('เซสชันหมดอายุ โปรดเข้าสู่ระบบใหม่')}
+  const t=await r.text();let j=null;try{j=t?JSON.parse(t):null}catch(e){}
+  if(!r.ok){let m=j&&(j.detail||j.message);if(Array.isArray(m))m=m.map(x=>x.msg).join(' ');throw new Error(typeof m=='string'&&m?m:'เกิดข้อผิดพลาด ('+r.status+')')}
+  return j}
+// ===== แปลงชื่อ field จาก backend เป็นรูปแบบที่ UI ใช้ (ปรับตาม schema จริงได้ที่นี่ที่เดียว) =====
+const pick=(o,ks)=>{if(!o)return;for(const k of ks)if(o[k]!==undefined&&o[k]!==null)return o[k]};
+const list=j=>Array.isArray(j)?j:(j&&(j.items||j.results||j.data||j.detections||j.history||j.predictions||j.files))||[];
+const UU=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+function uuidIn(o,d=0){if(!o||typeof o!='object'||d>3)return;const ks=Object.keys(o).filter(k=>!/user|owner|account/i.test(k));
+  for(const k of ks)if(typeof o[k]=='string'&&UU.test(o[k])&&/id/i.test(k))return o[k];
+  for(const k of ks){const r=uuidIn(o[k],d+1);if(r)return r}}
+function deep(o,re,ok,d=0){if(!o||typeof o!='object'||Array.isArray(o)||d>3)return;
+  for(const k of Object.keys(o)){const v=o[k];if(re.test(k)&&!/thresh|index|class|version|id$/i.test(k)&&ok(v))return v}
+  for(const k of Object.keys(o)){const r=deep(o[k],re,ok,d+1);if(r!==undefined)return r}}
+function norm(x){
+  const fb0=pick(x,['feedback','user_feedback']),fb=Array.isArray(fb0)?fb0[0]:fb0,lbv=[x.label,x.result,x.prediction,x.verdict,x.result&&x.result.label,x.prediction&&x.prediction.label].find(v=>typeof v=='string'),lb=lbv?lbv.toLowerCase():'',
+    th=pick(x,['threshold','threshold_used']),sg0=pick(x,['segment_scores','segments','scores']),sg=Array.isArray(sg0)?sg0:[];
+  let sc=pick(x,['spoof_score','score','spoof_probability','probability','mean_probability']);
+  if(sc===undefined)sc=deep(x,/spoof|score|prob|confidence/i,v=>typeof v=='number'&&v>=0&&v<=100);
+  sc=+sc||0;if(sc>1)sc=sc/100;
+  return{id:(v=>UU.test(String(v))?v:uuidIn(x))(pick(x,['id','detection_id','history_id','record_id','uuid'])),raw:x,name:String(pick(x,['filename','file_name','original_filename','name'])||'ไฟล์เสียง').replace(/\.(webm|wav|mp3|m4a|ogg|flac|aac|opus|mp4)$/i,''),score:sc,
+    dur:Math.round(+pick(x,['duration_sec','duration','duration_seconds'])||0),at:new Date(pick(x,['created_at','timestamp','detected_at'])||Date.now()),
+    agree:pick(x,['user_agrees','agree'])??(fb?pick(fb,['user_agrees','agree']):undefined)??deep(x,/agree/i,v=>typeof v=='boolean')??null,comment:x.comment||(fb&&fb.comment)||deep(x,/comment/i,v=>typeof v=='string'&&v.trim()!=='')||'',scores:sg.map(s=>+(s&&typeof s=='object'?(s.spoof_probability??s.score??s.probability):s)),segs:sg.filter(s=>s&&typeof s=='object'&&s.end_seconds!==undefined).map(s=>({s:+s.start_seconds||0,e:+s.end_seconds||0})),partial:!!x.possible_partial_spoof,maxp:+x.max_probability||0,
+    fake:lb?/spoof|fake|synth/.test(lb):undefined,th:th!==undefined?+th:undefined,email:pick(x,['user_email','email'])||(x.user&&x.user.email)||'ผู้เยี่ยมชม'}}
+const thTxt=d=>d.th!==undefined?d.th.toFixed(2):'–';
+const isF=d=>d.fake!==undefined?d.fake:d.score>=(d.th||S.th);
+const uname=u=>pick(u,['name','full_name','display_name'])||String(u.email||'').split('@')[0];
+const since=u=>{const v=pick(u,['created_at','createdAt','member_since']);return v?D(new Date(v)):'ไม่ระบุ'};
+const pct=v=>v===undefined?'–':(v<=1?v*100:v).toFixed(1)+'%';
+
+const pill=d=>isF(d)?'<span class="pill fake">สังเคราะห์</span>':'<span class="pill real">เสียงจริง</span>';
+const fbp=d=>d.agree===null?'<span class="pill">ยังไม่ระบุ</span>':d.agree?'<span class="pill real">ผลถูกต้อง</span>':'<span class="pill fake">ผลไม่ถูกต้อง</span>';
+const filt=l=>l.filter(d=>(!S.f.date||dk(d.at)==S.f.date)&&(!S.f.res||(isF(d)?'fake':'real')==S.f.res));
+const errBox=()=>S.err?`<div class="err" role="alert">${esc(S.err)}</div>`:'';
+const IC={
+  mic:'<rect x="9" y="3" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/>',
+  clock:'<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
+  user:'<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>',
+  grid:'<rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/>',
+  sliders:'<path d="M4 7h10M18 7h2M4 17h2M10 17h10"/><circle cx="16" cy="7" r="2"/><circle cx="8" cy="17" r="2"/>',
+  stop:'<rect x="6" y="6" width="12" height="12" rx="2" fill="currentColor"/>',
+  upload:'<path d="M12 16V4M7 9l5-5 5 5M4 20h16"/>',
+  check:'<path d="M5 12.5l4.5 4.5L19 7"/>',
+  cross:'<path d="M6 6l12 12M18 6L6 18"/>',
+  trash:'<path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/>',
+  cal:'<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/>',
+  play:'<path d="M8 5v14l11-7z" fill="currentColor"/>',
+  eye:'<path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/>',
+  left:'<path d="M15 6l-6 6 6 6"/>',right:'<path d="M9 6l6 6-6 6"/>'};
+const ic=n=>`<svg class="i" viewBox="0 0 24 24" aria-hidden="true">${IC[n]}</svg>`;
+const NAV={user:[['home','mic','ตรวจเสียง'],['hist','clock','ประวัติ'],['prof','user','โปรไฟล์']],admin:[['dash','grid','ภาพรวม'],['hist','clock','ประวัติการตรวจ'],['th','sliders','เกณฑ์ตัดสิน']]};
+const MOUTH={idle:'<path d="M66 100 Q80 113 94 100" fill="none" stroke="var(--bd)" stroke-width="4"/>',
+ listen:'<ellipse cx="80" cy="106" rx="8" ry="10" fill="var(--paper)" stroke="var(--bd)" stroke-width="4"/>',
+ busy:'<circle cx="80" cy="104" r="5" fill="var(--bd)"/>',
+ real:'<path d="M62 96 Q80 124 98 96Z" fill="var(--paper)" stroke="var(--bd)" stroke-width="4"/>',
+ fake:'<path d="M60 106 l7 -8 l7 8 l7 -8 l7 8 l7 -8 l5 8" fill="none" stroke="var(--bd)" stroke-width="4"/>'};
+const EYES={idle:'<circle cx="60" cy="78" r="7" fill="var(--bd)"/><circle cx="100" cy="78" r="7" fill="var(--bd)"/>',
+ listen:'<circle cx="60" cy="76" r="10" fill="var(--paper)" stroke="var(--bd)" stroke-width="4"/><circle cx="100" cy="76" r="10" fill="var(--paper)" stroke="var(--bd)" stroke-width="4"/><circle cx="62" cy="77" r="4" fill="var(--bd)"/><circle cx="102" cy="77" r="4" fill="var(--bd)"/>',
+ busy:'<circle cx="60" cy="74" r="7" fill="var(--bd)"/><circle cx="100" cy="74" r="7" fill="var(--bd)"/><circle cx="62" cy="71" r="2.4" fill="var(--paper)"/><circle cx="102" cy="71" r="2.4" fill="var(--paper)"/>',
+ real:'<path d="M50 82 Q60 66 70 82" fill="none" stroke="var(--bd)" stroke-width="4.5"/><path d="M90 82 Q100 66 110 82" fill="none" stroke="var(--bd)" stroke-width="4.5"/>',
+ fake:'<path d="M50 74 L70 78" stroke="var(--bd)" stroke-width="4.5"/><path d="M90 70 L112 62" stroke="var(--bd)" stroke-width="4.5"/><circle cx="62" cy="86" r="6" fill="var(--bd)"/><circle cx="102" cy="86" r="6" fill="var(--bd)"/>'};
+const mascot=(m,sz)=>`<svg class="mc ${m}" viewBox="0 0 160 150" style="${sz?'--s:'+sz+'px':''}" aria-hidden="true"><g fill="none" stroke="var(--bd)" stroke-width="4.5" stroke-linecap="round"><path d="M62 26V14"/><path d="M80 22V4"/><path d="M98 26V12"/></g><path class="body" d="M20 100C10 50 45 22 80 24c38 2 70 26 62 74-4 30-30 42-62 42-32 0-56-10-60-40Z" stroke="var(--bd)" stroke-width="4.5"/>${m=='fake'?'':'<circle cx="44" cy="100" r="7" fill="var(--rose)" opacity=".7"/><circle cx="116" cy="100" r="7" fill="var(--rose)" opacity=".7"/>'}${EYES[m]}${MOUTH[m]}</svg>`;
+const logo=()=>`<span class="logo" aria-hidden="true"><b>${[8,15,20,11,16].map(h=>`<i style="height:${h}px"></i>`).join('')}</b></span>`;
+const MTH=['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'],WD=['อา','จ','อ','พ','พฤ','ศ','ส'];
+function calHTML(){
+  const y=S.cal.y,m=S.cal.m,first=new Date(y,m,1).getDay(),days=new Date(y,m+1,0).getDate(),today=dk(new Date());
+  let cells='';for(let i=0;i<first;i++)cells+='<span></span>';
+  for(let n=1;n<=days;n++){const k=y+'-'+String(m+1).padStart(2,'0')+'-'+String(n).padStart(2,'0');cells+=`<button class="day ${k==S.f.date?'sel':''} ${k==today?'today':''}" data-day="${k}">${n}</button>`}
+  return `<div class="cal" role="dialog" aria-label="เลือกวันที่"><div class="calh"><button class="iconbtn" data-cal="-1" aria-label="เดือนก่อนหน้า">${ic('left')}</button><b>${MTH[m]} ${y+543}</b><button class="iconbtn" data-cal="1" aria-label="เดือนถัดไป">${ic('right')}</button></div><div class="calg">${WD.map(w=>`<i>${w}</i>`).join('')}${cells}</div><div class="calf"><button class="btn ghost sm" data-day="${today}">วันนี้</button><button class="btn ghost sm" data-day="">ล้างวันที่</button></div></div>`}
+const filterBar=()=>{const on=S.f.date||S.f.res;
+  return `<div class="chips">${[['','ทั้งหมด'],['real','เสียงจริง'],['fake','เสียงสังเคราะห์']].map(c=>`<button class="chip ${S.f.res==c[0]?'on':''}" data-chip="${c[0]}">${c[1]}</button>`).join('')}<div class="datewrap"><button class="chip ${S.f.date?'on':''}" data-cal="toggle" aria-haspopup="dialog">${ic('cal')}${S.f.date?D(new Date(S.f.date+'T00:00:00')):'เลือกวันที่'}</button>${S.cal.open?calHTML():''}</div>${on?'<button class="btn ghost sm" data-act="clr">ล้างตัวกรอง</button>':''}</div>`};
+
+function render(){
+  const a=$('#app');if(!S.user){a.innerHTML=loginV();return}
+  const adm=S.role=='admin',nav=NAV[adm?'admin':'user'],btns=cls=>nav.map(p=>`<button data-go="${p[0]}" class="${S.page==p[0]?'on':''}">${ic(p[1])}${p[2]}</button>`).join('');
+  const v=S.loading?'<p class="mute">กำลังโหลดข้อมูลจากระบบ</p>':{home:homeV,hist:adm?aHistV:uHistV,prof:profV,dash:dashV,th:thV}[S.page]();
+  a.innerHTML=`<header class="bar"><div><div class="brand">${logo()}เสียงจริงไหม?${adm?'<span class="tag">ผู้ดูแล</span>':''}</div><nav class="nav" aria-label="เมนูหลัก">${btns()}</nav>${adm?'<button class="out" data-act="out">ออกจากระบบ</button>':''}</div></header>
+  <main class="page ${adm?'wide':''}">${v}</main><nav class="dock" aria-label="เมนูหลัก">${btns()}</nav>`;
+  if(S.phase=='done'&&S.page=='home'&&$('#wave'))draw();
+  if(S.page=='home'&&!S.rec&&$('#live'))drawLive();
+}
+function fpCard(){
+  const em=esc(S.fpEmail||'');
+  if(S.fp==3)return `<div class="card center"><div style="display:grid;justify-items:center">${mascot('real',100)}</div><h2 style="margin-top:8px">ตั้งรหัสผ่านใหม่แล้ว</h2><p class="mute" style="margin-top:6px">ใช้รหัสใหม่เข้าสู่ระบบได้เลย</p><button class="btn block" style="margin-top:20px" data-act="fpback">ไปหน้าเข้าสู่ระบบ</button></div>`;
+  if(S.fp==2)return `<div class="card"><h2>ใส่รหัสยืนยัน</h2><p class="mute small" style="margin-top:6px">ถ้ามีอีเมล ${em} ในระบบ เราส่งรหัส 6 หลักไปให้แล้ว</p>
+  <label class="f">รหัสยืนยัน<input class="in" id="fc" inputmode="numeric" autocomplete="one-time-code" maxlength="12" placeholder="เช่น 123456"></label>
+  <label class="f">รหัสผ่านใหม่ (อย่างน้อย 8 ตัว)<span class="pwd"><input class="in" id="f1" type="password" autocomplete="new-password"><button type="button" class="eye" data-eye aria-label="แสดงหรือซ่อนรหัสผ่าน">${ic('eye')}</button></span></label>
+  <label class="f">ยืนยันรหัสผ่านใหม่<span class="pwd"><input class="in" id="f2" type="password" autocomplete="new-password"><button type="button" class="eye" data-eye aria-label="แสดงหรือซ่อนรหัสผ่าน">${ic('eye')}</button></span></label>
+  ${errBox()}<button class="btn block" style="margin-top:22px" data-act="fpreset">ตั้งรหัสผ่านใหม่</button>
+  <p class="center" style="margin-top:14px"><button class="btn ghost sm" data-act="fpsend">ส่งรหัสอีกครั้ง</button> <button class="btn ghost sm" data-act="fpback">กลับ</button></p></div>`;
+  return `<div class="card"><h2>ลืมรหัสผ่าน</h2><p class="mute small" style="margin-top:6px">กรอกอีเมลที่สมัครไว้ ระบบจะส่งรหัสยืนยันให้ เพื่อตั้งรหัสผ่านใหม่ รหัสเดิมดูย้อนหลังไม่ได้เพราะเก็บแบบเข้ารหัส</p>
+  <label class="f">อีเมล<input class="in" id="fe" type="email" autocomplete="username" value="${em}"></label>
+  ${errBox()}<button class="btn block" style="margin-top:22px" data-act="fpsend">ส่งรหัสยืนยัน</button>
+  <p class="center" style="margin-top:14px"><button class="btn ghost sm" data-act="fpback">กลับไปเข้าสู่ระบบ</button></p></div>`}
+function loginV(){
+  const adm=S.role=='admin';
+  return `<div class="login"><div class="hero">${mascot('idle')}<span class="sticker">ตรวจเสียงภาษาไทย</span><h1>เสียงนี้คนพูดจริง<br>หรือ AI สร้างขึ้น</h1><p>อัปไฟล์หรืออัดเสียงสั้น ๆ แล้วรู้ผลทันทีไม่กี่วินาที</p></div>
+  <div class="lg"><div class="brand" style="margin:0 0 18px">${logo()}เสียงจริงไหม?</div>${S.fp&&!adm?fpCard():`<div class="card">
+  ${S.reg?`<h2>สมัครสมาชิก</h2>`:`<div class="seg2"><button data-role="user" class="${!adm?'on':''}">ผู้ใช้ทั่วไป</button><button data-role="admin" class="${adm?'on':''}">ผู้ดูแล</button></div>`}
+  <label class="f">${adm?'ชื่อผู้ใช้':'อีเมล'}<input class="in" id="em" ${adm?'':'type="email"'} autocomplete="username"></label>
+  <label class="f">รหัสผ่าน<span class="pwd"><input class="in" id="pw" type="password" autocomplete="current-password"><button type="button" class="eye" data-eye aria-label="แสดงหรือซ่อนรหัสผ่าน">${ic('eye')}</button></span></label>
+  ${!adm&&!S.reg?`<p style="margin-top:10px;text-align:right"><button class="linkbtn" data-act="fp">ลืมรหัสผ่าน?</button></p>`:''}${errBox()}<button class="btn block" style="margin-top:22px" data-act="${S.reg?'reg':'in'}">${S.reg?'สมัครสมาชิก':'เข้าสู่ระบบ'}</button>
+  ${adm?'':`<p class="center" style="margin-top:14px"><button class="btn ghost sm" data-act="tgl">${S.reg?'มีบัญชีแล้ว เข้าสู่ระบบ':'ยังไม่มีบัญชี สมัครสมาชิก'}</button></p>`}</div>`}</div></div>`}
+function homeV(){
+  let b='';
+  if(S.phase=='busy')b=`<div class="stage center" style="padding:28px 20px"><div style="display:grid;justify-items:center">${mascot('busy',130)}</div><h3 style="margin-top:12px">น้องคลื่นกำลังฟังอยู่</h3><p class="mute">กำลังวิเคราะห์เสียง รอสักครู่นะ</p></div>`;
+  else if(S.phase=='done')b=resV();
+  else b=`<div class="stage"><div class="seg2"><button data-tab="rec" class="${S.tab=='rec'?'on':''}">อัดเสียง</button><button data-tab="up" class="${S.tab=='up'?'on':''}">อัปโหลดไฟล์</button></div>
+  ${S.tab=='rec'?`<canvas id="live" class="live" aria-hidden="true"></canvas><div class="timer num" id="rt">${S.rec?mmss(S.rec.sec):'0:00'}</div><button class="rec ${S.rec?'on':''}" data-act="rec" aria-label="${S.rec?'หยุดอัด':'เริ่มอัด'}">${ic(S.rec?'stop':'mic')}</button><p class="center mute small">${S.rec?'กดอีกครั้งเมื่อพูดจบ ระบบจะตรวจให้ทันที':'แตะเพื่อเริ่มอัด พูดอย่างน้อย 4 วินาทีจะได้ผลแม่นขึ้น'}</p>`
+  :`<label class="drop">${ic('upload')}<input type="file" id="fi" accept="audio/*"><b>เลือกไฟล์เสียง หรือลากมาวางตรงนี้</b><span class="mute small">.wav .mp3 .m4a .flac</span></label>`}${errBox()}</div>`;
+  const mood=S.phase=='busy'?'busy':S.rec?'listen':'idle';
+  return `${S.phase=='busy'?'':`<div class="hello">${S.phase=='done'?'':mascot(mood)}<div><div class="bubble">สวัสดี ${esc(uname(S.user))} สมาชิกตั้งแต่ ${since(S.user)}</div></div></div>`}<h1 style="margin-top:${S.phase=='done'?'18':'4'}px">${S.phase=='done'?'ผลการตรวจ':'ตรวจเสียง'}</h1>${b}`}
+function resV(){
+  const d=S.cur,f=isF(d),p=Math.round(d.score*100),th=d.th||S.th,n=d.scores.length,bad=d.scores.filter(s=>s>=th).length,seg=d.segs&&d.segs.length==n;
+  return `<section class="res ${f?'fake':'real'}"><div class="reshead"><div><div class="vword">${f?'เป็นเสียงสังเคราะห์':'เป็นเสียงคนพูดจริง'}</div>
+  <div class="bignum num" role="img" aria-label="คะแนน ${p} เปอร์เซ็นต์">${p}<small>%</small></div></div>${mascot(f?'fake':'real')}</div>
+  <div class="resmeta">${esc(d.name)} ยาว ${mmss(d.dur)} นาที เกณฑ์ตอนตรวจ ${th.toFixed(2)}</div>
+  ${!f&&d.partial?`<div class="warn">แต่มีบางช่วงที่น่าสงสัย (สูงสุด ${Math.round(d.maxp*100)}%)</div>`:''}
+  <audio controls src="${d.url}" aria-label="ฟังไฟล์เสียงที่ตรวจ"></audio>
+  <div class="scope">${d.peaks&&d.peaks.length?'<canvas id="wave"></canvas>':''}${n?`<div class="segs">${d.scores.map((s,k)=>`<div class="sg num" style="flex:${seg?Math.max(d.segs[k].e-d.segs[k].s,.5):1}" title="คะแนนช่วงนี้ ${Math.round(s*100)}%"><i style="background:${s>=th?'var(--fake)':'var(--real)'}"></i><span>${Math.round(s*100)}</span></div>`).join('')}</div><div class="axis num"><span>0:00</span><span>${mmss(d.dur)}</span></div>`:''}</div>
+  ${n?`<p class="small" style="margin-top:12px">ช่วงที่เกินเกณฑ์ ${bad} จาก ${n} ช่วง สีของคลื่นเสียงตามคะแนนแต่ละช่วง</p>`:''}</section>
+  <div class="card"><h3>ผลนี้ถูกต้องไหม</h3>
+  ${d.sent?`<p class="ok">${ic('check')}ส่งความเห็นแล้ว ขอบคุณที่ช่วยให้ระบบแม่นขึ้น</p>`:`<div class="choices"><button class="choice yes ${d.agree===true?'on':''}" data-ag="1">${ic('check')}ถูกต้อง</button><button class="choice no ${d.agree===false?'on':''}" data-ag="0">${ic('cross')}ไม่ถูกต้อง</button></div>
+  <label class="f">ความเห็นเพิ่มเติม (ไม่บังคับ)<textarea class="in" id="cm" rows="3" placeholder="เช่น คลิปนี้บันทึกในห้องที่มีเสียงรบกวน">${esc(d.comment)}</textarea></label>${errBox()}
+  <button class="btn" style="margin-top:20px" data-act="send">ส่งความเห็น</button>`}
+  <p class="small mute" style="margin-top:20px">ผลนี้เป็นเครื่องมือช่วยตัดสินใจเบื้องต้น ไม่ใช่หลักฐานทางกฎหมาย</p></div>
+  <p style="margin-top:32px"><button class="btn block ghost" data-act="again">ตรวจไฟล์อื่น</button></p>`}
+function uHistV(){
+  const l=filt(S.hist);
+  return `<h1>ประวัติการตรวจ</h1>${filterBar()}${errBox()}${typeof location!='undefined'&&location.search.includes('debug')&&S.hist[0]?`<pre class="dbg">รายการจาก /history:\n${esc(JSON.stringify(S.hist[0].raw,null,1))}\n\nรายละเอียดจาก /history/{id}:\n${esc(JSON.stringify(S.hist[0].rawDetail||null,null,1))}</pre>`:''}${l.length?`<div class="hlist">${l.map(d=>{const f=isF(d);return `<div class="hrow ${f?'fake':'real'}"><span class="dot">${ic(f?'cross':'check')}</span><div class="g"><b>${esc(d.name)}</b><div class="small mute">${D(d.at)} ${T(d.at)} น. ยาว ${mmss(d.dur)} เกณฑ์ ${thTxt(d)}</div><div style="margin-top:6px">${pill(d)}${!f&&d.partial?'<span class="pill fake">บางช่วงน่าสงสัย</span>':''}${fbp(d)}</div>${d.comment?`<div class="cmt">${esc(d.comment)}</div>`:''}${playBox(d)}</div><div class="sc"><div class="bigpct num">${Math.round(d.score*100)}%</div><div class="small" style="color:var(--c)">${f?'เสียงสังเคราะห์':'เสียงคนพูดจริง'}</div></div><button class="iconbtn" data-del="${d.id}" aria-label="ลบรายการ ${esc(d.name)}">${ic('trash')}</button></div>`}).join('')}</div>`:`<div class="empty">${mascot('busy',110)}<p>${S.f.date||S.f.res?'ไม่พบรายการตามตัวกรองนี้':'ยังไม่มีรายการ ผลที่ตรวจแล้วจะมาอยู่ที่นี่'}</p><p style="margin-top:14px"><button class="btn" data-go="home">ตรวจเสียง</button></p></div>`}`}
+function profV(){
+  const u=S.user;
+  return `<h1>โปรไฟล์</h1><div class="card"><div class="row"><div class="avatar">${u.img?`<img src="${u.img}" alt="">`:esc((uname(u)[0]||'?').toUpperCase())}</div><div><h3>${esc(uname(u))}</h3><div class="mute">${esc(u.email)}</div></div></div>
+  <p style="margin-top:14px"><label class="btn ghost sm" style="cursor:pointer">เปลี่ยนรูปโปรไฟล์<input type="file" id="av" accept="image/*" style="display:none"></label></p>
+  <dl class="dl"><div><dt>อีเมล</dt><dd>${esc(u.email)}</dd></div><div><dt>สมาชิกตั้งแต่</dt><dd>${since(u)}</dd></div><div><dt>รหัสผ่าน</dt><dd aria-label="ซ่อนไว้" style="letter-spacing:2px;user-select:none">********</dd></div></dl></div>
+  <div class="card"><h3>เปลี่ยนรหัสผ่าน</h3><label class="f">รหัสผ่านปัจจุบัน<span class="pwd"><input class="in" type="password" id="p0" autocomplete="current-password"><button type="button" class="eye" data-eye aria-label="แสดงหรือซ่อนรหัสผ่าน">${ic('eye')}</button></span></label><label class="f">รหัสผ่านใหม่ (อย่างน้อย 8 ตัว)<span class="pwd"><input class="in" type="password" id="p1" autocomplete="new-password"><button type="button" class="eye" data-eye aria-label="แสดงหรือซ่อนรหัสผ่าน">${ic('eye')}</button></span></label><label class="f">ยืนยันรหัสผ่านใหม่<span class="pwd"><input class="in" type="password" id="p2" autocomplete="new-password"><button type="button" class="eye" data-eye aria-label="แสดงหรือซ่อนรหัสผ่าน">${ic('eye')}</button></span></label>
+  ${errBox()}${S.msg?`<div class="ok">${ic('check')}${S.msg}</div>`:''}<button class="btn" style="margin-top:16px" data-act="pw">บันทึกรหัสผ่านใหม่</button></div>
+  <p style="margin-top:20px"><button class="btn block ghost" data-act="out">ออกจากระบบ</button></p>`}
+function dashV(){
+  const A=S.adet,st=S.stats,total=pick(st,['total_detections','total','total_count'])??A.length,fake=pick(st,['spoof_count','total_spoof','spoof_total','synthetic_count'])??A.filter(isF).length,
+    real=pick(st,['real_count','bonafide_count','genuine_count'])??(total-fake),users=pick(st,['total_users','user_count','users'])??'–',
+    days=[...Array(7)].map((_,i)=>{const d=new Date(Date.now()-(6-i)*864e5);return{k:dk(d),l:d.toLocaleDateString('th-TH',{weekday:'short'}),c:A.filter(x=>dk(x.at)==dk(d)).length}}),mx=Math.max(1,...days.map(x=>x.c)),today=dk(new Date());
+  return `<h1>ภาพรวมระบบ</h1><p class="mute">กดที่ตัวเลขหรือแถบสีเพื่อดูรายการเบื้องหลัง</p>${errBox()}
+  <div class="stats"><button class="stat" data-go="hist" data-res=""><span class="k">ตรวจทั้งหมด</span><strong class="num">${total}</strong><span class="sub num">100%</span></button><button class="stat" style="--c:var(--fake)" data-go="hist" data-res="fake"><span class="k"><i></i>เสียงสังเคราะห์</span><strong class="num">${fake}</strong><span class="sub num">${total?Math.round(fake/total*100):0}% ของทั้งหมด</span></button><button class="stat" style="--c:var(--real)" data-go="hist" data-res="real"><span class="k"><i></i>เสียงจริง</span><strong class="num">${real}</strong><span class="sub num">${total?Math.round(real/total*100):0}% ของทั้งหมด</span></button><div class="stat"><span class="k">ผู้ใช้งาน</span><strong class="num">${users}</strong></div></div>
+  <div class="card"><h3>สัดส่วนผลตรวจ</h3>${total>0?`<div class="ratio">${fake>0?`<button class="rf" style="flex:${fake}" data-go="hist" data-res="fake" aria-label="เสียงสังเคราะห์ ${fake} รายการ"></button>`:''}${real>0?`<button class="rr" style="flex:${real}" data-go="hist" data-res="real" aria-label="เสียงจริง ${real} รายการ"></button>`:''}</div><div class="legend num"><span>เสียงสังเคราะห์ ${fake} (${Math.round(fake/total*100)}%)</span><span>เสียงจริง ${real} (${Math.round(real/total*100)}%)</span></div>`:'<p class="mute" style="margin-top:8px">ยังไม่มีผลตรวจ</p>'}</div>
+  <div class="card"><h3>จำนวนการตรวจ 7 วันล่าสุด</h3><div class="chart">${days.map(x=>`<div class="${x.k==today?'today':''}"><b class="num">${x.c}</b><i style="height:${x.c/mx*90+4}px"></i>${x.l}</div>`).join('')}</div></div>
+  <div class="card"><h3>ความเห็นล่าสุดจากผู้ใช้</h3>${(()=>{const v=A.filter(d=>d.agree!==null),y=v.filter(d=>d.agree).length;return v.length?`<p class="agree num"><b>${Math.round(y/v.length*100)}%</b> ของผู้ใช้ที่ให้ความเห็นบอกว่าผลถูกต้อง (${y} จาก ${v.length} รายการ)</p>`:''})()}<div style="margin-top:8px">${A.filter(d=>d.agree!==null||d.comment).slice(0,5).map(d=>`<div class="row" style="justify-content:space-between;padding:14px 0;border-top:1px solid var(--line)"><div style="min-width:0;overflow-wrap:anywhere">${esc(d.email)}<div class="small mute">${T(d.at)} น.</div>${d.comment?`<div class="cmt">${esc(d.comment)}</div>`:''}${playBox(d)}</div><div style="text-align:right"><div class="pctbadge num" style="color:${isF(d)?'var(--fake)':'var(--real)'}">${Math.round(d.score*100)}%</div>${pill(d)}${fbp(d)}</div></div>`).join('')||'<p class="mute">ยังไม่มีความเห็นจากผู้ใช้</p>'}</div></div>`}
+function aHistV(){
+  const l=filt(S.adet);
+  return `<h1>ประวัติการตรวจ</h1>${filterBar()}${errBox()}${typeof location!='undefined'&&location.search.includes('debug')&&S.adet[0]?`<pre class="dbg">${esc(JSON.stringify(S.adet[0].raw,null,1))}</pre>`:''}<div class="card tw"><table><thead><tr><th>เวลา</th><th>ผู้ใช้</th><th>ไฟล์</th><th>ผลตรวจ</th><th>เกณฑ์ตอนตรวจ</th><th>ความเห็นผู้ใช้</th></tr></thead><tbody>${l.map(d=>`<tr><td>${D(d.at)}<br>${T(d.at)} น.</td><td>${esc(d.email)}</td><td>${esc(d.name)}${playBox(d)}</td><td>${pill(d)} <span class="num">${Math.round(d.score*100)}%</span></td><td class="num">${thTxt(d)}</td><td>${fbp(d)}${d.comment?`<div class="cmt">${esc(d.comment)}</div>`:''}</td></tr>`).join('')||'<tr><td colspan="6" class="mute">ไม่พบรายการตามตัวกรองนี้</td></tr>'}</tbody></table></div>`}
+function thV(){
+  const i=S.thinfo,by=pick(i,['updated_by','set_by']),at=pick(i,['updated_at','created_at']),x=((S.th-.5)/.45*100).toFixed(1);
+  return `<h1>เกณฑ์การตัดสินใจ</h1><p class="mute">คะแนนตั้งแต่ค่านี้ขึ้นไปจะถูกตัดสินว่าเป็นเสียงสังเคราะห์ ใช้กับการตรวจครั้งต่อไปเท่านั้น ผลที่ตรวจไปแล้วจะคงเกณฑ์เดิมไว้</p>${errBox()}
+  <div class="thbig num" id="tv">${S.th.toFixed(2)}</div>
+  <input type="range" id="rg" min="0.5" max="0.95" step="0.01" value="${S.th}" style="--x:${x}%" aria-label="ค่า threshold">
+  <div class="zones"><span style="color:var(--real)">ต่ำกว่าค่านี้ ตัดสินว่าเป็นเสียงจริง</span><span style="color:var(--fake);text-align:right">ตั้งแต่ค่านี้ขึ้นไป เป็นเสียงสังเคราะห์</span></div>
+  <div class="zones mute num" style="margin-top:4px"><span>0.50 เข้มงวดน้อย</span><span>เข้มงวดมาก 0.95</span></div>
+  <div class="stats" style="grid-template-columns:1fr 1fr"><div class="stat" style="--c:var(--real)"><span class="k"><i></i>เสียงจริงถูกจับผิด</span><strong class="num">${pct(pick(i,['false_alarm_rate','far','false_alarm']))}</strong></div><div class="stat" style="--c:var(--fake)"><span class="k"><i></i>เสียงปลอมหลุดรอด</span><strong class="num">${pct(pick(i,['miss_rate','frr','miss']))}</strong></div></div>
+  <p class="small mute" style="margin-top:12px">สองช่องนี้แสดงเมื่อ backend ส่งค่ามาให้ ถ้าไม่มีจะขึ้น –</p>
+  ${S.msg?`<div class="ok">${ic('check')}${S.msg}</div>`:''}<button class="btn block" style="margin-top:24px" data-act="th">บันทึกการตั้งค่า</button>
+  <p class="small mute center" style="margin-top:14px">${at?'บันทึกล่าสุดเมื่อ '+D(new Date(at))+' '+T(new Date(at))+' น.'+(by?' โดย '+esc(by):''):'ยังไม่มีข้อมูลเวลาบันทึกล่าสุด'}</p>`}
+
+// ===== โหลดข้อมูล / นำทาง =====
+async function load(){
+  try{S.err='';
+    if(S.role=='admin'){
+      if(S.page=='dash'){const[a,s]=await Promise.all([api('/admin/detections'),api('/admin/stats').catch(()=>({}))]);S.adet=list(a).map(norm);applyLocal(S.adet);S.stats=s||{}}
+      else if(S.page=='hist'){S.adet=list(await api('/admin/detections')).map(norm);applyLocal(S.adet)}
+      else if(S.page=='th'){const t=await api('/admin/threshold');S.thinfo=t||{};S.th=+(pick(t,['value','threshold','current'])??S.th)}
+    }else if(S.page=='hist'){S.hist=list(await api('/history')).map(norm);console.log('ตัวอย่างรายการ /history',S.hist[0]&&S.hist[0].raw);await enrich(S.hist);applyLocal(S.hist)}
+  }catch(e){S.err=e.message}
+}
+S.aurl={};
+const AU={db:null,open(){return this.db||(this.db=new Promise((ok,no)=>{const r=indexedDB.open('vc-audio',1);r.onupgradeneeded=()=>r.result.createObjectStore('a');r.onsuccess=()=>ok(r.result);r.onerror=()=>no(r.error)}))},
+  async put(id,b){try{const db=await this.open();db.transaction('a','readwrite').objectStore('a').put(b,id)}catch(e){}},
+  async get(id){try{const db=await this.open();return await new Promise(ok=>{const r=db.transaction('a').objectStore('a').get(id);r.onsuccess=()=>ok(r.result||null);r.onerror=()=>ok(null)})}catch(e){return null}}};
+async function fetchAudio(id){
+  for(const p of ['/history/'+id+'/audio','/admin/detections/'+id+'/audio','/history/'+id+'/file']){
+    try{const r=await fetch(API+p,{headers:{Authorization:'Bearer '+S.token}});if(r.ok&&/audio|octet/i.test(r.headers.get('content-type')||''))return await r.blob()}catch(e){}}
+  return null}
+async function playAudio(id,b){
+  const box=document.getElementById('pl-'+id);b.disabled=true;const old=b.innerHTML;b.textContent='กำลังโหลด...';
+  let u=S.aurl[id];
+  if(!u){const bl=(await AU.get(id))||(await fetchAudio(id));if(bl)u=S.aurl[id]=URL.createObjectURL(bl)}
+  if(u&&box){box.innerHTML=`<audio controls autoplay src="${u}" aria-label="ฟังเสียงที่ตรวจ"></audio>`;b.remove()}
+  else{b.disabled=false;b.innerHTML=old;if(box)box.insertAdjacentHTML('beforeend','<div class="small mute nofile">ไม่พบไฟล์เสียงของรายการนี้ ระบบเก็บเฉพาะผลตรวจ จะฟังได้เฉพาะเสียงที่ตรวจจากเบราว์เซอร์นี้หลังอัปเดตแล้ว</div>')}}
+const playBox=d=>d.id?`<div class="pl" id="pl-${d.id}">${S.aurl[d.id]?`<audio controls src="${S.aurl[d.id]}" aria-label="ฟังเสียงที่ตรวจ"></audio>`:`<button class="btn ghost sm" data-play="${d.id}">${ic('play')}ฟังเสียง</button>`}</div>`:'';
+const LS={get:id=>{try{return JSON.parse(localStorage.getItem('fb:'+id))}catch(e){return null}},set:(id,v)=>{try{localStorage.setItem('fb:'+id,JSON.stringify(v))}catch(e){}}};
+const applyLocal=a=>a.forEach(d=>{const l=d.id&&LS.get(d.id);if(l){if(d.agree===null)d.agree=l.agree;if(!d.comment)d.comment=l.comment}});
+async function enrich(a){await Promise.all(a.slice(0,30).filter(d=>d.id).map(async d=>{try{const rawDet=await api('/history/'+d.id),det=norm(rawDet);d.rawDetail=rawDet;
+  if(det.score)d.score=det.score;if(det.scores.length)d.scores=det.scores;if(det.agree!==null)d.agree=det.agree;if(det.comment)d.comment=det.comment;if(det.dur)d.dur=det.dur;if(det.fake!==undefined)d.fake=det.fake;if(det.th!==undefined)d.th=det.th;if(det.segs.length)d.segs=det.segs;if(det.maxp)d.maxp=det.maxp;d.partial=det.partial||d.partial}catch(e){}}))}
+async function go(p,res){S.cal.open=false;S.page=p;S.f={date:'',res:res||''};S.err='';S.msg='';S.loading=true;render();await load();S.loading=false;render()}
+async function enter(tok,adm){
+  S.token=tok;S.role=adm?'admin':'user';store.set('tok',tok);store.set('role',S.role);
+  S.user=adm?{name:'ผู้ดูแลระบบ',email:'admin'}:await api('/users/me');
+  S.page=adm?'dash':'home';S.phase='idle';S.cur=null;S.loading=true;render();await load();S.loading=false}
+function logout(){S.token=null;S.user=null;S.page='home';S.phase='idle';S.cur=null;store.set('tok',null);store.set('role',null);render()}
+
+// ===== ตรวจเสียง =====
+function pk(x,n){const o=[],st=Math.floor(x.length/n)||1;for(let i=0;i<n;i++){let m=0;for(let j=i*st;j<Math.min(x.length,(i+1)*st);j+=8)m=Math.max(m,Math.abs(x[j]));o.push(m)}const t=Math.max(...o)||1;return o.map(v=>v/t)}
+function draw(){const c=$('#wave'),r=devicePixelRatio||1,w=c.clientWidth,h=c.clientHeight;c.width=w*r;c.height=h*r;const g=c.getContext('2d');g.scale(r,r);const d=S.cur,P=d.peaks,bw=w/P.length,n=d.scores.length,cs=getComputedStyle(document.documentElement),th=d.th||S.th;
+P.forEach((p,i)=>{const tot=n&&d.segs&&d.segs.length==n?d.segs[n-1].e:0,tt=i/P.length*tot;let k=tot?d.segs.findIndex(g=>tt>=g.s&&tt<g.e):-1;if(k<0)k=Math.min(n-1,Math.floor(i/P.length*n));const s=n?d.scores[k]:d.score;g.fillStyle=cs.getPropertyValue(s>=th?'--fake':'--real').trim();const bh=Math.max(4,p*h*.92);g.beginPath();if(g.roundRect)g.roundRect(i*bw+bw*.22,(h-bh)/2,bw*.56,bh,bw*.28);else g.rect(i*bw+bw*.22,(h-bh)/2,bw*.56,bh);g.fill()})}
+async function toWav(a){
+  const sr=16000,n=Math.max(1,Math.ceil(a.duration*sr)),oc=new OfflineAudioContext(1,n,sr),src=oc.createBufferSource();
+  src.buffer=a;src.connect(oc.destination);src.start();
+  const x=(await oc.startRendering()).getChannelData(0),buf=new ArrayBuffer(44+x.length*2),v=new DataView(buf),w=(o,t)=>[...t].forEach((c,i)=>v.setUint8(o+i,c.charCodeAt(0)));
+  w(0,'RIFF');v.setUint32(4,36+x.length*2,true);w(8,'WAVEfmt ');v.setUint32(16,16,true);v.setUint16(20,1,true);v.setUint16(22,1,true);v.setUint32(24,sr,true);v.setUint32(28,sr*2,true);v.setUint16(32,2,true);v.setUint16(34,16,true);w(36,'data');v.setUint32(40,x.length*2,true);
+  for(let i=0;i<x.length;i++){const t=Math.max(-1,Math.min(1,x[i]));v.setInt16(44+i*2,t<0?t*32768:t*32767,true)}
+  return new Blob([buf],{type:'audio/wav'})}
+async function run(blob,name){
+  S.err='';S.phase='busy';render();
+  try{
+    let a,wav;
+    try{const ax=new(window.AudioContext||window.webkitAudioContext)();a=await ax.decodeAudioData(await blob.arrayBuffer());ax.close&&ax.close();wav=await toWav(a)}
+    catch(e){throw new Error('เบราว์เซอร์อ่านไฟล์เสียงนี้ไม่ได้ ลองไฟล์ .wav หรือ .mp3 ที่ไม่เสียหาย')}
+    const fd=new FormData();fd.append('files',wav,name.replace(/\.[^.]+$/,'')+'.wav');
+    const j=await api('/predict',{method:'POST',form:fd});console.log('คำตอบจาก /predict',j);
+    if(!list(j).length&&!Array.isArray(j)){const ff=j&&j.failed_files;throw new Error('backend ตรวจไฟล์นี้ไม่ได้: '+(ff&&ff.length?JSON.stringify(ff):'ไม่มีผลลัพธ์กลับมา'))}
+    const f0=Array.isArray(j)?j[0]:list(j)[0],x=(f0&&typeof f0=='object')?f0:j,d=norm(x);
+    d.name=String(name).replace(/\.(webm|wav|mp3|m4a|ogg|flac|aac|opus|mp4)$/i,'');d.url=URL.createObjectURL(blob);d.peaks=pk(a.getChannelData(0),64);if(!d.dur)d.dur=Math.round(a.duration);
+    if(d.id){try{const det=norm(await api('/history/'+d.id));if(det.th!==undefined)d.th=det.th;if(det.fake!==undefined)d.fake=det.fake;if(det.scores.length)d.scores=det.scores;if(det.segs.length)d.segs=det.segs}catch(e){}}
+    if(d.id)AU.put(d.id,wav);
+    S.cur=d;S.phase='done'}
+  catch(e){S.phase='idle';S.err=e.message}
+  render()}
+function drawLive(arr){
+  const c=$('#live');if(!c)return;const r=devicePixelRatio||1,w=c.clientWidth,h=c.clientHeight;if(!w)return;
+  c.width=w*r;c.height=h*r;const g=c.getContext('2d');g.scale(r,r);
+  const n=Math.max(16,Math.floor(w/8)),bw=w/n,cs=getComputedStyle(document.documentElement);g.fillStyle=cs.getPropertyValue(arr?'--accent':'--line').trim();
+  for(let i=0;i<n;i++){const v=arr?Math.pow((arr[Math.floor(i/n*arr.length*.6)]||0)/255,1.4):0,bh=Math.max(4,v*h);g.beginPath();if(g.roundRect)g.roundRect(i*bw+bw*.3,(h-bh)/2,bw*.4,bh,2);else g.rect(i*bw+bw*.3,(h-bh)/2,bw*.4,bh);g.fill()}}
+async function rec(){
+  if(S.rec){S.rec.mr.stop();return}
+  try{const st=await navigator.mediaDevices.getUserMedia({audio:true}),mr=new MediaRecorder(st),ch=[];mr.ondataavailable=e=>ch.push(e.data);
+    let ac=null,an=null,buf=null;
+    try{ac=new(window.AudioContext||window.webkitAudioContext)();an=ac.createAnalyser();an.fftSize=128;ac.createMediaStreamSource(st).connect(an);buf=new Uint8Array(an.frequencyBinCount)}catch(e){ac=null;an=null}
+    const tick=()=>{if(!S.rec)return;if(an){an.getByteFrequencyData(buf);drawLive(buf)}S.rec.raf=requestAnimationFrame(tick)};
+    mr.onstop=()=>{st.getTracks().forEach(t=>t.stop());clearInterval(S.rec.t);cancelAnimationFrame(S.rec.raf);if(ac&&ac.close)ac.close();S.rec=null;run(new Blob(ch,{type:mr.mimeType}),'บันทึกเสียง '+T(new Date())+'.webm')};
+    mr.start();S.rec={mr,sec:0,raf:0,t:setInterval(()=>{S.rec.sec++;const e=$('#rt');if(e)e.textContent=mmss(S.rec.sec)},1000)};S.err='';
+    render();S.rec.raf=requestAnimationFrame(tick);return}
+  catch(e){S.err='เปิดไมโครโฟนไม่ได้ ตรวจสิทธิ์การใช้ไมโครโฟนของเบราว์เซอร์ หรือใช้การอัปโหลดไฟล์แทน'}
+  render()}
+
+// ===== เหตุการณ์ =====
+const fpErr=x=>/not found|method not allowed|\(404\)|\(405\)/i.test(x.message)?new Error('เซิร์ฟเวอร์ยังไม่มีระบบรีเซ็ตรหัสผ่าน (ต้องเพิ่มฝั่ง backend ก่อน) ตอนนี้ให้ผู้ดูแลช่วยตั้งรหัสใหม่ให้'):x;
+const app=$('#app'),guard=async f=>{try{S.err='';await f()}catch(e){S.err=e.message}render()};
+app.addEventListener('click',e=>{const b=e.target.closest('button');if(S.cal.open&&!e.target.closest('.datewrap')){S.cal.open=false;render()}if(!b)return;const d=b.dataset;
+  if(d.play!==undefined){playAudio(d.play,b);return}
+  if(d.eye!==undefined){const i=b.previousElementSibling;i.type=i.type=='password'?'text':'password';b.classList.toggle('on',i.type=='text');return}
+  if(d.cal!==undefined){if(d.cal=='toggle'){S.cal.open=!S.cal.open;if(S.cal.open){const t=S.f.date?new Date(S.f.date+'T00:00:00'):new Date();S.cal.y=t.getFullYear();S.cal.m=t.getMonth()}}else{S.cal.m+=+d.cal;if(S.cal.m<0){S.cal.m=11;S.cal.y--}if(S.cal.m>11){S.cal.m=0;S.cal.y++}}return render()}
+  if(d.day!==undefined){S.f.date=d.day;S.cal.open=false;return render()}
+  if(d.chip!==undefined){S.f.res=d.chip;return render()}
+  if(d.go!==undefined)return go(d.go,d.res);
+  if(d.role){S.role=d.role;S.err='';return render()}
+  if(d.tab){S.tab=d.tab;S.err='';return render()}
+  if(d.del)return guard(async()=>{if(!confirm('ลบรายการนี้ออกจากประวัติ'))return;await api('/history/'+d.del,{method:'DELETE'});await load()});
+  if(d.ag!==undefined){S.cur.agree=d.ag=='1';S.cur.comment=$('#cm').value;return render()}
+  switch(d.act){
+    case'fp':S.fp=1;S.err='';render();break;
+    case'fpback':S.fp=0;S.err='';render();break;
+    case'fpsend':guard(async()=>{const e=$('#fe')?$('#fe').value.trim():S.fpEmail;if(!/^\S+@\S+\.\S+$/.test(e||''))throw new Error('กรอกอีเมลให้ถูกต้องก่อน');S.fpEmail=e;
+      try{await api('/auth/forgot-password',{method:'POST',body:{email:e}})}catch(x){throw fpErr(x)}S.fp=2});break;
+    case'fpreset':guard(async()=>{const c=$('#fc').value.trim(),p1=$('#f1').value,p2=$('#f2').value;if(!c)throw new Error('ใส่รหัสยืนยันที่ได้รับทางอีเมล');if(p1.length<8)throw new Error('รหัสผ่านต้องยาวอย่างน้อย 8 ตัวอักษร');if(p1!==p2)throw new Error('รหัสผ่านใหม่สองช่องไม่ตรงกัน');
+      try{await api('/auth/reset-password',{method:'POST',body:{email:S.fpEmail,code:c,token:c,new_password:p1,password:p1}})}catch(x){throw fpErr(x)}S.fp=3});break;
+    case'tgl':S.reg=!S.reg;S.err='';render();break;
+    case'clr':S.f={date:'',res:''};render();break;
+    case'again':S.phase='idle';S.cur=null;S.err='';render();break;
+    case'rec':rec();break;
+    case'out':logout();break;
+    case'send':guard(async()=>{S.cur.comment=$('#cm').value;if(S.cur.agree===null)throw new Error('เลือกก่อนว่าผลนี้ถูกต้องหรือไม่ถูกต้อง');
+      if(!S.cur.id){const h=list(await api('/history')).map(norm).sort((a,b)=>b.at-a.at)[0];if(!h||!h.id)throw new Error('หา id ของผลตรวจนี้ไม่เจอ backend ส่ง field: '+Object.keys(S.cur.raw||{}).join(', ')+' | ประวัติมี '+(await api('/history').then(r=>list(r).length).catch(()=>'?'))+' รายการ');S.cur.id=h.id}
+      await api('/history/'+S.cur.id+'/feedback',{method:'POST',body:{user_agrees:S.cur.agree,comment:S.cur.comment}});LS.set(S.cur.id,{agree:S.cur.agree,comment:S.cur.comment});S.cur.sent=true});break;
+    case'th':guard(async()=>{const v=+$('#rg').value;await api('/admin/threshold',{method:'POST',body:{value:v,threshold:v}});S.msg='บันทึกแล้ว ค่าใหม่ใช้กับการตรวจครั้งต่อไป';await load()});break;
+    case'pw':guard(async()=>{const a=$('#p0').value,n=$('#p1').value,c=$('#p2').value;S.msg='';
+      if(n.length<8)throw new Error('รหัสผ่านใหม่ต้องยาวอย่างน้อย 8 ตัวอักษร');if(n!==c)throw new Error('รหัสผ่านใหม่สองช่องไม่ตรงกัน');
+      await api('/users/me/password',{method:'PUT',body:{current_password:a,new_password:n}});S.msg='เปลี่ยนรหัสผ่านแล้ว'});break;
+    case'in':guard(async()=>{const adm=S.role=='admin',em=$('#em').value.trim(),pw=$('#pw').value;
+      const j=await api(adm?'/auth/admin/login':'/auth/login',{method:'POST',noAuthRedirect:true,body:adm?{username:em,password:pw}:{email:em,password:pw}});await enter(j.access_token,adm)});break;
+    case'reg':guard(async()=>{const em=$('#em').value.trim(),pw=$('#pw').value;if(pw.length<8)throw new Error('รหัสผ่านต้องยาวอย่างน้อย 8 ตัวอักษร');
+      const j=await api('/auth/register',{method:'POST',noAuthRedirect:true,body:{email:em,password:pw}});S.reg=false;await enter(j.access_token,false)});break;
+  }});
+app.addEventListener('input',e=>{if(e.target.id=='rg'){S.th=+e.target.value;$('#tv').textContent=S.th.toFixed(2);e.target.style.setProperty('--x',((S.th-.5)/.45*100).toFixed(1)+'%')}});
+app.addEventListener('change',e=>{const t=e.target;
+  if(t.dataset.f){S.f[t.dataset.f]=t.value;render()}
+  if(t.id=='fi'&&t.files[0])run(t.files[0],t.files[0].name);
+  if(t.id=='av'&&t.files[0]){S.user.img=URL.createObjectURL(t.files[0]);render()}});
+app.addEventListener('dragover',e=>e.preventDefault());
+app.addEventListener('drop',e=>{e.preventDefault();const f=e.dataTransfer.files[0];if(f&&S.page=='home'&&S.phase=='idle'&&S.tab=='up')run(f,f.name)});
+addEventListener('resize',()=>{if(S.phase=='done'&&$('#wave'))draw();if(!S.rec&&$('#live'))drawLive()});
+
+// เปิดหน้าใหม่แล้ว token ยังอยู่ใน sessionStorage ให้เข้าต่อได้เลย
+(async()=>{const t=store.get('tok');render();
+  if(t){try{await enter(t,store.get('role')=='admin')}catch(e){logout()}render()}})();
+</script>
+</body>
+</html>
