@@ -17,25 +17,31 @@
 - ทุก error ใช้รูปแบบเดียวกัน: `{"detail": "ข้อความ"}` — ยกเว้น validation error (422) ที่ `detail` เป็น array
 - Content-Type: `application/json` สำหรับ endpoint ทั่วไป, `multipart/form-data` เฉพาะ `/predict`
 
-| Endpoint | Method | ต้อง Login | คำอธิบาย |
-|---|---|---|---|
-| `/health` | GET | ไม่ต้อง | เช็คสถานะ + ว่าใช้โมเดลจริงหรือ mock |
-| `/auth/register` | POST | ไม่ต้อง | สมัครสมาชิกผู้ใช้ทั่วไป |
-| `/auth/login` | POST | ไม่ต้อง | เข้าสู่ระบบผู้ใช้ทั่วไป |
-| `/auth/admin/login` | POST | ไม่ต้อง | เข้าสู่ระบบผู้ดูแล |
-| `/predict` | POST | ไม่บังคับ | ตรวจสอบเสียง (1 หรือหลายไฟล์) |
-| `/history` | GET | **ต้อง** (user) | ดูรายการประวัติของตนเอง |
-| `/history/{id}` | GET | **ต้อง** (user) | ดูรายละเอียด + คะแนนรายช่วง |
-| `/history/{id}` | DELETE | **ต้อง** (user) | ลบรายการประวัติ |
-| `/history/{id}/feedback` | POST | **ต้อง** (user) | ให้ feedback ว่าผลถูกต้องไหม (ครั้งแรก) |
-| `/history/{id}/feedback` | GET | **ต้อง** (user) | ดู feedback ที่เคยให้ไว้กับรายการนี้ |
-| `/history/{id}/feedback` | PUT | **ต้อง** (user) | แก้คำตอบ feedback ที่เคยให้ไว้แล้ว |
-| `/feedback` | GET | **ต้อง** (user) | ประวัติ feedback ทั้งหมดที่ฉันเคยให้ (ใหม่→เก่า) |
-| `/admin/threshold` | GET | **ต้อง** (admin) | ดูค่า threshold ปัจจุบัน |
-| `/admin/threshold` | POST | **ต้อง** (admin) | อัปเดตค่า threshold (มีผลทันที) |
-| `/admin/stats` | GET | **ต้อง** (admin) | สถิติภาพรวมระบบ |
-| `/admin/users` | GET | **ต้อง** (admin) | รายชื่อผู้ใช้ + ค้นหา + filter ระงับ/ใช้งานปกติ + แบ่งหน้า |
-| `/admin/users/{id}` | PATCH | **ต้อง** (admin) | แก้ display_name / ระงับ-เปิดใช้งานบัญชี |
+| Endpoint                 | Method | ต้อง Login       | คำอธิบาย                                                      |
+| ------------------------ | ------ | ---------------- | ------------------------------------------------------------- |
+| `/health`                | GET    | ไม่ต้อง          | เช็คสถานะ + ว่าใช้โมเดลจริงหรือ mock                          |
+| `/auth/register`         | POST   | ไม่ต้อง          | สมัครสมาชิกผู้ใช้ทั่วไป                                       |
+| `/auth/login`            | POST   | ไม่ต้อง          | เข้าสู่ระบบผู้ใช้ทั่วไป                                       |
+| `/auth/admin/login`      | POST   | ไม่ต้อง          | เข้าสู่ระบบผู้ดูแล                                            |
+| `/predict`               | POST   | ไม่บังคับ        | ตรวจสอบเสียง (1 หรือหลายไฟล์)                                 |
+| `/history`               | GET    | **ต้อง** (user)  | ดูรายการประวัติของตนเอง                                       |
+| `/history/{id}`          | GET    | **ต้อง** (user)  | ดูรายละเอียด + คะแนนรายช่วง                                   |
+| `/history/{id}`          | DELETE | **ต้อง** (user)  | ลบรายการประวัติ                                               |
+| `/history/{id}/feedback` | POST   | **ต้อง** (user)  | ให้ feedback ว่าผลถูกต้องไหม (ครั้งแรก)                       |
+| `/history/{id}/feedback` | GET    | **ต้อง** (user)  | ดู feedback ที่เคยให้ไว้กับรายการนี้                          |
+| `/history/{id}/feedback` | PUT    | **ต้อง** (user)  | แก้คำตอบ feedback ที่เคยให้ไว้แล้ว                            |
+| `/feedback`              | GET    | **ต้อง** (user)  | ประวัติ feedback ทั้งหมดที่ฉันเคยให้ (ใหม่→เก่า)              |
+| `/feedback/options`      | GET    | ไม่ต้อง          | คำถามและตัวเลือก (ภาษาไทย) ของแบบสอบถามรายละเอียด feedback    |
+| `/users/me`              | GET    | **ต้อง** (user)  | ดูข้อมูลบัญชีของตัวเอง                                        |
+| `/users/me`              | PATCH  | **ต้อง** (user)  | แก้ชื่อที่แสดง (`display_name`)                               |
+| `/users/me/password`     | PUT    | **ต้อง** (user)  | เปลี่ยนรหัสผ่าน (ต้องส่งรหัสเดิม)                             |
+| `/admin/threshold`       | GET    | **ต้อง** (admin) | ดูค่า threshold ปัจจุบัน                                      |
+| `/admin/threshold`       | POST   | **ต้อง** (admin) | อัปเดตค่า threshold (มีผลทันที)                               |
+| `/admin/stats`           | GET    | **ต้อง** (admin) | สถิติภาพรวมระบบ                                               |
+| `/admin/users`           | GET    | **ต้อง** (admin) | รายชื่อผู้ใช้ + ค้นหา + filter ระงับ/ใช้งานปกติ + แบ่งหน้า    |
+| `/admin/users/{id}`      | PATCH  | **ต้อง** (admin) | แก้ display_name / ระงับ-เปิดใช้งานบัญชี                      |
+| `/admin/detections`      | GET    | **ต้อง** (admin) | ผลตรวจของทุกคน (รวม guest) + filter + เรียงลำดับ + แบ่งหน้า   |
+| `/admin/detections/{id}` | GET    | **ต้อง** (admin) | รายละเอียดผลตรวจ 1 รายการ + รายช่วงเสียง + feedback + เจ้าของ |
 
 ---
 
@@ -46,6 +52,7 @@ curl http://localhost:8000/health
 ```
 
 **200 OK**
+
 ```json
 {
   "status": "ok",
@@ -53,6 +60,7 @@ curl http://localhost:8000/health
   "using_mock_model": true
 }
 ```
+
 เมื่อวางโมเดลจริงแล้ว `using_mock_model` จะเป็น `false` และ `model_version` จะเป็นค่าที่มาจาก `model.json`
 → frontend ใช้ field นี้แสดง banner เตือนผู้ใช้ได้ เช่น "ระบบอยู่ระหว่างทดสอบ ผลยังไม่แม่นยำ 100%"
 
@@ -67,6 +75,7 @@ curl -X POST http://localhost:8000/auth/register \
 ```
 
 **Request body**
+
 ```json
 {
   "email": "student@example.com",
@@ -74,28 +83,37 @@ curl -X POST http://localhost:8000/auth/register \
   "display_name": "สมชาย ทดสอบ"
 }
 ```
+
 `display_name` ใส่หรือไม่ใส่ก็ได้ (optional) | `password` ต้อง ≥ 8 ตัวอักษร | `email` ต้องเป็นรูปแบบอีเมลที่ถูกต้อง
 
 **201 Created**
+
 ```json
 {
   "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJiNTgyMDZmNi00ZGM1LTRiOWEtYmQ3Zi1iMDVjMmVhOGEwMmEiLCJyb2xlIjoidXNlciIsImV4cCI6MTc5MDA2MjQ5NX0.Ifqx5ju7DiD14IyHlIAwkxfoN0kRYE-92-vNXGuuH8Q",
   "token_type": "bearer"
 }
 ```
+
 เก็บ `access_token` ไว้ (เช่น localStorage หรือ cookie) แล้วแนบเป็น `Authorization: Bearer <access_token>`
 ในคำขอถัดไปที่ต้องการ login
 
 **409 Conflict** — อีเมลซ้ำ
+
 ```json
 { "detail": "อีเมลนี้ถูกใช้แล้ว" }
 ```
 
 **422 Unprocessable Entity** — ข้อมูลไม่ผ่าน validation เช่น email ผิดรูปแบบ หรือ password สั้นไป
+
 ```json
 {
   "detail": [
-    { "type": "string_too_short", "loc": ["body", "password"], "msg": "String should have at least 8 characters" }
+    {
+      "type": "string_too_short",
+      "loc": ["body", "password"],
+      "msg": "String should have at least 8 characters"
+    }
   ]
 }
 ```
@@ -111,19 +129,23 @@ curl -X POST http://localhost:8000/auth/login \
 ```
 
 **200 OK** — รูปแบบเดียวกับ register
+
 ```json
 { "access_token": "eyJhbGciOiJIUzI1NiIs...", "token_type": "bearer" }
 ```
 
 **401 Unauthorized** — อีเมลหรือรหัสผ่านผิด (ข้อความเดียวกันทั้งสองกรณี ไม่บอกว่าผิดช่องไหน)
+
 ```json
 { "detail": "อีเมลหรือรหัสผ่านไม่ถูกต้อง" }
 ```
 
 **403 Forbidden** — รหัสผ่านถูก แต่บัญชีถูก admin ระงับไว้ (ไม่ออก token ให้)
+
 ```json
 { "detail": "Account suspended" }
 ```
+
 ถ้ารหัสผ่านผิด จะได้ `401 Invalid email or password` เหมือนเดิมเสมอ (ไม่บอกว่าบัญชีนี้ถูกระงับ ให้คนที่ไม่รู้รหัสผ่าน)
 
 ---
@@ -140,11 +162,13 @@ curl -X POST http://localhost:8000/auth/admin/login \
 ```
 
 **200 OK**
+
 ```json
 { "access_token": "eyJhbGciOiJIUzI1NiIs...", "token_type": "bearer" }
 ```
 
 **401 Unauthorized**
+
 ```json
 { "detail": "ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง" }
 ```
@@ -169,6 +193,7 @@ curl -F "files=@clip.wav" http://localhost:8000/predict
 ```
 
 **200 OK**
+
 ```json
 {
   "results": [
@@ -186,9 +211,27 @@ curl -F "files=@clip.wav" http://localhost:8000/predict
       "model_version": "mock-v0 (โมเดลจริงยังไม่พร้อม)",
       "processing_ms": 0,
       "segments": [
-        { "index": 0, "start_seconds": 0.0, "end_seconds": 4.0, "spoof_probability": 0.7558805346488953, "is_spoof": true },
-        { "index": 1, "start_seconds": 4.0, "end_seconds": 8.0, "spoof_probability": 0.7025182247161865, "is_spoof": true },
-        { "index": 2, "start_seconds": 8.0, "end_seconds": 10.0, "spoof_probability": 0.4920880198478699, "is_spoof": false }
+        {
+          "index": 0,
+          "start_seconds": 0.0,
+          "end_seconds": 4.0,
+          "spoof_probability": 0.7558805346488953,
+          "is_spoof": true
+        },
+        {
+          "index": 1,
+          "start_seconds": 4.0,
+          "end_seconds": 8.0,
+          "spoof_probability": 0.7025182247161865,
+          "is_spoof": true
+        },
+        {
+          "index": 2,
+          "start_seconds": 8.0,
+          "end_seconds": 10.0,
+          "spoof_probability": 0.4920880198478699,
+          "is_spoof": false
+        }
       ],
       "saved_to_history": false
     }
@@ -196,6 +239,7 @@ curl -F "files=@clip.wav" http://localhost:8000/predict
   "failed_files": []
 }
 ```
+
 `saved_to_history: false` → frontend รู้ทันทีว่าไม่ต้องแสดง "ดูในประวัติ" สำหรับผลนี้
 `segments` → เอาไปวาดกราฟ/ไฮไลต์ช่วงเวลาที่น่าสงสัยได้เลย (ตรงกับ UC4)
 
@@ -209,6 +253,7 @@ curl -F "files=@call_a.wav" -F "files=@call_b.wav" \
 
 **200 OK** — `results` มีหลายรายการตามจำนวนไฟล์ที่ส่งมา แต่ละรายการมี `saved_to_history: true`
 เพราะมี token ที่ถูกต้อง
+
 ```json
 {
   "results": [
@@ -226,7 +271,13 @@ curl -F "files=@call_a.wav" -F "files=@call_b.wav" \
       "model_version": "mock-v0 (โมเดลจริงยังไม่พร้อม)",
       "processing_ms": 0,
       "segments": [
-        { "index": 0, "start_seconds": 0.0, "end_seconds": 3.0, "spoof_probability": 0.7558805346488953, "is_spoof": true }
+        {
+          "index": 0,
+          "start_seconds": 0.0,
+          "end_seconds": 3.0,
+          "spoof_probability": 0.7558805346488953,
+          "is_spoof": true
+        }
       ],
       "saved_to_history": true
     },
@@ -244,8 +295,20 @@ curl -F "files=@call_a.wav" -F "files=@call_b.wav" \
       "model_version": "mock-v0 (โมเดลจริงยังไม่พร้อม)",
       "processing_ms": 0,
       "segments": [
-        { "index": 0, "start_seconds": 0.0, "end_seconds": 4.0, "spoof_probability": 0.6270922422409058, "is_spoof": true },
-        { "index": 1, "start_seconds": 4.0, "end_seconds": 5.0, "spoof_probability": 0.6828998923301697, "is_spoof": true }
+        {
+          "index": 0,
+          "start_seconds": 0.0,
+          "end_seconds": 4.0,
+          "spoof_probability": 0.6270922422409058,
+          "is_spoof": true
+        },
+        {
+          "index": 1,
+          "start_seconds": 4.0,
+          "end_seconds": 5.0,
+          "spoof_probability": 0.6828998923301697,
+          "is_spoof": true
+        }
       ],
       "saved_to_history": true
     }
@@ -253,6 +316,7 @@ curl -F "files=@call_a.wav" -F "files=@call_b.wav" \
   "failed_files": []
 }
 ```
+
 → `results.length > 1` คือสัญญาณให้ frontend สลับไปแสดง "ตารางเปรียบเทียบ" แทน "ผลรายไฟล์" (ตาม Activity Diagram)
 
 ### ตัวอย่าง 3 — ไฟล์บางไฟล์รูปแบบไม่ถูกต้อง (ผสมกับไฟล์ที่ถูกต้อง)
@@ -266,7 +330,14 @@ curl -F "files=@clip2.wav" -F "files=@clip.mp3" -F "files=@broken.wav" http://lo
 
 ```json
 {
-  "results": [ { "id": "…", "original_filename": "clip2.wav", "verdict": "spoof", "…": "…" } ],
+  "results": [
+    {
+      "id": "…",
+      "original_filename": "clip2.wav",
+      "verdict": "spoof",
+      "…": "…"
+    }
+  ],
   "failed_files": [
     {
       "filename": "clip.mp3",
@@ -289,12 +360,12 @@ curl -F "files=@clip2.wav" -F "files=@clip.mp3" -F "files=@broken.wav" http://lo
 
 ### รหัส `reason` (frontend ควรดูจากฟิลด์นี้ ไม่ใช่จาก `message`)
 
-| `reason` | เกิดเมื่อ | `message` ตัวอย่าง | ข้อความไทยที่แนะนำให้แสดง |
-|---|---|---|---|
-| `unsupported_format` | นามสกุลไม่ใช่ `.wav` / `.flac` (หรือไม่มีนามสกุล) | `Unsupported file type '(none)' - allowed: .wav, .flac` | ไฟล์ชนิดนี้ไม่รองรับ (รองรับเฉพาะ .wav และ .flac) |
-| `file_too_large` | ไฟล์ใหญ่กว่า 20 MB | `The file is 21.0 MB - the limit is 20 MB` | ไฟล์ใหญ่เกินไป (ไม่เกิน 20 MB) |
-| `empty_audio` | ไฟล์ 0 ไบต์ **หรือ** เปิดได้แต่ไม่มีเสียงเลย (0 samples) | `The file is empty` / `The file contains no audio samples` | ไฟล์นี้ไม่มีเสียง |
-| `decode_failed` | อ่านข้อมูลเสียงไม่ได้ (ไฟล์เสียหาย หรือไม่ใช่ไฟล์เสียงจริง) | `Could not read the audio data - the file may be corrupted or not a real audio file` | เปิดไฟล์ไม่ได้ ไฟล์อาจเสียหาย ลองอัดหรือบันทึกใหม่ |
+| `reason`             | เกิดเมื่อ                                                   | `message` ตัวอย่าง                                                                   | ข้อความไทยที่แนะนำให้แสดง                          |
+| -------------------- | ----------------------------------------------------------- | ------------------------------------------------------------------------------------ | -------------------------------------------------- |
+| `unsupported_format` | นามสกุลไม่ใช่ `.wav` / `.flac` (หรือไม่มีนามสกุล)           | `Unsupported file type '(none)' - allowed: .wav, .flac`                              | ไฟล์ชนิดนี้ไม่รองรับ (รองรับเฉพาะ .wav และ .flac)  |
+| `file_too_large`     | ไฟล์ใหญ่กว่า 20 MB                                          | `The file is 21.0 MB - the limit is 20 MB`                                           | ไฟล์ใหญ่เกินไป (ไม่เกิน 20 MB)                     |
+| `empty_audio`        | ไฟล์ 0 ไบต์ **หรือ** เปิดได้แต่ไม่มีเสียงเลย (0 samples)    | `The file is empty` / `The file contains no audio samples`                           | ไฟล์นี้ไม่มีเสียง                                  |
+| `decode_failed`      | อ่านข้อมูลเสียงไม่ได้ (ไฟล์เสียหาย หรือไม่ใช่ไฟล์เสียงจริง) | `Could not read the audio data - the file may be corrupted or not a real audio file` | เปิดไฟล์ไม่ได้ ไฟล์อาจเสียหาย ลองอัดหรือบันทึกใหม่ |
 
 - `message` เป็นภาษาอังกฤษไว้ให้ดูตอน debug เท่านั้น ข้อความอาจปรับถ้อยคำได้ในอนาคต — อย่าเอาไป `if (message === "...")`
 - ถ้า `reason` มีค่าใหม่ที่ frontend ไม่รู้จัก ให้แสดงข้อความกลางๆ ไว้เป็น fallback เช่น "ไฟล์นี้ตรวจสอบไม่ได้"
@@ -310,6 +381,7 @@ curl -H "Authorization: Bearer <TOKEN>" http://localhost:8000/history
 ```
 
 **200 OK** — เรียงจากใหม่ไปเก่าเสมอ, ไม่มี `segments` ในนี้ (ดูรายละเอียดต้องเรียก `/history/{id}` ต่อ)
+
 ```json
 [
   {
@@ -334,9 +406,11 @@ curl -H "Authorization: Bearer <TOKEN>" http://localhost:8000/history
   }
 ]
 ```
+
 รองรับ `?limit=50` (default 50, สูงสุด 200)
 
 **401 Unauthorized** — ไม่ได้แนบ token หรือ token ไม่ถูกต้อง/หมดอายุ
+
 ```json
 { "detail": "ต้องเข้าสู่ระบบก่อนใช้งานส่วนนี้" }
 ```
@@ -350,6 +424,7 @@ curl -H "Authorization: Bearer <TOKEN>" http://localhost:8000/history/241de76c-f
 ```
 
 **200 OK** — เหมือน item ใน `/history` แต่เพิ่ม `threshold_used`, `model_version`, `processing_ms`, `segments`
+
 ```json
 {
   "id": "241de76c-f61e-48a8-9d37-807cb7cb6484",
@@ -364,12 +439,19 @@ curl -H "Authorization: Bearer <TOKEN>" http://localhost:8000/history/241de76c-f
   "model_version": "mock-v0 (โมเดลจริงยังไม่พร้อม)",
   "processing_ms": 0,
   "segments": [
-    { "index": 0, "start_seconds": 0.0, "end_seconds": 3.0, "spoof_probability": 0.7558805346488953, "is_spoof": true }
+    {
+      "index": 0,
+      "start_seconds": 0.0,
+      "end_seconds": 3.0,
+      "spoof_probability": 0.7558805346488953,
+      "is_spoof": true
+    }
   ]
 }
 ```
 
 **404 Not Found** — ไม่พบ หรือเป็นของผู้ใช้คนอื่น (ตั้งใจให้ error เหมือนกันทั้งสองกรณี ไม่บอกว่ามีอยู่แต่ไม่ใช่ของเรา)
+
 ```json
 { "detail": "ไม่พบรายการ" }
 ```
@@ -396,6 +478,7 @@ curl -X POST http://localhost:8000/history/241de76c-f61e-48a8-9d37-807cb7cb6484/
 ```
 
 **201 Created**
+
 ```json
 {
   "id": "f2ba17f1-f882-4e7b-ab82-bb682ec6689a",
@@ -407,6 +490,7 @@ curl -X POST http://localhost:8000/history/241de76c-f61e-48a8-9d37-807cb7cb6484/
 ```
 
 **409 Conflict** ให้ feedback รายการนี้ไปแล้ว (1 รายการให้ feedback ได้ครั้งเดียว) ถ้าจะแก้ไขใช้ `PUT /history/{id}/feedback` แทน
+
 ```json
 { "detail": "Feedback already submitted for this record" }
 ```
@@ -423,6 +507,7 @@ curl http://localhost:8000/history/53d92be8-15ac-426f-b6e2-ad486ad61016/feedback
 ```
 
 **200 OK**
+
 ```json
 {
   "id": "f2ba17f1-f882-4e7b-ab82-bb682ec6689a",
@@ -432,9 +517,11 @@ curl http://localhost:8000/history/53d92be8-15ac-426f-b6e2-ad486ad61016/feedback
   "updated_at": null
 }
 ```
+
 `updated_at` เป็น `null` = ยังไม่เคยแก้ไข
 
 **404 Not Found** ยังไม่เคยให้ feedback รายการนี้ (หรือรายการไม่ใช่ของผู้ใช้คนนี้ → `"Record not found"`)
+
 ```json
 { "detail": "No feedback submitted for this record" }
 ```
@@ -454,6 +541,7 @@ curl -X PUT http://localhost:8000/history/53d92be8-15ac-426f-b6e2-ad486ad61016/f
 ```
 
 **200 OK** `id` เดิม (แก้แถวเดิม ไม่ได้สร้างใหม่) และ `updated_at` มีค่าแล้ว
+
 ```json
 {
   "id": "f2ba17f1-f882-4e7b-ab82-bb682ec6689a",
@@ -463,21 +551,174 @@ curl -X PUT http://localhost:8000/history/53d92be8-15ac-426f-b6e2-ad486ad61016/f
   "updated_at": "2026-10-09T06:30:07"
 }
 ```
+
 หมายเหตุ: ถ้าส่งค่าเดียวกับที่บันทึกไว้อยู่แล้ว `updated_at` จะไม่เปลี่ยน
 
 **404 Not Found** — ยังไม่เคยให้ feedback รายการนี้ ให้เรียก `POST` ก่อน
+
 ```json
-{ "detail": "No feedback submitted for this record yet submit it with POST first" }
+{
+  "detail": "No feedback submitted for this record yet submit it with POST first"
+}
 ```
 
 **422 Unprocessable Entity** — body ไม่ครบ
+
 ```json
 {
   "detail": [
-    { "type": "missing", "loc": ["body", "user_agrees"], "msg": "Field required", "input": {} }
+    {
+      "type": "missing",
+      "loc": ["body", "user_agrees"],
+      "msg": "Field required",
+      "input": {}
+    }
   ]
 }
 ```
+
+---
+
+## แบบสอบถามรายละเอียดของ feedback (ไม่บังคับ)
+
+นอกจาก `user_agrees` แล้ว `POST` และ `PUT /history/{id}/feedback` รับคำตอบแบบสอบถาม "เสียงนี้ถูกอัดมาอย่างไร" ได้อีก 11 ช่อง
+เพื่อให้รู้ว่าผลที่ไม่ตรงเกิดจากสภาพการอัด/อุปกรณ์ (เช่น เปิดเสียงจากอีกเครื่องผ่านลำโพงแล้วอัดซ้ำ) หรือโมเดลผิดจริง —
+**ระบบไม่เก็บไฟล์เสียง** จึงย้อนกลับไปฟังภายหลังไม่ได้ ข้อมูลนี้คือหลักฐานเดียวที่จะมีไว้วิเคราะห์
+
+- **ทุกช่องไม่บังคับ** — ส่งแค่ `{"user_agrees": true}` ได้เหมือนเดิม · ตอบได้ทั้งตอนเห็นด้วยและไม่เห็นด้วย
+- รายการคำถามและข้อความไทยของแต่ละตัวเลือก: `GET /feedback/options` (ด้านล่าง) — frontend ควรวาดฟอร์มจากรายการนั้น
+- ค่าที่ไม่ได้ตอบเป็น `null` เสมอ ทั้งใน request และ response
+
+| ฟิลด์               | ชนิด                | ค่าที่รับ                                                                                                                                                                                                          |
+| ------------------- | ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `audio_source`      | เลือก 1             | `direct_voice` · `speaker_replay` (เปิดจากอีกเครื่องผ่านลำโพงแล้วอัด) · `phone_call` · `chat_voice_message` · `shared_media` · `other`                                                                             |
+| `input_method`      | เลือก 1             | `recorded_in_app` · `uploaded_file` — **frontend ส่งให้อัตโนมัติ** ไม่ต้องถามผู้ใช้                                                                                                                                |
+| `environment`       | เลือก 1             | `quiet_room` · `noisy_indoor` · `outdoors` · `in_vehicle` · `crowded_public`                                                                                                                                       |
+| `mic_distance`      | เลือก 1             | `close` (≤ 30 ซม.) · `normal` · `far` (> 1 ม.)                                                                                                                                                                     |
+| `audio_issues`      | เลือกหลายข้อ (list) | `background_noise` · `echo` · `uneven_volume` (ดังเบาไม่สม่ำเสมอ) · `too_quiet` · `distorted` · `choppy` · `music_or_tv` · `multiple_speakers` · ห้ามซ้ำ · `[]` = ตอบว่า "ไม่มีปัญหา" (ต่างจาก `null` = ไม่ได้ตอบ) |
+| `recording_device`  | ข้อความ ≤ 100       | รุ่นอุปกรณ์ที่ใช้อัด เช่น `"Galaxy A54"`                                                                                                                                                                           |
+| `playback_device`   | ข้อความ ≤ 100       | รุ่นอุปกรณ์/ลำโพงที่ใช้เปิดเสียง — **ส่งได้เฉพาะเมื่อ `audio_source` = `speaker_replay`**                                                                                                                          |
+| `truth_basis`       | เลือก 1             | ผู้ใช้รู้ได้อย่างไรว่าเสียงนี้จริง/สังเคราะห์: `self_recorded` · `self_generated` · `know_the_speaker` · `not_sure` (ใช้ประเมินความน่าเชื่อถือของ label)                                                           |
+| `speaker_accent`    | เลือก 1             | `central` · `northern` · `northeastern` · `southern` · `other`                                                                                                                                                     |
+| `speaker_age_group` | เลือก 1             | `under_20` · `20_39` · `40_59` · `60_plus`                                                                                                                                                                         |
+| `comment`           | ข้อความ ≤ 300       | ข้อความอิสระ — ให้ฝั่งหน้าเว็บเตือนผู้ใช้ไม่ให้พิมพ์ชื่อ/เบอร์โทร                                                                                                                                                  |
+
+ข้อความที่ส่งมาเป็นช่องว่างล้วนจะถือว่าไม่ได้ตอบ (`null`) · ตัดช่องว่างหัวท้ายให้
+
+```bash
+curl -X POST http://localhost:8000/history/428b4eb9-90ef-401a-9f0d-933a58b26011/feedback \
+  -H "Authorization: Bearer <TOKEN>" -H "Content-Type: application/json" \
+  -d '{"user_agrees": false, "audio_source": "speaker_replay", "environment": "noisy_indoor",
+       "mic_distance": "far", "audio_issues": ["echo", "uneven_volume"], "recording_device": "Galaxy A54",
+       "playback_device": "iPhone 12", "truth_basis": "self_recorded", "speaker_accent": "northern",
+       "speaker_age_group": "60_plus", "comment": "เปิดจากโทรศัพท์อีกเครื่องวางบนโต๊ะ"}'
+```
+
+**201 Created** — response ของ `POST` / `PUT` / `GET /history/{id}/feedback` และของแต่ละรายการใน `GET /feedback` มีฟิลด์เหล่านี้ทั้งหมดต่อท้ายฟิลด์เดิม
+
+```json
+{
+  "audio_source": "speaker_replay",
+  "input_method": null,
+  "environment": "noisy_indoor",
+  "mic_distance": "far",
+  "audio_issues": ["echo", "uneven_volume"],
+  "recording_device": "Galaxy A54",
+  "playback_device": "iPhone 12",
+  "truth_basis": "self_recorded",
+  "speaker_accent": "northern",
+  "speaker_age_group": "60_plus",
+  "comment": "เปิดจากโทรศัพท์อีกเครื่องวางบนโต๊ะ",
+  "id": "00af8539-c2f6-4f4e-a854-37aae3caa60f",
+  "detection_id": "428b4eb9-90ef-401a-9f0d-933a58b26011",
+  "user_agrees": false,
+  "created_at": "2026-11-01T08:52:12",
+  "updated_at": null
+}
+```
+
+**`PUT` = ตั้งค่าใหม่ทั้งหมด** — ช่องที่ไม่ส่งมาจะถูกล้างเป็น `null` (ไม่ใช่คงค่าเดิม) ดังนั้นหน้าแก้ไขต้องส่งฟอร์มเต็มทุกครั้ง · ส่งค่าเหมือนเดิมทุกช่อง `updated_at` ไม่เปลี่ยน
+
+**422 Unprocessable Entity** — ตัวอย่างที่เจอได้
+
+| ส่งอะไรมา                                                                        | สาเหตุ                                                                      |
+| -------------------------------------------------------------------------------- | --------------------------------------------------------------------------- |
+| ค่าที่ไม่อยู่ในตัวเลือก (`"audio_source": "telepathy"`) หรือพิมพ์ใหญ่/เล็กไม่ตรง | `Input should be 'direct_voice', 'speaker_replay', ...`                     |
+| `audio_issues` ซ้ำกัน / ไม่ใช่ list                                              | `audio_issues must not contain duplicates` / `Input should be a valid list` |
+| `recording_device` / `playback_device` > 100, `comment` > 300                    | `String should have at most N characters`                                   |
+| `playback_device` ที่ `audio_source` ไม่ใช่ `speaker_replay`                     | `playback_device can only be sent when audio_source is speaker_replay`      |
+| ชื่อฟิลด์ที่ไม่รู้จัก (พิมพ์ผิด เช่น `audio_sorce`)                              | `Extra inputs are not permitted` — ไม่ถูกเมินเงียบๆ เพราะคำตอบจะหาย         |
+| ไม่ส่ง `user_agrees`                                                             | `Field required`                                                            |
+
+> ข้อควรระวัง: response 422 ของ FastAPI ส่งค่า `input` กลับมาด้วย (รวมข้อความใน `comment`) — ฝั่ง frontend อย่าเก็บ body ของ error ลง log
+
+---
+
+## GET /feedback/options
+
+คำถามของแบบสอบถามพร้อมข้อความไทยของทุกตัวเลือก **ไม่ต้อง login** (ข้อมูลคงที่ ไม่มีข้อมูลผู้ใช้) — frontend วาดฟอร์มจากรายการนี้
+เพื่อไม่ต้องเขียนตัวเลือกซ้ำสองที่ (เพิ่มตัวเลือกใหม่ฝั่ง backend แล้วฟอร์มอัปเดตเอง)
+
+```bash
+curl http://localhost:8000/feedback/options
+```
+
+**200 OK** (ตัดมาบางข้อ — จริงมี 11 ข้อ เรียงตามลำดับที่ควรถาม)
+
+```json
+{
+  "notice": "การตอบแบบสอบถามนี้ไม่บังคับ ระบบไม่เก็บไฟล์เสียงของคุณ เก็บเฉพาะคำตอบเหล่านี้เพื่อนำไปปรับปรุงความแม่นยำของการตรวจสอบ",
+  "questions": [
+    {
+      "key": "audio_source",
+      "type": "single",
+      "label": "เสียงนี้ได้มาอย่างไร",
+      "help": null,
+      "options": [
+        { "value": "direct_voice", "label": "พูดหรืออัดใส่ไมโครโฟนโดยตรง" },
+        {
+          "value": "speaker_replay",
+          "label": "เปิดเสียงจากอีกเครื่องผ่านลำโพง แล้วอัดอีกที"
+        }
+      ],
+      "max_length": null,
+      "ask_user": true,
+      "show_if": null
+    },
+    {
+      "key": "input_method",
+      "type": "single",
+      "label": "ส่งเสียงเข้าระบบอย่างไร",
+      "help": null,
+      "options": [
+        { "value": "recorded_in_app", "label": "อัดเสียงในเว็บนี้" },
+        { "value": "uploaded_file", "label": "อัปโหลดไฟล์" }
+      ],
+      "max_length": null,
+      "ask_user": false,
+      "show_if": null
+    },
+    {
+      "key": "playback_device",
+      "type": "text",
+      "label": "รุ่นอุปกรณ์/ลำโพงที่ใช้เปิดเสียง (ถ้ารู้)",
+      "help": null,
+      "options": null,
+      "max_length": 100,
+      "ask_user": true,
+      "show_if": { "audio_source": "speaker_replay" }
+    }
+  ]
+}
+```
+
+| ฟิลด์      | ความหมาย                                                                                                               |
+| ---------- | ---------------------------------------------------------------------------------------------------------------------- |
+| `notice`   | ข้อความแจ้งความเป็นส่วนตัว ควรแสดงเหนือฟอร์ม                                                                           |
+| `key`      | ชื่อฟิลด์ใน request ของ POST/PUT feedback                                                                              |
+| `type`     | `single` เลือกข้อเดียว (radio) · `multi` เลือกได้หลายข้อ (checkbox → ส่งเป็น list) · `text` พิมพ์เอง (ดู `max_length`) |
+| `ask_user` | `false` = frontend ส่งให้อัตโนมัติ ไม่ต้องถามผู้ใช้ (ตอนนี้มีข้อ `input_method`)                                       |
+| `show_if`  | แสดงข้อนี้เมื่อฟิลด์อื่นมีค่านี้เท่านั้น เช่น `playback_device` ถามเมื่อ `audio_source` = `speaker_replay`             |
 
 ---
 
@@ -492,6 +733,7 @@ curl "http://localhost:8000/feedback?limit=20&offset=0" -H "Authorization: Beare
 ```
 
 **200 OK** — ถ้ายังไม่เคยให้เลยจะได้ `[]`
+
 ```json
 [
   {
@@ -505,13 +747,121 @@ curl "http://localhost:8000/feedback?limit=20&offset=0" -H "Authorization: Beare
   }
 ]
 ```
+
 `verdict` คือผลที่ระบบตัดสินตอนนั้น (`"real"` / `"spoof"`) — `user_agrees` บอกว่าผู้ใช้เห็นด้วยกับผลนั้นหรือไม่
 กด "แก้ไข" ที่แถวนี้ → เรียก `PUT /history/{detection_id}/feedback`
 
 **401 Unauthorized**
+
 ```json
 { "detail": "Authentication required" }
 ```
+
+---
+
+## GET /users/me
+
+ดูข้อมูลบัญชีของตัวเอง (ใช้กับหน้าโปรไฟล์) — ไม่มี `password_hash` ในผลลัพธ์
+
+```bash
+curl http://localhost:8000/users/me -H "Authorization: Bearer <TOKEN>"
+```
+
+**200 OK**
+
+```json
+{
+  "id": "d17bbf05-acc4-4c83-b994-8fb6189cfea6",
+  "email": "somchai@example.com",
+  "display_name": "Somchai",
+  "created_at": "2026-10-23T08:23:00"
+}
+```
+
+`display_name` เป็น `null` ถ้ายังไม่เคยตั้งชื่อ
+
+**401 Unauthorized** — ไม่มี token / token ไม่ถูกต้อง / เป็น token ของ admin / บัญชีถูกระงับหรือถูกลบ
+
+```json
+{ "detail": "Authentication required" }
+```
+
+---
+
+## PATCH /users/me
+
+แก้ชื่อที่แสดงของตัวเอง **ส่งเฉพาะฟิลด์ที่ต้องการแก้** ตอนนี้แก้ได้แค่ `display_name` (อีเมลและสถานะบัญชีแก้เองไม่ได้)
+
+| ฟิลด์          | ชนิด                                | ความหมาย                         |
+| -------------- | ----------------------------------- | -------------------------------- |
+| `display_name` | string (1–100 ตัวอักษร) หรือ `null` | ชื่อใหม่ · ส่ง `null` = ล้างชื่อ |
+
+```bash
+curl -X PATCH http://localhost:8000/users/me \
+  -H "Authorization: Bearer <TOKEN>" -H "Content-Type: application/json" \
+  -d '{"display_name": "Somchai K."}'
+```
+
+**200 OK** — คืนข้อมูลบัญชีหลังแก้ (หน้าตาเดียวกับ `GET /users/me`)
+
+```json
+{
+  "id": "d17bbf05-acc4-4c83-b994-8fb6189cfea6",
+  "email": "somchai@example.com",
+  "display_name": "Somchai K.",
+  "created_at": "2026-10-23T08:23:00"
+}
+```
+
+**401 Unauthorized** — เหมือน `GET /users/me`
+
+**422 Unprocessable Entity** — ตัวอย่างที่เจอได้
+
+| ส่งอะไรมา                                       | สาเหตุ                                                                        |
+| ----------------------------------------------- | ----------------------------------------------------------------------------- |
+| `{}`                                            | ต้องส่งอย่างน้อย 1 ฟิลด์: `"Send at least one field to update: display_name"` |
+| `{"email": "x@y.com"}` / `{"is_active": false}` | ฟิลด์ที่ไม่รู้จักหรือแก้เองไม่ได้: `"Extra inputs are not permitted"`         |
+| `{"display_name": ""}` หรือยาว > 100            | ชื่อต้องยาว 1–100 ตัวอักษร (อยากล้างชื่อให้ส่ง `null`)                        |
+
+---
+
+## PUT /users/me/password
+
+เปลี่ยนรหัสผ่านของตัวเอง ต้องส่งรหัสเดิมมาด้วย
+
+| ฟิลด์              | ชนิด                    | ความหมาย                                                |
+| ------------------ | ----------------------- | ------------------------------------------------------- |
+| `current_password` | string                  | รหัสผ่านปัจจุบัน                                        |
+| `new_password`     | string (8–128 ตัวอักษร) | รหัสผ่านใหม่ (กฎเดียวกับตอนสมัคร) ต้องไม่ซ้ำกับรหัสเดิม |
+
+```bash
+curl -X PUT http://localhost:8000/users/me/password \
+  -H "Authorization: Bearer <TOKEN>" -H "Content-Type: application/json" \
+  -d '{"current_password": "Password1234", "new_password": "NewPassword5678"}'
+```
+
+**204 No Content** — เปลี่ยนสำเร็จ (ไม่มี body) ต่อจากนี้ต้อง login ด้วยรหัสใหม่
+
+**400 Bad Request** — รหัสเดิมไม่ถูกต้อง (ไม่เปลี่ยนอะไร)
+
+```json
+{ "detail": "Current password is incorrect" }
+```
+
+ใช้ 400 ไม่ใช่ 401 โดยตั้งใจ — token ยังใช้ได้ frontend **ไม่ควร** เด้งไปหน้า login แค่แสดงข้อความ "รหัสผ่านเดิมไม่ถูกต้อง"
+
+**401 Unauthorized** — เหมือน `GET /users/me`
+
+**422 Unprocessable Entity** — ตัวอย่างที่เจอได้
+
+| ส่งอะไรมา                                                  | สาเหตุ                                                                                          |
+| ---------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
+| `new_password` สั้นกว่า 8 หรือยาวกว่า 128                  | `String should have at least 8 characters`                                                      |
+| `new_password` เหมือน `current_password`                   | `New password must be different from the current password`                                      |
+| ขาดฟิลด์ใดฟิลด์หนึ่ง / `current_password` ว่าง / ฟิลด์แปลก | `Field required` / `String should have at least 1 character` / `Extra inputs are not permitted` |
+
+> **ข้อจำกัดที่ควรรู้:** token ที่ออกไปก่อนเปลี่ยนรหัส **ยังใช้ได้จนหมดอายุ** (JWT ไม่เก็บสถานะ) — ถ้าต้องการให้เปลี่ยนรหัสแล้วทุกเครื่องหลุดทันที ต้องเพิ่มคอลัมน์ (migration) แล้วเช็คใน `get_current_user`
+> และ response 422 ของ FastAPI จะส่งค่า `input` กลับมาด้วย (รวมรหัสผ่านที่ client เพิ่งส่ง) — ฝั่ง frontend อย่าเอา body ของ error 422 ไปเก็บ log
 
 ---
 
@@ -522,12 +872,15 @@ curl -H "Authorization: Bearer <ADMIN_TOKEN>" http://localhost:8000/admin/thresh
 ```
 
 **200 OK** — เป็น `null` ได้ถ้ายังไม่เคยมีใครตั้งค่ามาก่อน (ระบบจะใช้ค่า default จาก config แทน)
+
 ```json
 null
 ```
+
 หลังมีคนตั้งค่าแล้วจะได้แบบนี้แทน (รูปแบบเดียวกับ `current` ใน POST ด้านล่าง)
 
 **401 Unauthorized** — token ไม่ใช่ของแอดมิน (หรือเป็น token ผู้ใช้ทั่วไป)
+
 ```json
 { "detail": "ไม่มีสิทธิ์ดำเนินการ" }
 ```
@@ -543,6 +896,7 @@ curl -X POST http://localhost:8000/admin/threshold \
 ```
 
 **200 OK** — `previous_value` เป็น `null` ถ้าเป็นการตั้งค่าครั้งแรก
+
 ```json
 {
   "previous_value": null,
@@ -555,13 +909,21 @@ curl -X POST http://localhost:8000/admin/threshold \
   }
 }
 ```
+
 มีผลกับ `/predict` คำขอถัดไป**ทันที** ไม่ต้อง restart backend
 
 **422 Unprocessable Entity** — `value` ต้องอยู่ระหว่าง 0.0–1.0
+
 ```json
 {
   "detail": [
-    { "type": "less_than_equal", "loc": ["body", "value"], "msg": "Input should be less than or equal to 1", "input": 1.5, "ctx": {"le": 1.0} }
+    {
+      "type": "less_than_equal",
+      "loc": ["body", "value"],
+      "msg": "Input should be less than or equal to 1",
+      "input": 1.5,
+      "ctx": { "le": 1.0 }
+    }
   ]
 }
 ```
@@ -575,6 +937,7 @@ curl -H "Authorization: Bearer <ADMIN_TOKEN>" http://localhost:8000/admin/stats
 ```
 
 **200 OK** — `feedback_agreement_rate` เป็น `null` ถ้ายังไม่มี feedback เลยสักรายการ
+
 ```json
 {
   "total_detections": 4,
@@ -586,6 +949,7 @@ curl -H "Authorization: Bearer <ADMIN_TOKEN>" http://localhost:8000/admin/stats
 ```
 
 **401 Unauthorized** — เรียกด้วย token ผู้ใช้ทั่วไป (ไม่ใช่แอดมิน)
+
 ```json
 { "detail": "ไม่มีสิทธิ์ดำเนินการ" }
 ```
@@ -598,18 +962,19 @@ curl -H "Authorization: Bearer <ADMIN_TOKEN>" http://localhost:8000/admin/stats
 
 Query (ทุกตัวไม่บังคับ):
 
-| Query | ค่าเริ่มต้น | คำอธิบาย |
-|---|---|---|
-| `q` | — | ค้นหาจาก email หรือ display_name (บางส่วนก็ได้ ไม่สนตัวพิมพ์ใหญ่/เล็ก; สูงสุด 100 ตัวอักษร) |
-| `is_active` | — | `true` = ใช้งานปกติ · `false` = ถูกระงับ · ไม่ส่ง = ทั้งหมด |
-| `limit` | 50 | 1–200 |
-| `offset` | 0 | ≥ 0 |
+| Query       | ค่าเริ่มต้น | คำอธิบาย                                                                                    |
+| ----------- | ----------- | ------------------------------------------------------------------------------------------- |
+| `q`         | —           | ค้นหาจาก email หรือ display_name (บางส่วนก็ได้ ไม่สนตัวพิมพ์ใหญ่/เล็ก; สูงสุด 100 ตัวอักษร) |
+| `is_active` | —           | `true` = ใช้งานปกติ · `false` = ถูกระงับ · ไม่ส่ง = ทั้งหมด                                 |
+| `limit`     | 50          | 1–200                                                                                       |
+| `offset`    | 0           | ≥ 0                                                                                         |
 
 ```bash
 curl "http://localhost:8000/admin/users?limit=2" -H "Authorization: Bearer <ADMIN_TOKEN>"
 ```
 
 **200 OK**
+
 ```json
 {
   "items": [
@@ -645,6 +1010,7 @@ curl "http://localhost:8000/admin/users?limit=2" -H "Authorization: Bearer <ADMI
 - ไม่มีผลลัพธ์ → `{"items": [], "total": 0, ...}` (ไม่ใช่ 404)
 
 **401 Unauthorized** — ไม่มี token หรือเป็น token ของผู้ใช้ทั่วไป
+
 ```json
 { "detail": "Insufficient permissions" }
 ```
@@ -657,10 +1023,10 @@ curl "http://localhost:8000/admin/users?limit=2" -H "Authorization: Bearer <ADMI
 
 แก้ข้อมูลผู้ใช้ **ส่งเฉพาะฟิลด์ที่ต้องการแก้** (ฟิลด์ที่ไม่ส่งจะไม่ถูกแตะ)
 
-| ฟิลด์ | ชนิด | ความหมาย |
-|---|---|---|
-| `display_name` | string 1–100 ตัวอักษร หรือ `null` | `null` = ล้างชื่อ |
-| `is_active` | `true` / `false` | `false` = ระงับบัญชี · `true` = เปิดใช้งานอีกครั้ง |
+| ฟิลด์          | ชนิด                              | ความหมาย                                           |
+| -------------- | --------------------------------- | -------------------------------------------------- |
+| `display_name` | string 1–100 ตัวอักษร หรือ `null` | `null` = ล้างชื่อ                                  |
+| `is_active`    | `true` / `false`                  | `false` = ระงับบัญชี · `true` = เปิดใช้งานอีกครั้ง |
 
 แก้ `email` / รหัสผ่านผ่าน endpoint นี้ไม่ได้ (ส่งมา → 422)
 
@@ -671,6 +1037,7 @@ curl -X PATCH http://localhost:8000/admin/users/d839abb0-e093-4a30-870a-ad71663b
 ```
 
 **200 OK** — คืนผู้ใช้หลังแก้ (หน้าตาเดียวกับ 1 แถวใน `GET /admin/users`)
+
 ```json
 {
   "id": "d839abb0-e093-4a30-870a-ad71663b730e",
@@ -685,40 +1052,224 @@ curl -X PATCH http://localhost:8000/admin/users/d839abb0-e093-4a30-870a-ad71663b
 
 **ผลของการระงับ (`is_active: false`)** — มีผลทันที ไม่ต้องรอ token หมดอายุ:
 
-| ผู้ใช้ที่ถูกระงับเรียก | ผลลัพธ์ |
-|---|---|
-| `GET /history`, `/feedback`, ฯลฯ ด้วย token เดิม | `401` `{"detail": "Invalid or suspended account"}` |
-| `POST /auth/login` | `403` `{"detail": "Account suspended"}` |
-| `POST /predict` (ด้วย token เดิม) | `200` ตรวจให้ แต่เป็น guest (`saved_to_history: false`) |
+| ผู้ใช้ที่ถูกระงับเรียก                           | ผลลัพธ์                                                 |
+| ------------------------------------------------ | ------------------------------------------------------- |
+| `GET /history`, `/feedback`, ฯลฯ ด้วย token เดิม | `401` `{"detail": "Invalid or suspended account"}`      |
+| `POST /auth/login`                               | `403` `{"detail": "Account suspended"}`                 |
+| `POST /predict` (ด้วย token เดิม)                | `200` ตรวจให้ แต่เป็น guest (`saved_to_history: false`) |
 
 ประวัติการตรวจที่มีอยู่แล้ว **ไม่ถูกลบ** และกลับมาเห็นได้เมื่อเปิดบัญชีอีกครั้ง
 
 **404 Not Found**
+
 ```json
 { "detail": "User not found" }
 ```
 
 **422 Unprocessable Entity** — ตัวอย่างที่เจอได้
 
-| ส่งอะไรมา | สาเหตุ |
-|---|---|
-| `{}` | ต้องส่งอย่างน้อย 1 ฟิลด์: `"Send at least one field to update: display_name or is_active"` |
-| `{"email": "x@y.com"}` | ฟิลด์ที่ไม่รู้จัก: `"Extra inputs are not permitted"` |
-| `{"is_active": null}` | `"is_active must be true or false"` |
-| `{"display_name": ""}` หรือยาว > 100 | ชื่อต้องยาว 1–100 ตัวอักษร (อยากล้างชื่อให้ส่ง `null`) |
-| id ใน URL ไม่ใช่ UUID | `Input should be a valid UUID` |
+| ส่งอะไรมา                            | สาเหตุ                                                                                     |
+| ------------------------------------ | ------------------------------------------------------------------------------------------ |
+| `{}`                                 | ต้องส่งอย่างน้อย 1 ฟิลด์: `"Send at least one field to update: display_name or is_active"` |
+| `{"email": "x@y.com"}`               | ฟิลด์ที่ไม่รู้จัก: `"Extra inputs are not permitted"`                                      |
+| `{"is_active": null}`                | `"is_active must be true or false"`                                                        |
+| `{"display_name": ""}` หรือยาว > 100 | ชื่อต้องยาว 1–100 ตัวอักษร (อยากล้างชื่อให้ส่ง `null`)                                     |
+| id ใน URL ไม่ใช่ UUID                | `Input should be a valid UUID`                                                             |
 
 **401 Unauthorized** — ไม่มี token หรือเป็น token ของผู้ใช้ทั่วไป
 
 ---
 
+## GET /admin/detections
+
+ผลตรวจเสียงของ **ทุกคน (รวม guest)** สำหรับหน้า "ผลตรวจทั้งหมด" ของ admin เรียงใหม่ → เก่าเป็นค่าเริ่มต้น
+(แต่ละรายการไม่มีรายละเอียดรายช่วงเสียง — เป็นข้อมูลระดับไฟล์เท่านั้น)
+
+Query (ทุกตัวไม่บังคับ — ใส่หลายตัวพร้อมกัน = ต้องตรงทุกเงื่อนไข):
+
+| Query                  | ค่าเริ่มต้น  | คำอธิบาย                                                                                              |
+| ---------------------- | ------------ | ----------------------------------------------------------------------------------------------------- |
+| `verdict`              | —            | `real` หรือ `spoof`                                                                                   |
+| `date_from`, `date_to` | —            | วันที่ `YYYY-MM-DD` **ตามเวลาไทย** นับรวมทั้งวัน (`date_from=date_to=2026-10-01` = ทั้งวันที่ 1 ต.ค.) |
+| `q`                    | —            | ค้นหาจากชื่อไฟล์ (บางส่วนก็ได้ ไม่สนตัวพิมพ์; 1–100 ตัวอักษร)                                         |
+| `user_id`              | —            | เฉพาะผลตรวจของผู้ใช้คนนี้ (UUID)                                                                      |
+| `user_email`           | —            | ค้นหาจากอีเมลผู้ใช้ (บางส่วนก็ได้ ไม่สนตัวพิมพ์)                                                      |
+| `guest`                | —            | `true` = เฉพาะที่ไม่ได้ login · `false` = เฉพาะที่ login                                              |
+| `model_version`        | —            | ตรงทุกตัวอักษร (ดูค่าที่มีได้จากผลลัพธ์)                                                              |
+| `partial_spoof`        | —            | `true` = เฉพาะที่ระบบสงสัยว่าปลอมบางช่วง · `false` = เฉพาะที่ไม่สงสัย                                 |
+| `feedback`             | —            | `agree` · `disagree` · `none` (ยังไม่มี feedback)                                                     |
+| `audio_source`         | —            | ค่าเดียวกับ `audio_source` ของแบบสอบถาม feedback (เช่น `speaker_replay`)                              |
+| `environment`          | —            | `quiet_room` · `noisy_indoor` · `outdoors` · `in_vehicle` · `crowded_public`                          |
+| `audio_issue`          | —            | เฉพาะผลที่ผู้ใช้ติ๊กปัญหานี้ไว้ (ติ๊กได้หลายข้อ จึงตรงเมื่อปัญหานี้อยู่ในรายการ) เช่น `echo`          |
+| `truth_basis`          | —            | `self_recorded` · `self_generated` · `know_the_speaker` · `not_sure`                                  |
+| `speaker_accent`       | —            | `central` · `northern` · `northeastern` · `southern` · `other`                                        |
+| `speaker_age_group`    | —            | `under_20` · `20_39` · `40_59` · `60_plus`                                                            |
+| `min_prob`, `max_prob` | —            | ช่วงของ `mean_probability` 0–1 (รวมค่าปลายทั้งสองข้าง)                                                |
+| `sort`                 | `created_at` | `created_at` · `mean_probability` · `processing_ms`                                                   |
+| `order`                | `desc`       | `asc` หรือ `desc`                                                                                     |
+| `limit`                | 50           | 1–200                                                                                                 |
+| `offset`               | 0            | ≥ 0                                                                                                   |
+
+> กลุ่ม filter จากแบบสอบถาม (`audio_source` ... `speaker_age_group`): ผลที่ไม่มี feedback หรือผู้ใช้ไม่ได้ตอบข้อนั้น **จะไม่ถูกนับ** เมื่อใช้ filter นั้น · ใช้ร่วมกับ `feedback=disagree` ได้ เช่น ดูเฉพาะเคสที่ผู้ใช้ไม่เห็นด้วยและอัดผ่านลำโพง
+
+```bash
+# ผลที่ระบบตัดสินว่าจริง เรียงจาก mean_probability น้อย → มาก เอา 2 รายการ
+curl "http://localhost:8000/admin/detections?verdict=real&sort=mean_probability&order=asc&limit=2" \
+  -H "Authorization: Bearer <ADMIN_TOKEN>"
+```
+
+**200 OK**
+
+```json
+{
+  "items": [
+    {
+      "id": "e8da1af3-c58b-4616-ad1a-69d5ca241fe6",
+      "created_at": "2026-10-22T09:16:43",
+      "original_filename": "call_recording.wav",
+      "duration_seconds": 3.0,
+      "num_segments": 1,
+      "mean_probability": 0.2609,
+      "max_probability": 0.2609,
+      "threshold_used": 0.5,
+      "verdict": "real",
+      "possible_partial_spoof": false,
+      "model_version": "mock-v0 (real model not yet available)",
+      "processing_ms": 1,
+      "user_id": null,
+      "user_email": null,
+      "feedback": null
+    }
+  ],
+  "total": 1,
+  "limit": 2,
+  "offset": 0
+}
+```
+
+- `total` = จำนวนที่ตรงกับ filter **ทั้งหมด** (ไม่ใช่แค่หน้านี้) — ใช้คำนวณจำนวนหน้า
+- `user_id` / `user_email` เป็น `null` = ผลตรวจของ guest (ไม่ได้ login ตอนตรวจ)
+- `feedback`: `"agree"` / `"disagree"` / `null` (ยังไม่มี feedback)
+- `created_at` เก็บเป็น UTC ส่วน `date_from` / `date_to` ตีความเป็นเวลาไทย (UTC+7)
+- ถ้าค่า `sort` เท่ากัน ลำดับยังคงที่ (ตัดสินด้วย id) แบ่งหน้าแล้วไม่ซ้ำ/ไม่ตก
+- ค้นหา `%` หรือ `_` จะหาตัวอักษรนั้นจริงๆ ไม่ใช่ wildcard
+- ไม่มีผลลัพธ์ → `{"items": [], "total": 0, ...}` (ไม่ใช่ 404)
+
+**401 Unauthorized** — ไม่มี token หรือเป็น token ของผู้ใช้ทั่วไป
+
+```json
+{ "detail": "Insufficient permissions" }
+```
+
+**422 Unprocessable Entity** — ตัวอย่างที่เจอได้
+
+| ส่งอะไรมา                                                    | สาเหตุ                                                          |
+| ------------------------------------------------------------ | --------------------------------------------------------------- |
+| `sort=bad` / `order=up` / `verdict=maybe` / `feedback=maybe` | `Input should be ...` (ระบุค่าที่ใช้ได้ให้)                     |
+| `date_from=2026-10-30&date_to=2026-10-01`                    | `date_from must not be after date_to`                           |
+| `min_prob=0.9&max_prob=0.1` หรือค่านอก 0–1                   | `min_prob must not be greater than max_prob`                    |
+| `q=` (ว่าง) หรือ `limit=0` / `limit=201` / `offset=-1`       | นอกช่วงที่กำหนด                                                 |
+| ชื่อ query ที่ไม่รู้จัก (เช่น `verdit=spoof`)                | `Extra inputs are not permitted` — พิมพ์ผิดแล้วไม่ถูกเมินเงียบๆ |
+
+---
+
+## GET /admin/detections/{id}
+
+รายละเอียดผลตรวจ 1 รายการของ **ใครก็ได้ (รวม guest)** สำหรับหน้า/ drawer รายละเอียดของ admin (กดจากแถวใน `GET /admin/detections`) —
+ต่างจาก `GET /history/{id}` ที่ผู้ใช้ดูได้เฉพาะของตัวเอง
+
+```bash
+curl http://localhost:8000/admin/detections/d1ac9092-a27f-4de6-80e5-eb8610c6bfec \
+  -H "Authorization: Bearer <ADMIN_TOKEN>"
+```
+
+**200 OK**
+
+```json
+{
+  "id": "d1ac9092-a27f-4de6-80e5-eb8610c6bfec",
+  "created_at": "2026-10-24T06:00:51",
+  "original_filename": "call_from_bank.wav",
+  "duration_seconds": 7.0,
+  "num_segments": 2,
+  "mean_probability": 0.7463,
+  "max_probability": 0.986,
+  "threshold_used": 0.5,
+  "verdict": "spoof",
+  "possible_partial_spoof": false,
+  "model_version": "mock-v0 (real model not yet available)",
+  "processing_ms": 0,
+  "user_id": "287775a5-f234-43b5-b424-a5dcae578a44",
+  "user_email": "somchai@example.com",
+  "feedback": "disagree",
+  "sample_rate": 16000,
+  "file_size_bytes": 224044,
+  "audio_format": "wav",
+  "feedback_created_at": "2026-10-24T06:00:51",
+  "feedback_updated_at": "2026-10-24T06:00:51",
+  "feedback_details": {
+    "audio_source": "speaker_replay",
+    "input_method": "recorded_in_app",
+    "environment": "noisy_indoor",
+    "mic_distance": "far",
+    "audio_issues": ["echo", "uneven_volume"],
+    "recording_device": "Galaxy A54",
+    "playback_device": "iPhone 15",
+    "truth_basis": "self_recorded",
+    "speaker_accent": "northern",
+    "speaker_age_group": "60_plus",
+    "comment": "เปิดจากโทรศัพท์อีกเครื่องวางบนโต๊ะ"
+  },
+  "segments": [
+    {
+      "index": 0,
+      "start_seconds": 0.0,
+      "end_seconds": 4.0,
+      "spoof_probability": 0.9859611392021179,
+      "is_spoof": true
+    },
+    {
+      "index": 1,
+      "start_seconds": 4.0,
+      "end_seconds": 7.0,
+      "spoof_probability": 0.5066450238227844,
+      "is_spoof": true
+    }
+  ]
+}
+```
+
+- ฟิลด์ตั้งแต่ `id` ถึง `feedback` **เหมือน 1 แถวใน `GET /admin/detections` ทุกตัว** (ใช้ component เดียวกันได้) ที่เพิ่มมาคือ `sample_rate`, `file_size_bytes`, `audio_format`, `feedback_created_at`, `feedback_updated_at`, `segments`
+- `user_id` / `user_email` เป็น `null` = ผลตรวจของ guest · `feedback` เป็น `"agree"` / `"disagree"` / `null`
+- `feedback_created_at` เป็น `null` ถ้ายังไม่มี feedback · `feedback_updated_at` เป็น `null` ถ้ายังไม่เคยแก้ feedback
+- `feedback_details` = คำตอบแบบสอบถามของ feedback นี้ (11 ฟิลด์ ดูตารางใน "แบบสอบถามรายละเอียดของ feedback") · `null` ถ้ายังไม่มี feedback · มี feedback แต่ผู้ใช้ไม่ได้ตอบ = object ที่ทุกฟิลด์เป็น `null` · `comment` เป็นข้อความอิสระของผู้ใช้ อาจมีข้อมูลส่วนบุคคลหลุดมา ระวังเวลา export/แสดงต่อสาธารณะ
+- `segments` เรียงตาม `index` · `is_spoof` = `spoof_probability >= threshold_used` **ของผลตรวจนี้** (ไม่ใช่ threshold ปัจจุบันของระบบ) — ใช้วาดกราฟช่วงเวลาที่น่าสงสัย; ถ้าไม่มี segment จะได้ `[]`
+- ไม่เก็บไฟล์เสียงจริง จึงไม่มีลิงก์ให้ฟัง
+
+**401 Unauthorized** — ไม่มี token หรือเป็น token ของผู้ใช้ทั่วไป
+
+```json
+{ "detail": "Insufficient permissions" }
+```
+
+**404 Not Found** — ไม่มีผลตรวจ id นี้ (เช่น ผู้ใช้ลบจากหน้าประวัติของตัวเองไปแล้ว)
+
+```json
+{ "detail": "Detection not found" }
+```
+
+**422 Unprocessable Entity** — id ใน URL ไม่ใช่ UUID
+
+---
+
 ## สรุป error status code ที่ frontend ต้องดักไว้
 
-| Status | ความหมาย | ตัวอย่างจุดที่เจอ |
-|---|---|---|
-| 401 | ไม่ได้ login / token หมดอายุ / role ไม่ตรง / **บัญชีถูกระงับหรือถูกลบ** | `/history`, `/admin/*` เมื่อไม่มี/ผิด token หรือบัญชีถูกระงับ |
-| 403 | บัญชีถูกระงับ (รหัสผ่านถูก แต่ login ไม่ได้) | `POST /auth/login` |
-| 404 | ไม่พบข้อมูล หรือไม่ใช่เจ้าของ | `/history/{id}` ที่ไม่มีจริงหรือเป็นของคนอื่น |
-| 409 | ข้อมูลขัดแย้งกับที่มีอยู่ | อีเมลซ้ำตอนสมัคร, feedback ซ้ำ |
-| 422 | request body ไม่ผ่าน validation | password สั้นไป, threshold นอกช่วง 0–1 |
-| 200 (แต่มี `failed_files`) | ตรวจสอบเสียงสำเร็จบางไฟล์ | อัปโหลดไฟล์ผิดฟอร์แมต/เสียหาย/ว่างเปล่าปนกับไฟล์ที่ถูกต้อง — ดู `failed_files[].reason` |
+| Status                     | ความหมาย                                                                     | ตัวอย่างจุดที่เจอ                                                                       |
+| -------------------------- | ---------------------------------------------------------------------------- | --------------------------------------------------------------------------------------- |
+| 400                        | ข้อมูลรูปแบบถูกแต่เงื่อนไขไม่ผ่าน (token ยังใช้ได้ **อย่าเด้งไปหน้า login**) | `PUT /users/me/password` เมื่อรหัสเดิมไม่ถูกต้อง                                        |
+| 401                        | ไม่ได้ login / token หมดอายุ / role ไม่ตรง / **บัญชีถูกระงับหรือถูกลบ**      | `/history`, `/admin/*` เมื่อไม่มี/ผิด token หรือบัญชีถูกระงับ                           |
+| 403                        | บัญชีถูกระงับ (รหัสผ่านถูก แต่ login ไม่ได้)                                 | `POST /auth/login`                                                                      |
+| 404                        | ไม่พบข้อมูล หรือไม่ใช่เจ้าของ                                                | `/history/{id}` ที่ไม่มีจริงหรือเป็นของคนอื่น                                           |
+| 409                        | ข้อมูลขัดแย้งกับที่มีอยู่                                                    | อีเมลซ้ำตอนสมัคร, feedback ซ้ำ                                                          |
+| 422                        | request body ไม่ผ่าน validation                                              | password สั้นไป, threshold นอกช่วง 0–1                                                  |
+| 200 (แต่มี `failed_files`) | ตรวจสอบเสียงสำเร็จบางไฟล์                                                    | อัปโหลดไฟล์ผิดฟอร์แมต/เสียหาย/ว่างเปล่าปนกับไฟล์ที่ถูกต้อง — ดู `failed_files[].reason` |

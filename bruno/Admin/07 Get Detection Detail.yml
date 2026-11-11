@@ -1,0 +1,139 @@
+info:
+  name: Get Detection Detail
+  type: http
+  seq: 7
+
+http:
+  method: GET
+  url: "{{baseUrl}}/admin/detections/{{detectionId}}"
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+
+examples:
+  - name: "200 OK"
+    description: "Full detail incl. per-segment scores, owner and feedback (set detectionId to an id from List Detections)"
+    request:
+      url: "{{baseUrl}}/admin/detections/{{detectionId}}"
+      method: GET
+    response:
+      status: 200
+      statusText: "OK"
+      body:
+        type: json
+        data: |-
+          {
+            "id": "<detection-uuid>",
+            "created_at": "2026-10-24T06:00:51",
+            "original_filename": "call_from_bank.wav",
+            "duration_seconds": 7.0,
+            "num_segments": 2,
+            "mean_probability": 0.7463,
+            "max_probability": 0.986,
+            "threshold_used": 0.5,
+            "verdict": "spoof",
+            "possible_partial_spoof": false,
+            "model_version": "<model-version>",
+            "processing_ms": 600,
+            "user_id": "<user-uuid>",
+            "user_email": "somchai@example.com",
+            "feedback": "disagree",
+            "sample_rate": 16000,
+            "file_size_bytes": 224044,
+            "audio_format": "wav",
+            "feedback_created_at": "2026-10-24T06:00:51",
+            "feedback_updated_at": "2026-10-24T06:05:12",
+            "segments": [
+              { "index": 0, "start_seconds": 0.0, "end_seconds": 4.0, "spoof_probability": 0.986, "is_spoof": true },
+              { "index": 1, "start_seconds": 4.0, "end_seconds": 7.0, "spoof_probability": 0.507, "is_spoof": true }
+            ]
+          }
+  - name: "200 OK \u2014 guest, \u0e22\u0e31\u0e07\u0e44\u0e21\u0e48\u0e21\u0e35 feedback"
+    description: "user_id, user_email, feedback and feedback_* are null"
+    request:
+      url: "{{baseUrl}}/admin/detections/{{detectionId}}"
+      method: GET
+    response:
+      status: 200
+      statusText: "OK"
+      body:
+        type: json
+        data: |-
+          {
+            "id": "<detection-uuid>",
+            "created_at": "2026-10-24T06:00:51",
+            "original_filename": "call_from_bank.wav",
+            "duration_seconds": 7.0,
+            "num_segments": 2,
+            "mean_probability": 0.7463,
+            "max_probability": 0.986,
+            "threshold_used": 0.5,
+            "verdict": "spoof",
+            "possible_partial_spoof": false,
+            "model_version": "<model-version>",
+            "processing_ms": 600,
+            "user_id": null,
+            "user_email": null,
+            "feedback": null,
+            "sample_rate": 16000,
+            "file_size_bytes": 224044,
+            "audio_format": "wav",
+            "feedback_created_at": null,
+            "feedback_updated_at": null,
+            "segments": [
+              { "index": 0, "start_seconds": 0.0, "end_seconds": 4.0, "spoof_probability": 0.986, "is_spoof": true },
+              { "index": 1, "start_seconds": 4.0, "end_seconds": 7.0, "spoof_probability": 0.507, "is_spoof": true }
+            ]
+          }
+  - name: "401 Unauthorized"
+    description: "Missing token or a regular user token"
+    request:
+      url: "{{baseUrl}}/admin/detections/{{detectionId}}"
+      method: GET
+    response:
+      status: 401
+      statusText: "Unauthorized"
+      body:
+        type: json
+        data: |-
+          {
+            "detail": "Insufficient permissions"
+          }
+  - name: "404 Not Found"
+    description: "No detection with this id"
+    request:
+      url: "{{baseUrl}}/admin/detections/{{detectionId}}"
+      method: GET
+    response:
+      status: 404
+      statusText: "Not Found"
+      body:
+        type: json
+        data: |-
+          {
+            "detail": "Detection not found"
+          }
+  - name: "422 Unprocessable Entity"
+    description: "detectionId is not a UUID"
+    request:
+      url: "{{baseUrl}}/admin/detections/{{detectionId}}"
+      method: GET
+    response:
+      status: 422
+      statusText: "Unprocessable Entity"
+      body:
+        type: json
+        data: |-
+          {
+            "detail": [
+              {
+                "type": "uuid_parsing",
+                "loc": ["path", "detection_id"],
+                "msg": "Input should be a valid UUID"
+              }
+            ]
+          }

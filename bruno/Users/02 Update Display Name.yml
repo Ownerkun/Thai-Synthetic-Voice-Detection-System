@@ -1,0 +1,118 @@
+info:
+  name: Update Display Name
+  type: http
+  seq: 2
+
+http:
+  method: PATCH
+  url: "{{baseUrl}}/users/me"
+  headers:
+    - name: Content-Type
+      value: application/json
+  body:
+    type: json
+    data: |-
+      {
+        "display_name": "Somchai K."
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+
+examples:
+  - name: "200 OK"
+    description: "Display name changed"
+    request:
+      url: "{{baseUrl}}/users/me"
+      method: PATCH
+      body:
+        type: json
+        data: |-
+          {
+            "display_name": "Somchai K."
+          }
+    response:
+      status: 200
+      statusText: "OK"
+      body:
+        type: json
+        data: |-
+          {
+            "id": "<user-uuid>",
+            "email": "user@example.com",
+            "display_name": "Somchai K.",
+            "created_at": "2026-10-23T08:23:00"
+          }
+  - name: "200 OK — \u0e25\u0e49\u0e32\u0e07\u0e0a\u0e37\u0e48\u0e2d"
+    description: "Send null to clear the name"
+    request:
+      url: "{{baseUrl}}/users/me"
+      method: PATCH
+      body:
+        type: json
+        data: |-
+          {
+            "display_name": null
+          }
+    response:
+      status: 200
+      statusText: "OK"
+      body:
+        type: json
+        data: |-
+          {
+            "id": "<user-uuid>",
+            "email": "user@example.com",
+            "display_name": null,
+            "created_at": "2026-10-23T08:23:00"
+          }
+  - name: "401 Unauthorized"
+    description: "Missing token, admin token, or suspended account"
+    request:
+      url: "{{baseUrl}}/users/me"
+      method: PATCH
+      body:
+        type: json
+        data: |-
+          {
+            "display_name": "Somchai K."
+          }
+    response:
+      status: 401
+      statusText: "Unauthorized"
+      body:
+        type: json
+        data: |-
+          {
+            "detail": "Authentication required"
+          }
+  - name: "422 Unprocessable Entity"
+    description: "Empty body, empty or >100 character name, or a field that cannot be edited (email, is_active)"
+    request:
+      url: "{{baseUrl}}/users/me"
+      method: PATCH
+      body:
+        type: json
+        data: |-
+          {
+            "email": "x@y.com"
+          }
+    response:
+      status: 422
+      statusText: "Unprocessable Entity"
+      body:
+        type: json
+        data: |-
+          {
+            "detail": [
+              {
+                "type": "extra_forbidden",
+                "loc": ["body", "email"],
+                "msg": "Extra inputs are not permitted"
+              }
+            ]
+          }

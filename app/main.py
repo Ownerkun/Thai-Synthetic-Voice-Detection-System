@@ -18,6 +18,7 @@ from app.features.history.router import router as history_router
 from app.features.feedback.router import router as feedback_router
 from app.models.admin import AdminAccount
 from app.services.onnx_analyzer import get_analyzer
+from app.features.users.router import router as users_router
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
 logger = logging.getLogger(__name__)
@@ -54,6 +55,7 @@ app.include_router(detection_router)
 app.include_router(history_router)
 app.include_router(admin_router)
 app.include_router(feedback_router)
+app.include_router(users_router)
 
 
 def _bootstrap_admin_if_missing() -> None:

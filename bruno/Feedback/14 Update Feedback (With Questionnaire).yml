@@ -1,0 +1,142 @@
+info:
+  name: Update Feedback (With Questionnaire)
+  type: http
+  seq: 14
+
+http:
+  method: PUT
+  url: "{{baseUrl}}/history/{{detectionId}}/feedback"
+  headers:
+    - name: Content-Type
+      value: application/json
+  body:
+    type: json
+    data: |-
+      {
+        "user_agrees": false,
+        "audio_source": "speaker_replay",
+        "input_method": "recorded_in_app",
+        "environment": "noisy_indoor",
+        "mic_distance": "far",
+        "audio_issues": ["echo", "uneven_volume"],
+        "recording_device": "Galaxy A54",
+        "playback_device": "iPhone 12",
+        "truth_basis": "self_recorded",
+        "speaker_accent": "northern",
+        "speaker_age_group": "60_plus",
+        "comment": "เปิดจากโทรศัพท์อีกเครื่องวางบนโต๊ะ"
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+
+examples:
+  - name: "200 OK"
+    description: "PUT replaces everything: fields left out are cleared to null. Run Submit Feedback first (or PUT after it). Every field except user_agrees is optional"
+    request:
+      url: "{{baseUrl}}/history/{{detectionId}}/feedback"
+      method: PUT
+      body:
+        type: json
+        data: |-
+          {
+            "user_agrees": false,
+            "audio_source": "speaker_replay",
+            "input_method": "recorded_in_app",
+            "environment": "noisy_indoor",
+            "mic_distance": "far",
+            "audio_issues": ["echo", "uneven_volume"],
+            "recording_device": "Galaxy A54",
+            "playback_device": "iPhone 12",
+            "truth_basis": "self_recorded",
+            "speaker_accent": "northern",
+            "speaker_age_group": "60_plus",
+            "comment": "เปิดจากโทรศัพท์อีกเครื่องวางบนโต๊ะ"
+          }
+    response:
+      status: 200
+      statusText: "OK"
+      body:
+        type: json
+        data: |-
+          {
+            "audio_source": "speaker_replay",
+            "input_method": "recorded_in_app",
+            "environment": "noisy_indoor",
+            "mic_distance": "far",
+            "audio_issues": ["echo", "uneven_volume"],
+            "recording_device": "Galaxy A54",
+            "playback_device": "iPhone 12",
+            "truth_basis": "self_recorded",
+            "speaker_accent": "northern",
+            "speaker_age_group": "60_plus",
+            "comment": "เปิดจากโทรศัพท์อีกเครื่องวางบนโต๊ะ",
+            "id": "<feedback-uuid>",
+            "detection_id": "<detection-uuid>",
+            "user_agrees": false,
+            "created_at": "2026-11-01T08:52:12Z",
+            "updated_at": "2026-11-01T08:55:00Z"
+          }
+  - name: "422 Unprocessable Entity"
+    description: "Value not in the options, duplicate audio_issues, unknown field name, or playback_device when audio_source is not speaker_replay"
+    request:
+      url: "{{baseUrl}}/history/{{detectionId}}/feedback"
+      method: PUT
+      body:
+        type: json
+        data: |-
+          {
+            "user_agrees": false,
+            "audio_source": "direct_voice",
+            "playback_device": "iPhone 12"
+          }
+    response:
+      status: 422
+      statusText: "Unprocessable Entity"
+      body:
+        type: json
+        data: |-
+          {
+            "detail": [
+              {
+                "type": "value_error",
+                "loc": ["body"],
+                "msg": "Value error, playback_device can only be sent when audio_source is speaker_replay"
+              }
+            ]
+          }
+  - name: "401 Unauthorized"
+    description: "Missing token"
+    request:
+      url: "{{baseUrl}}/history/{{detectionId}}/feedback"
+      method: PUT
+      body:
+        type: json
+        data: |-
+          {
+            "user_agrees": false,
+            "audio_source": "speaker_replay",
+            "input_method": "recorded_in_app",
+            "environment": "noisy_indoor",
+            "mic_distance": "far",
+            "audio_issues": ["echo", "uneven_volume"],
+            "recording_device": "Galaxy A54",
+            "playback_device": "iPhone 12",
+            "truth_basis": "self_recorded",
+            "speaker_accent": "northern",
+            "speaker_age_group": "60_plus",
+            "comment": "เปิดจากโทรศัพท์อีกเครื่องวางบนโต๊ะ"
+          }
+    response:
+      status: 401
+      statusText: "Unauthorized"
+      body:
+        type: json
+        data: |-
+          {
+            "detail": "Authentication required"
+          }
