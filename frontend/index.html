@@ -279,28 +279,43 @@ input[type=range]::-moz-range-thumb{width:20px;height:20px;background:var(--bg);
 .eye{position:absolute;right:4px;top:50%;transform:translateY(-50%);border:0;background:none;border-radius:10px;padding:5px;color:var(--mute);display:grid;place-items:center}
 .eye:hover,.eye.on{color:var(--accent)}
 label.f .pwd{margin-top:2px}label.f .pwd .in{margin-top:0}
+.admfoot{text-align:center;margin-top:26px}.admfoot .linkbtn{font-size:12px;opacity:.6;text-decoration:none}.admfoot .linkbtn:hover{opacity:1;text-decoration:underline}
 .linkbtn{border:0;background:none;padding:0;color:var(--mute);font-size:14px;text-decoration:underline;text-underline-offset:3px}.linkbtn:hover{color:var(--accent)}
 .pl{margin-top:8px}.pl audio{margin-top:0;height:36px;min-width:220px}.pl .nofile{margin-top:6px;max-width:260px}
 audio{border-radius:999px}
 .tag{font-family:inherit}
 h1,h2,h3,.disp{font-family:inherit;font-weight:300}h3{font-weight:500}
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important}}
+
+.qd{margin-top:22px}.qd summary{cursor:pointer;font-weight:500;padding:10px 0}
+.qd .q{border:0;padding:0;margin:18px 0 0;min-width:0}.qd legend{padding:0;font-weight:500;margin-bottom:6px}
+.chips.tight{margin-top:8px}
+.tags{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}.tg{font-size:13px;color:var(--mute);background:color-mix(in srgb,var(--bg) 70%,transparent);border-radius:999px;padding:2px 10px}
+.ban{margin-top:16px;padding:12px 16px;border-radius:16px;background:var(--lilac)}
+.choice.yes.on,.choice.no.on{color:var(--ink)}
+.tw .tg{background:var(--surf)}
+.usearch{display:inline-flex;gap:8px;align-items:center;margin-left:auto}.usearch .in{min-height:36px;width:200px}
 </style>
 </head>
 <body>
 <div id="app"></div>
 <script>
 // ===== ตั้งค่า: แก้ที่อยู่ของ backend ตรงนี้ =====
-const API=window.API_BASE||'http://localhost:8000';
+const API=window.API_BASE||(()=>{try{const q=new URLSearchParams(location.search).get('api');if(q)return q.replace(/\/$/,'');if(/^https?:$/.test(location.protocol)&&location.hostname)return location.protocol+'//'+location.hostname+':8000'}catch(e){}return'http://localhost:8000'})();
 
 const $=s=>document.querySelector(s),esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 const D=d=>d.toLocaleDateString('th-TH',{day:'numeric',month:'short',year:'numeric'}),T=d=>d.toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit'});
 const dk=d=>d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
 const mmss=s=>Math.floor(s/60)+':'+String(s%60).padStart(2,'0');
 const store={get:k=>{try{return sessionStorage.getItem(k)}catch(e){return null}},set:(k,v)=>{try{v==null?sessionStorage.removeItem(k):sessionStorage.setItem(k,v)}catch(e){}}};
-const S={fp:0,fpEmail:'',token:null,user:null,role:'user',page:'home',tab:'rec',phase:'idle',cur:null,rec:null,f:{date:'',res:''},reg:false,err:'',msg:'',loading:false,th:.8,hist:[],adet:[],stats:{},thinfo:{}};
+const S={fo:null,qopen:false,users:[],utotal:0,uq:'',ua:'',fu:null,atotal:0,dm:null,fp:0,fpEmail:'',token:null,user:null,role:'user',page:'home',tab:'rec',phase:'idle',cur:null,rec:null,f:{date:'',res:''},reg:false,err:'',msg:'',loading:false,th:.8,hist:[],adet:[],stats:{},thinfo:{}};
 
 S.cal={open:false,y:new Date().getFullYear(),m:new Date().getMonth()};
+const AVK=u=>'av:'+(u.id||u.email);
+const AV={get:u=>{try{return localStorage.getItem(AVK(u))}catch(e){return null}},set:(u,v)=>{try{localStorage.setItem(AVK(u),v);return true}catch(e){return false}}};
+function avShrink(f){return new Promise((ok,no)=>{const im=new Image(),url=URL.createObjectURL(f);im.onload=()=>{const n=256,s=Math.min(im.width,im.height),c=document.createElement('canvas');c.width=c.height=n;c.getContext('2d').drawImage(im,(im.width-s)/2,(im.height-s)/2,s,s,0,0,n,n);ok(c.toDataURL('image/jpeg',.85))};im.onerror=()=>no(new Error('เปิดรูปนี้ไม่ได้ ลองไฟล์ .jpg หรือ .png'));im.src=url})}
+const ERR_TH={'Invalid email or password':'อีเมลหรือรหัสผ่านไม่ถูกต้อง','Invalid username or password':'ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง','Account suspended':'บัญชีนี้ถูกระงับ ติดต่อผู้ดูแลระบบ','Email already in use':'อีเมลนี้ถูกใช้สมัครไปแล้ว','Current password is incorrect':'รหัสผ่านปัจจุบันไม่ถูกต้อง','Feedback already submitted for this record':'ส่งความเห็นของผลนี้ไปแล้ว','Invalid or suspended account':'บัญชีนี้ถูกระงับหรือไม่ถูกต้อง','User not found':'ไม่พบผู้ใช้นี้'};
+const thErr=m=>ERR_TH[m]||(/must be different/i.test(m)?'รหัสผ่านใหม่ต้องไม่ซ้ำกับรหัสผ่านเดิม':m);
 // ===== ชั้นเรียก API =====
 async function api(path,o={}){
   const h={};if(S.token)h.Authorization='Bearer '+S.token;if(o.body)h['Content-Type']='application/json';
@@ -308,7 +323,7 @@ async function api(path,o={}){
   catch(e){throw new Error('เชื่อมต่อ API ที่ '+API+' ไม่ได้ ตรวจว่า backend เปิดอยู่และตั้ง CORS ไว้แล้ว')}
   if(r.status==401&&S.token&&!o.noAuthRedirect){logout();throw new Error('เซสชันหมดอายุ โปรดเข้าสู่ระบบใหม่')}
   const t=await r.text();let j=null;try{j=t?JSON.parse(t):null}catch(e){}
-  if(!r.ok){let m=j&&(j.detail||j.message);if(Array.isArray(m))m=m.map(x=>x.msg).join(' ');throw new Error(typeof m=='string'&&m?m:'เกิดข้อผิดพลาด ('+r.status+')')}
+  if(!r.ok){let m=j&&(j.detail||j.message);if(Array.isArray(m))m=m.map(x=>x.msg).join(' ');const er=new Error(typeof m=='string'&&m?thErr(m):'เกิดข้อผิดพลาด ('+r.status+')');er.status=r.status;throw er}
   return j}
 // ===== แปลงชื่อ field จาก backend เป็นรูปแบบที่ UI ใช้ (ปรับตาม schema จริงได้ที่นี่ที่เดียว) =====
 const pick=(o,ks)=>{if(!o)return;for(const k of ks)if(o[k]!==undefined&&o[k]!==null)return o[k]};
@@ -328,8 +343,8 @@ function norm(x){
   sc=+sc||0;if(sc>1)sc=sc/100;
   return{id:(v=>UU.test(String(v))?v:uuidIn(x))(pick(x,['id','detection_id','history_id','record_id','uuid'])),raw:x,name:String(pick(x,['filename','file_name','original_filename','name'])||'ไฟล์เสียง').replace(/\.(webm|wav|mp3|m4a|ogg|flac|aac|opus|mp4)$/i,''),score:sc,
     dur:Math.round(+pick(x,['duration_sec','duration','duration_seconds'])||0),at:new Date(pick(x,['created_at','timestamp','detected_at'])||Date.now()),
-    agree:pick(x,['user_agrees','agree'])??(fb?pick(fb,['user_agrees','agree']):undefined)??deep(x,/agree/i,v=>typeof v=='boolean')??null,comment:x.comment||(fb&&fb.comment)||deep(x,/comment/i,v=>typeof v=='string'&&v.trim()!=='')||'',scores:sg.map(s=>+(s&&typeof s=='object'?(s.spoof_probability??s.score??s.probability):s)),segs:sg.filter(s=>s&&typeof s=='object'&&s.end_seconds!==undefined).map(s=>({s:+s.start_seconds||0,e:+s.end_seconds||0})),partial:!!x.possible_partial_spoof,maxp:+x.max_probability||0,
-    fake:lb?/spoof|fake|synth/.test(lb):undefined,th:th!==undefined?+th:undefined,email:pick(x,['user_email','email'])||(x.user&&x.user.email)||'ผู้เยี่ยมชม'}}
+    agree:(typeof fb0=='string'?{agree:true,disagree:false}[fb0]:undefined)??pick(x,['user_agrees','agree'])??(fb?pick(fb,['user_agrees','agree']):undefined)??deep(x,/agree/i,v=>typeof v=='boolean')??null,comment:x.comment||(fb&&fb.comment)||deep(x,/comment/i,v=>typeof v=='string'&&v.trim()!=='')||'',scores:sg.map(s=>+(s&&typeof s=='object'?(s.spoof_probability??s.score??s.probability):s)),segs:sg.filter(s=>s&&typeof s=='object'&&s.end_seconds!==undefined).map(s=>({s:+s.start_seconds||0,e:+s.end_seconds||0})),partial:!!x.possible_partial_spoof,maxp:+x.max_probability||0,
+    fake:lb?/spoof|fake|synth/.test(lb):undefined,th:th!==undefined?+th:undefined,uid:x.user_id,email:pick(x,['user_email','email'])||(x.user&&x.user.email)||'ผู้เยี่ยมชม'}}
 const thTxt=d=>d.th!==undefined?d.th.toFixed(2):'–';
 const isF=d=>d.fake!==undefined?d.fake:d.score>=(d.th||S.th);
 const uname=u=>pick(u,['name','full_name','display_name'])||String(u.email||'').split('@')[0];
@@ -356,7 +371,7 @@ const IC={
   eye:'<path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/>',
   left:'<path d="M15 6l-6 6 6 6"/>',right:'<path d="M9 6l6 6-6 6"/>'};
 const ic=n=>`<svg class="i" viewBox="0 0 24 24" aria-hidden="true">${IC[n]}</svg>`;
-const NAV={user:[['home','mic','ตรวจเสียง'],['hist','clock','ประวัติ'],['prof','user','โปรไฟล์']],admin:[['dash','grid','ภาพรวม'],['hist','clock','ประวัติการตรวจ'],['th','sliders','เกณฑ์ตัดสิน']]};
+const NAV={user:[['home','mic','ตรวจเสียง'],['hist','clock','ประวัติ'],['prof','user','โปรไฟล์']],admin:[['dash','grid','ภาพรวม'],['hist','clock','ประวัติการตรวจ'],['users','user','ผู้ใช้'],['th','sliders','เกณฑ์ตัดสิน']]};
 const MOUTH={idle:'<path d="M66 100 Q80 113 94 100" fill="none" stroke="var(--bd)" stroke-width="4"/>',
  listen:'<ellipse cx="80" cy="106" rx="8" ry="10" fill="var(--paper)" stroke="var(--bd)" stroke-width="4"/>',
  busy:'<circle cx="80" cy="104" r="5" fill="var(--bd)"/>',
@@ -381,7 +396,7 @@ const filterBar=()=>{const on=S.f.date||S.f.res;
 function render(){
   const a=$('#app');if(!S.user){a.innerHTML=loginV();return}
   const adm=S.role=='admin',nav=NAV[adm?'admin':'user'],btns=cls=>nav.map(p=>`<button data-go="${p[0]}" class="${S.page==p[0]?'on':''}">${ic(p[1])}${p[2]}</button>`).join('');
-  const v=S.loading?'<p class="mute">กำลังโหลดข้อมูลจากระบบ</p>':{home:homeV,hist:adm?aHistV:uHistV,prof:profV,dash:dashV,th:thV}[S.page]();
+  const v=S.loading?'<p class="mute">กำลังโหลดข้อมูลจากระบบ</p>':{home:homeV,hist:adm?aHistV:uHistV,prof:profV,dash:dashV,th:thV,users:usersV}[S.page]();
   a.innerHTML=`<header class="bar"><div><div class="brand">${logo()}เสียงจริงไหม?${adm?'<span class="tag">ผู้ดูแล</span>':''}</div><nav class="nav" aria-label="เมนูหลัก">${btns()}</nav>${adm?'<button class="out" data-act="out">ออกจากระบบ</button>':''}</div></header>
   <main class="page ${adm?'wide':''}">${v}</main><nav class="dock" aria-label="เมนูหลัก">${btns()}</nav>`;
   if(S.phase=='done'&&S.page=='home'&&$('#wave'))draw();
@@ -404,14 +419,15 @@ function loginV(){
   const adm=S.role=='admin';
   return `<div class="login"><div class="hero">${mascot('idle')}<span class="sticker">ตรวจเสียงภาษาไทย</span><h1>เสียงนี้คนพูดจริง<br>หรือ AI สร้างขึ้น</h1><p>อัปไฟล์หรืออัดเสียงสั้น ๆ แล้วรู้ผลทันทีไม่กี่วินาที</p></div>
   <div class="lg"><div class="brand" style="margin:0 0 18px">${logo()}เสียงจริงไหม?</div>${S.fp&&!adm?fpCard():`<div class="card">
-  ${S.reg?`<h2>สมัครสมาชิก</h2>`:`<div class="seg2"><button data-role="user" class="${!adm?'on':''}">ผู้ใช้ทั่วไป</button><button data-role="admin" class="${adm?'on':''}">ผู้ดูแล</button></div>`}
+  ${S.reg?`<h2>สมัครสมาชิก</h2>`:''}
   <label class="f">${adm?'ชื่อผู้ใช้':'อีเมล'}<input class="in" id="em" ${adm?'':'type="email"'} autocomplete="username"></label>
   <label class="f">รหัสผ่าน<span class="pwd"><input class="in" id="pw" type="password" autocomplete="current-password"><button type="button" class="eye" data-eye aria-label="แสดงหรือซ่อนรหัสผ่าน">${ic('eye')}</button></span></label>
   ${!adm&&!S.reg?`<p style="margin-top:10px;text-align:right"><button class="linkbtn" data-act="fp">ลืมรหัสผ่าน?</button></p>`:''}${errBox()}<button class="btn block" style="margin-top:22px" data-act="${S.reg?'reg':'in'}">${S.reg?'สมัครสมาชิก':'เข้าสู่ระบบ'}</button>
-  ${adm?'':`<p class="center" style="margin-top:14px"><button class="btn ghost sm" data-act="tgl">${S.reg?'มีบัญชีแล้ว เข้าสู่ระบบ':'ยังไม่มีบัญชี สมัครสมาชิก'}</button></p>`}</div>`}</div></div>`}
+  ${adm?'':`<p class="center" style="margin-top:14px"><button class="btn ghost sm" data-act="tgl">${S.reg?'มีบัญชีแล้ว เข้าสู่ระบบ':'ยังไม่มีบัญชี สมัครสมาชิก'}</button></p>`}</div>`}
+  ${S.reg||S.fp&&!adm?'':`<p class="admfoot"><button class="linkbtn" data-role="${adm?'user':'admin'}">${adm?'กลับไปหน้าผู้ใช้ทั่วไป':'สำหรับผู้ดูแลระบบ'}</button></p>`}</div></div>`}
 function homeV(){
   let b='';
-  if(S.phase=='busy')b=`<div class="stage center" style="padding:28px 20px"><div style="display:grid;justify-items:center">${mascot('busy',130)}</div><h3 style="margin-top:12px">น้องคลื่นกำลังฟังอยู่</h3><p class="mute">กำลังวิเคราะห์เสียง รอสักครู่นะ</p></div>`;
+  if(S.phase=='busy')b=`<div class="stage center" style="padding:28px 20px"><div style="display:grid;justify-items:center">${mascot('busy',130)}</div><h3 style="margin-top:12px">กำลังประมวลผล</h3><p class="mute">กำลังวิเคราะห์เสียง รอสักครู่นะ</p></div>`;
   else if(S.phase=='done')b=resV();
   else b=`<div class="stage"><div class="seg2"><button data-tab="rec" class="${S.tab=='rec'?'on':''}">อัดเสียง</button><button data-tab="up" class="${S.tab=='up'?'on':''}">อัปโหลดไฟล์</button></div>
   ${S.tab=='rec'?`<canvas id="live" class="live" aria-hidden="true"></canvas><div class="timer num" id="rt">${S.rec?mmss(S.rec.sec):'0:00'}</div><button class="rec ${S.rec?'on':''}" data-act="rec" aria-label="${S.rec?'หยุดอัด':'เริ่มอัด'}">${ic(S.rec?'stop':'mic')}</button><p class="center mute small">${S.rec?'กดอีกครั้งเมื่อพูดจบ ระบบจะตรวจให้ทันที':'แตะเพื่อเริ่มอัด พูดอย่างน้อย 4 วินาทีจะได้ผลแม่นขึ้น'}</p>`
@@ -429,33 +445,34 @@ function resV(){
   ${n?`<p class="small" style="margin-top:12px">ช่วงที่เกินเกณฑ์ ${bad} จาก ${n} ช่วง สีของคลื่นเสียงตามคะแนนแต่ละช่วง</p>`:''}</section>
   <div class="card"><h3>ผลนี้ถูกต้องไหม</h3>
   ${d.sent?`<p class="ok">${ic('check')}ส่งความเห็นแล้ว ขอบคุณที่ช่วยให้ระบบแม่นขึ้น</p>`:`<div class="choices"><button class="choice yes ${d.agree===true?'on':''}" data-ag="1">${ic('check')}ถูกต้อง</button><button class="choice no ${d.agree===false?'on':''}" data-ag="0">${ic('cross')}ไม่ถูกต้อง</button></div>
-  <label class="f">ความเห็นเพิ่มเติม (ไม่บังคับ)<textarea class="in" id="cm" rows="3" placeholder="เช่น คลิปนี้บันทึกในห้องที่มีเสียงรบกวน">${esc(d.comment)}</textarea></label>${errBox()}
+  <label class="f">ความเห็นเพิ่มเติม (ไม่บังคับ)<textarea class="in" id="cm" rows="3" maxlength="300" placeholder="เช่น คลิปนี้บันทึกในห้องที่มีเสียงรบกวน">${esc(d.comment)}</textarea></label>${qForm(d)}${errBox()}
   <button class="btn" style="margin-top:20px" data-act="send">ส่งความเห็น</button>`}
   <p class="small mute" style="margin-top:20px">ผลนี้เป็นเครื่องมือช่วยตัดสินใจเบื้องต้น ไม่ใช่หลักฐานทางกฎหมาย</p></div>
   <p style="margin-top:32px"><button class="btn block ghost" data-act="again">ตรวจไฟล์อื่น</button></p>`}
 function uHistV(){
   const l=filt(S.hist);
-  return `<h1>ประวัติการตรวจ</h1>${filterBar()}${errBox()}${typeof location!='undefined'&&location.search.includes('debug')&&S.hist[0]?`<pre class="dbg">รายการจาก /history:\n${esc(JSON.stringify(S.hist[0].raw,null,1))}\n\nรายละเอียดจาก /history/{id}:\n${esc(JSON.stringify(S.hist[0].rawDetail||null,null,1))}</pre>`:''}${l.length?`<div class="hlist">${l.map(d=>{const f=isF(d);return `<div class="hrow ${f?'fake':'real'}"><span class="dot">${ic(f?'cross':'check')}</span><div class="g"><b>${esc(d.name)}</b><div class="small mute">${D(d.at)} ${T(d.at)} น. ยาว ${mmss(d.dur)} เกณฑ์ ${thTxt(d)}</div><div style="margin-top:6px">${pill(d)}${!f&&d.partial?'<span class="pill fake">บางช่วงน่าสงสัย</span>':''}${fbp(d)}</div>${d.comment?`<div class="cmt">${esc(d.comment)}</div>`:''}${playBox(d)}</div><div class="sc"><div class="bigpct num">${Math.round(d.score*100)}%</div><div class="small" style="color:var(--c)">${f?'เสียงสังเคราะห์':'เสียงคนพูดจริง'}</div></div><button class="iconbtn" data-del="${d.id}" aria-label="ลบรายการ ${esc(d.name)}">${ic('trash')}</button></div>`}).join('')}</div>`:`<div class="empty">${mascot('busy',110)}<p>${S.f.date||S.f.res?'ไม่พบรายการตามตัวกรองนี้':'ยังไม่มีรายการ ผลที่ตรวจแล้วจะมาอยู่ที่นี่'}</p><p style="margin-top:14px"><button class="btn" data-go="home">ตรวจเสียง</button></p></div>`}`}
+  return `<h1>ประวัติการตรวจ</h1>${filterBar()}${errBox()}${typeof location!='undefined'&&location.search.includes('debug')&&S.hist[0]?`<pre class="dbg">รายการจาก /history:\n${esc(JSON.stringify(S.hist[0].raw,null,1))}\n\nรายละเอียดจาก /history/{id}:\n${esc(JSON.stringify(S.hist[0].rawDetail||null,null,1))}</pre>`:''}${l.length?`<div class="hlist">${l.map(d=>{const f=isF(d);return `<div class="hrow ${f?'fake':'real'}"><span class="dot">${ic(f?'cross':'check')}</span><div class="g"><b>${esc(d.name)}</b><div class="small mute">${D(d.at)} ${T(d.at)} น. ยาว ${mmss(d.dur)} เกณฑ์ ${thTxt(d)}</div><div style="margin-top:6px">${pill(d)}${!f&&d.partial?'<span class="pill fake">บางช่วงน่าสงสัย</span>':''}${fbp(d)}</div>${d.comment?`<div class="cmt">${esc(d.comment)}</div>`:''}${fdTags(d)}${playBox(d)}</div><div class="sc"><div class="bigpct num">${Math.round(d.score*100)}%</div><div class="small" style="color:var(--c)">${f?'เสียงสังเคราะห์':'เสียงคนพูดจริง'}</div></div><button class="iconbtn" data-del="${d.id}" aria-label="ลบรายการ ${esc(d.name)}">${ic('trash')}</button></div>`}).join('')}</div>`:`<div class="empty">${mascot('busy',110)}<p>${S.f.date||S.f.res?'ไม่พบรายการตามตัวกรองนี้':'ยังไม่มีรายการ ผลที่ตรวจแล้วจะมาอยู่ที่นี่'}</p><p style="margin-top:14px"><button class="btn" data-go="home">ตรวจเสียง</button></p></div>`}`}
 function profV(){
   const u=S.user;
   return `<h1>โปรไฟล์</h1><div class="card"><div class="row"><div class="avatar">${u.img?`<img src="${u.img}" alt="">`:esc((uname(u)[0]||'?').toUpperCase())}</div><div><h3>${esc(uname(u))}</h3><div class="mute">${esc(u.email)}</div></div></div>
   <p style="margin-top:14px"><label class="btn ghost sm" style="cursor:pointer">เปลี่ยนรูปโปรไฟล์<input type="file" id="av" accept="image/*" style="display:none"></label></p>
   <dl class="dl"><div><dt>อีเมล</dt><dd>${esc(u.email)}</dd></div><div><dt>สมาชิกตั้งแต่</dt><dd>${since(u)}</dd></div><div><dt>รหัสผ่าน</dt><dd aria-label="ซ่อนไว้" style="letter-spacing:2px;user-select:none">********</dd></div></dl></div>
+  <div class="card"><h3>ชื่อที่แสดง</h3><label class="f">ชื่อ<input class="in" id="dn" maxlength="100" autocomplete="nickname" value="${esc(u.display_name||'')}" placeholder="${esc(String(u.email).split('@')[0])}"></label>${S.dm?`<div class="${S.dm.ok?'ok':'err'}" role="${S.dm.ok?'status':'alert'}">${S.dm.ok?ic('check'):''}${esc(S.dm.m)}</div>`:''}<button class="btn" style="margin-top:16px" data-act="dn">บันทึกชื่อ</button></div>
   <div class="card"><h3>เปลี่ยนรหัสผ่าน</h3><label class="f">รหัสผ่านปัจจุบัน<span class="pwd"><input class="in" type="password" id="p0" autocomplete="current-password"><button type="button" class="eye" data-eye aria-label="แสดงหรือซ่อนรหัสผ่าน">${ic('eye')}</button></span></label><label class="f">รหัสผ่านใหม่ (อย่างน้อย 8 ตัว)<span class="pwd"><input class="in" type="password" id="p1" autocomplete="new-password"><button type="button" class="eye" data-eye aria-label="แสดงหรือซ่อนรหัสผ่าน">${ic('eye')}</button></span></label><label class="f">ยืนยันรหัสผ่านใหม่<span class="pwd"><input class="in" type="password" id="p2" autocomplete="new-password"><button type="button" class="eye" data-eye aria-label="แสดงหรือซ่อนรหัสผ่าน">${ic('eye')}</button></span></label>
   ${errBox()}${S.msg?`<div class="ok">${ic('check')}${S.msg}</div>`:''}<button class="btn" style="margin-top:16px" data-act="pw">บันทึกรหัสผ่านใหม่</button></div>
   <p style="margin-top:20px"><button class="btn block ghost" data-act="out">ออกจากระบบ</button></p>`}
 function dashV(){
-  const A=S.adet,st=S.stats,total=pick(st,['total_detections','total','total_count'])??A.length,fake=pick(st,['spoof_count','total_spoof','spoof_total','synthetic_count'])??A.filter(isF).length,
-    real=pick(st,['real_count','bonafide_count','genuine_count'])??(total-fake),users=pick(st,['total_users','user_count','users'])??'–',
+  const A=S.adet,st=S.stats,total=pick(st,['total_detections','total','total_count'])??A.length,fake=pick(st,['total_spoof_verdicts','spoof_count','total_spoof','spoof_total','synthetic_count'])??A.filter(isF).length,
+    real=pick(st,['total_real_verdicts','real_count','bonafide_count','genuine_count'])??(total-fake),users=pick(st,['total_users','user_count','users'])??'–',
     days=[...Array(7)].map((_,i)=>{const d=new Date(Date.now()-(6-i)*864e5);return{k:dk(d),l:d.toLocaleDateString('th-TH',{weekday:'short'}),c:A.filter(x=>dk(x.at)==dk(d)).length}}),mx=Math.max(1,...days.map(x=>x.c)),today=dk(new Date());
   return `<h1>ภาพรวมระบบ</h1><p class="mute">กดที่ตัวเลขหรือแถบสีเพื่อดูรายการเบื้องหลัง</p>${errBox()}
-  <div class="stats"><button class="stat" data-go="hist" data-res=""><span class="k">ตรวจทั้งหมด</span><strong class="num">${total}</strong><span class="sub num">100%</span></button><button class="stat" style="--c:var(--fake)" data-go="hist" data-res="fake"><span class="k"><i></i>เสียงสังเคราะห์</span><strong class="num">${fake}</strong><span class="sub num">${total?Math.round(fake/total*100):0}% ของทั้งหมด</span></button><button class="stat" style="--c:var(--real)" data-go="hist" data-res="real"><span class="k"><i></i>เสียงจริง</span><strong class="num">${real}</strong><span class="sub num">${total?Math.round(real/total*100):0}% ของทั้งหมด</span></button><div class="stat"><span class="k">ผู้ใช้งาน</span><strong class="num">${users}</strong></div></div>
+  <div class="stats"><button class="stat" data-go="hist" data-res=""><span class="k">ตรวจทั้งหมด</span><strong class="num">${total}</strong><span class="sub num">100%</span></button><button class="stat" style="--c:var(--fake)" data-go="hist" data-res="fake"><span class="k"><i></i>เสียงสังเคราะห์</span><strong class="num">${fake}</strong><span class="sub num">${total?Math.round(fake/total*100):0}% ของทั้งหมด</span></button><button class="stat" style="--c:var(--real)" data-go="hist" data-res="real"><span class="k"><i></i>เสียงจริง</span><strong class="num">${real}</strong><span class="sub num">${total?Math.round(real/total*100):0}% ของทั้งหมด</span></button><button class="stat" data-go="users"><span class="k">ผู้ใช้งาน</span><strong class="num">${users}</strong><span class="sub">ดูรายชื่อผู้ใช้</span></button></div>
   <div class="card"><h3>สัดส่วนผลตรวจ</h3>${total>0?`<div class="ratio">${fake>0?`<button class="rf" style="flex:${fake}" data-go="hist" data-res="fake" aria-label="เสียงสังเคราะห์ ${fake} รายการ"></button>`:''}${real>0?`<button class="rr" style="flex:${real}" data-go="hist" data-res="real" aria-label="เสียงจริง ${real} รายการ"></button>`:''}</div><div class="legend num"><span>เสียงสังเคราะห์ ${fake} (${Math.round(fake/total*100)}%)</span><span>เสียงจริง ${real} (${Math.round(real/total*100)}%)</span></div>`:'<p class="mute" style="margin-top:8px">ยังไม่มีผลตรวจ</p>'}</div>
   <div class="card"><h3>จำนวนการตรวจ 7 วันล่าสุด</h3><div class="chart">${days.map(x=>`<div class="${x.k==today?'today':''}"><b class="num">${x.c}</b><i style="height:${x.c/mx*90+4}px"></i>${x.l}</div>`).join('')}</div></div>
-  <div class="card"><h3>ความเห็นล่าสุดจากผู้ใช้</h3>${(()=>{const v=A.filter(d=>d.agree!==null),y=v.filter(d=>d.agree).length;return v.length?`<p class="agree num"><b>${Math.round(y/v.length*100)}%</b> ของผู้ใช้ที่ให้ความเห็นบอกว่าผลถูกต้อง (${y} จาก ${v.length} รายการ)</p>`:''})()}<div style="margin-top:8px">${A.filter(d=>d.agree!==null||d.comment).slice(0,5).map(d=>`<div class="row" style="justify-content:space-between;padding:14px 0;border-top:1px solid var(--line)"><div style="min-width:0;overflow-wrap:anywhere">${esc(d.email)}<div class="small mute">${T(d.at)} น.</div>${d.comment?`<div class="cmt">${esc(d.comment)}</div>`:''}${playBox(d)}</div><div style="text-align:right"><div class="pctbadge num" style="color:${isF(d)?'var(--fake)':'var(--real)'}">${Math.round(d.score*100)}%</div>${pill(d)}${fbp(d)}</div></div>`).join('')||'<p class="mute">ยังไม่มีความเห็นจากผู้ใช้</p>'}</div></div>`}
+  <div class="card"><h3>ความเห็นล่าสุดจากผู้ใช้</h3>${(()=>{const v=A.filter(d=>d.agree!==null),y=v.filter(d=>d.agree).length,rt=st.feedback_agreement_rate;if(rt!=null)return `<p class="agree num"><b>${Math.round(rt*100)}%</b> ของผู้ใช้ที่ให้ความเห็นบอกว่าผลถูกต้อง</p>`;return v.length?`<p class="agree num"><b>${Math.round(y/v.length*100)}%</b> ของผู้ใช้ที่ให้ความเห็นบอกว่าผลถูกต้อง (${y} จาก ${v.length} รายการ)</p>`:''})()}<div style="margin-top:8px">${A.filter(d=>d.agree!==null||d.comment).slice(0,5).map(d=>`<div class="row" style="justify-content:space-between;padding:14px 0;border-top:1px solid var(--line)"><div style="min-width:0;overflow-wrap:anywhere">${esc(d.email)}<div class="small mute">${T(d.at)} น.</div>${d.comment?`<div class="cmt">${esc(d.comment)}</div>`:''}${fdTags(d)}${playBox(d)}</div><div style="text-align:right"><div class="pctbadge num" style="color:${isF(d)?'var(--fake)':'var(--real)'}">${Math.round(d.score*100)}%</div>${pill(d)}${fbp(d)}</div></div>`).join('')||'<p class="mute">ยังไม่มีความเห็นจากผู้ใช้</p>'}</div></div>`}
 function aHistV(){
   const l=filt(S.adet);
-  return `<h1>ประวัติการตรวจ</h1>${filterBar()}${errBox()}${typeof location!='undefined'&&location.search.includes('debug')&&S.adet[0]?`<pre class="dbg">${esc(JSON.stringify(S.adet[0].raw,null,1))}</pre>`:''}<div class="card tw"><table><thead><tr><th>เวลา</th><th>ผู้ใช้</th><th>ไฟล์</th><th>ผลตรวจ</th><th>เกณฑ์ตอนตรวจ</th><th>ความเห็นผู้ใช้</th></tr></thead><tbody>${l.map(d=>`<tr><td>${D(d.at)}<br>${T(d.at)} น.</td><td>${esc(d.email)}</td><td>${esc(d.name)}${playBox(d)}</td><td>${pill(d)} <span class="num">${Math.round(d.score*100)}%</span></td><td class="num">${thTxt(d)}</td><td>${fbp(d)}${d.comment?`<div class="cmt">${esc(d.comment)}</div>`:''}</td></tr>`).join('')||'<tr><td colspan="6" class="mute">ไม่พบรายการตามตัวกรองนี้</td></tr>'}</tbody></table></div>`}
+  return `<h1>ประวัติการตรวจ</h1>${filterBar()}${errBox()}${fuBan()}${atNote()}${typeof location!='undefined'&&location.search.includes('debug')&&S.adet[0]?`<pre class="dbg">${esc(JSON.stringify(S.adet[0].raw,null,1))}</pre>`:''}<div class="card tw"><table><thead><tr><th>เวลา</th><th>ผู้ใช้</th><th>ไฟล์</th><th>ผลตรวจ</th><th>เกณฑ์ตอนตรวจ</th><th>ความเห็นผู้ใช้</th></tr></thead><tbody>${l.map(d=>`<tr><td>${D(d.at)}<br>${T(d.at)} น.</td><td>${esc(d.email)}</td><td>${esc(d.name)}${playBox(d)}</td><td>${pill(d)} <span class="num">${Math.round(d.score*100)}%</span></td><td class="num">${thTxt(d)}</td><td>${fbp(d)}${d.comment?`<div class="cmt">${esc(d.comment)}</div>`:''}${fdTags(d)}</td></tr>`).join('')||'<tr><td colspan="6" class="mute">ไม่พบรายการตามตัวกรองนี้</td></tr>'}</tbody></table></div>`}
 function thV(){
   const i=S.thinfo,by=pick(i,['updated_by','set_by']),at=pick(i,['updated_at','created_at']),x=((S.th-.5)/.45*100).toFixed(1);
   return `<h1>เกณฑ์การตัดสินใจ</h1><p class="mute">คะแนนตั้งแต่ค่านี้ขึ้นไปจะถูกตัดสินว่าเป็นเสียงสังเคราะห์ ใช้กับการตรวจครั้งต่อไปเท่านั้น ผลที่ตรวจไปแล้วจะคงเกณฑ์เดิมไว้</p>${errBox()}
@@ -472,12 +489,46 @@ function thV(){
 async function load(){
   try{S.err='';
     if(S.role=='admin'){
-      if(S.page=='dash'){const[a,s]=await Promise.all([api('/admin/detections'),api('/admin/stats').catch(()=>({}))]);S.adet=list(a).map(norm);applyLocal(S.adet);S.stats=s||{}}
-      else if(S.page=='hist'){S.adet=list(await api('/admin/detections')).map(norm);applyLocal(S.adet)}
+      if(S.page=='dash'){const[a,s]=await Promise.all([api('/admin/detections?limit=200'),api('/admin/stats').catch(()=>({}))]);S.adet=list(a).map(norm);S.atotal=a.total||S.adet.length;S.stats=s||{};await enrichAdmin(S.adet)}
+      else if(S.page=='hist'){const j=await api('/admin/detections?limit=200'+(S.fu?'&user_id='+S.fu.id:''));S.adet=list(j).map(norm);S.atotal=j.total||S.adet.length;await enrichAdmin(S.adet)}
+      else if(S.page=='users'){const q=new URLSearchParams({limit:200});if(S.uq)q.set('q',S.uq);if(S.ua)q.set('is_active',S.ua);const j=await api('/admin/users?'+q);S.users=list(j);S.utotal=j.total||S.users.length}
       else if(S.page=='th'){const t=await api('/admin/threshold');S.thinfo=t||{};S.th=+(pick(t,['value','threshold','current'])??S.th)}
-    }else if(S.page=='hist'){S.hist=list(await api('/history')).map(norm);console.log('ตัวอย่างรายการ /history',S.hist[0]&&S.hist[0].raw);await enrich(S.hist);applyLocal(S.hist)}
+    }else if(S.page=='hist'){S.hist=list(await api('/history')).map(norm);await Promise.all([enrich(S.hist),mergeFb(S.hist)])}
   }catch(e){S.err=e.message}
 }
+// ===== แบบสอบถามฟีดแบ็ก (ตัวเลือกมาจาก GET /feedback/options) =====
+async function loadFO(){if(S.fo)return;try{const o=await api('/feedback/options');if(o&&Array.isArray(o.questions))S.fo=o}catch(e){}}
+const FDK=['audio_source','input_method','environment','mic_distance','audio_issues','truth_basis','speaker_accent','speaker_age_group','recording_device','playback_device'];
+const optL=(k,v)=>{const q=S.fo&&S.fo.questions.find(x=>x.key==k),o=q&&q.options&&q.options.find(x=>x.value==v);return o?o.label:v};
+const pickFd=x=>{const o={};for(const k of FDK)if(x[k]!==undefined&&x[k]!==null&&x[k]!=='')o[k]=x[k];return o};
+function fdTags(d){const f=d.fd;if(!f)return'';const t=[];
+  for(const k of FDK){const v=f[k];if(v===undefined||v===null||v==='')continue;
+    if(k=='audio_issues'){t.push(v.length?'ปัญหา: '+v.map(x=>optL(k,x)).join(', '):'เสียงไม่มีปัญหา');continue}
+    if(k=='recording_device'){t.push('อุปกรณ์อัด: '+v);continue}
+    if(k=='playback_device'){t.push('อุปกรณ์เปิดเสียง: '+v);continue}
+    t.push(optL(k,v))}
+  return t.length?`<div class="tags">${t.map(x=>`<span class="tg">${esc(x)}</span>`).join('')}</div>`:''}
+async function mergeFb(a){await loadFO();try{const m={};list(await api('/feedback?limit=200')).forEach(x=>{m[x.detection_id]=x});
+  a.forEach(d=>{const x=m[d.id];if(x){d.agree=x.user_agrees;d.comment=x.comment||'';d.fd=pickFd(x)}})}catch(e){}}
+async function enrichAdmin(a){await loadFO();await Promise.all(a.filter(d=>d.id&&d.agree!==null).slice(0,60).map(async d=>{try{const x=await api('/admin/detections/'+d.id),fd=x&&x.feedback_details;if(fd){d.comment=fd.comment||'';d.fd=pickFd(fd)}}catch(e){}}))}
+function qForm(d){const fo=S.fo;if(!fo||!fo.questions||!fo.questions.length)return'';const a=d.fd||(d.fd={});
+  const qs=fo.questions.filter(q=>q.ask_user!==false&&q.key!='comment'&&(!q.show_if||Object.entries(q.show_if).every(([k,v])=>a[k]===v)));
+  const on=(q,v)=>q.type=='multi'?Array.isArray(a[q.key])&&a[q.key].includes(v):a[q.key]===v;
+  return `<details class="qd" ${S.qopen?'open':''}><summary>ตอบแบบสอบถามเพิ่มเติม (ไม่บังคับ)</summary>${fo.notice?`<p class="small mute">${esc(fo.notice)}</p>`:''}${qs.map(q=>`<fieldset class="q"><legend>${esc(q.label)}</legend>${q.help?`<div class="small mute">${esc(q.help)}</div>`:''}${q.type=='text'?`<input class="in" data-q="${q.key}" maxlength="${q.max_length||100}" value="${esc(a[q.key]||'')}">`:`<div class="chips tight">${(q.options||[]).map(o=>`<button type="button" class="chip ${on(q,o.value)?'on':''}" data-q="${q.key}" data-v="${o.value}" aria-pressed="${on(q,o.value)}">${esc(o.label)}</button>`).join('')}${q.type=='multi'?`<button type="button" class="chip ${Array.isArray(a[q.key])&&!a[q.key].length?'on':''}" data-q="${q.key}" data-v="__none">ไม่มีปัญหา</button>`:''}</div>`}</fieldset>`).join('')}</details>`}
+function fbBody(){const c=S.cur,b={user_agrees:c.agree},cm=(c.comment||'').trim();if(cm)b.comment=cm.slice(0,300);
+  const qs=(S.fo&&S.fo.questions)||[],a=c.fd||{};
+  for(const q of qs){if(q.ask_user===false||q.key=='comment')continue;let v=a[q.key];if(typeof v=='string')v=v.trim();if(v===undefined||v==='')continue;b[q.key]=v}
+  if(qs.some(q=>q.key=='input_method')&&c.method)b.input_method=c.method;
+  if(b.audio_source!='speaker_replay')delete b.playback_device;return b}
+// ===== หน้าผู้ใช้ของแอดมิน =====
+const fuBan=()=>S.fu?`<div class="ban">กำลังดูเฉพาะผลตรวจของ <b>${esc(S.fu.email)}</b> <button class="linkbtn" data-act="ufclr">ดูทั้งหมด</button></div>`:'';
+const atNote=()=>S.atotal>S.adet.length?`<p class="small mute num">แสดง ${S.adet.length} รายการล่าสุด จากทั้งหมด ${S.atotal}</p>`:'';
+function usersV(){const l=S.users,dt=v=>v?D(new Date(v)):'';
+  return `<h1>ผู้ใช้งาน</h1><p class="mute">ดูรายชื่อผู้ใช้ ระงับบัญชี หรือเปิดใช้งานอีกครั้ง ผู้ที่ถูกระงับจะเข้าสู่ระบบไม่ได้</p>${errBox()}
+  <div class="chips">${[['','ทั้งหมด'],['true','ใช้งานปกติ'],['false','ถูกระงับ']].map(c=>`<button class="chip ${S.ua==c[0]?'on':''}" data-ua="${c[0]}">${c[1]}</button>`).join('')}<span class="usearch"><input class="in" id="uq" type="search" placeholder="ค้นหาอีเมลหรือชื่อ" aria-label="ค้นหาผู้ใช้" value="${esc(S.uq)}"><button class="btn sm" data-act="usearch">ค้นหา</button></span></div>
+  <p class="small mute num" style="margin-top:12px">${S.utotal?'แสดง '+l.length+' จาก '+S.utotal+' คน':''}</p>
+  <div class="card tw"><table><thead><tr><th>ผู้ใช้</th><th>สมัครเมื่อ</th><th>เข้าใช้ล่าสุด</th><th>ตรวจแล้ว</th><th>สถานะ</th><th></th></tr></thead><tbody>${l.map(u=>`<tr><td><b>${esc(u.display_name||String(u.email).split('@')[0])}</b><div class="small mute">${esc(u.email)}</div></td><td>${dt(u.created_at)}</td><td>${u.last_login_at?dt(u.last_login_at)+'<br>'+T(new Date(u.last_login_at))+' น.':'<span class="mute">ยังไม่เคย</span>'}</td><td class="num">${u.detection_count}</td><td>${u.is_active?'<span class="pill real">ใช้งานปกติ</span>':'<span class="pill fake">ถูกระงับ</span>'}</td><td><button class="btn ghost sm" data-uview="${u.id}">ดูผลตรวจ</button> <button class="btn ghost sm" data-utog="${u.id}">${u.is_active?'ระงับ':'เปิดใช้'}</button></td></tr>`).join('')||'<tr><td colspan="6" class="mute">ไม่พบผู้ใช้</td></tr>'}</tbody></table></div>`}
+async function searchUsers(){S.uq=($('#uq')&&$('#uq').value.trim())||'';return go('users')}
 S.aurl={};
 const AU={db:null,open(){return this.db||(this.db=new Promise((ok,no)=>{const r=indexedDB.open('vc-audio',1);r.onupgradeneeded=()=>r.result.createObjectStore('a');r.onsuccess=()=>ok(r.result);r.onerror=()=>no(r.error)}))},
   async put(id,b){try{const db=await this.open();db.transaction('a','readwrite').objectStore('a').put(b,id)}catch(e){}},
@@ -497,12 +548,12 @@ const LS={get:id=>{try{return JSON.parse(localStorage.getItem('fb:'+id))}catch(e
 const applyLocal=a=>a.forEach(d=>{const l=d.id&&LS.get(d.id);if(l){if(d.agree===null)d.agree=l.agree;if(!d.comment)d.comment=l.comment}});
 async function enrich(a){await Promise.all(a.slice(0,30).filter(d=>d.id).map(async d=>{try{const rawDet=await api('/history/'+d.id),det=norm(rawDet);d.rawDetail=rawDet;
   if(det.score)d.score=det.score;if(det.scores.length)d.scores=det.scores;if(det.agree!==null)d.agree=det.agree;if(det.comment)d.comment=det.comment;if(det.dur)d.dur=det.dur;if(det.fake!==undefined)d.fake=det.fake;if(det.th!==undefined)d.th=det.th;if(det.segs.length)d.segs=det.segs;if(det.maxp)d.maxp=det.maxp;d.partial=det.partial||d.partial}catch(e){}}))}
-async function go(p,res){S.cal.open=false;S.page=p;S.f={date:'',res:res||''};S.err='';S.msg='';S.loading=true;render();await load();S.loading=false;render()}
+async function go(p,res,keep){if(!keep)S.fu=null;S.dm=null;S.cal.open=false;S.page=p;S.f={date:'',res:res||''};S.err='';S.msg='';S.loading=true;render();await load();S.loading=false;render()}
 async function enter(tok,adm){
   S.token=tok;S.role=adm?'admin':'user';store.set('tok',tok);store.set('role',S.role);
-  S.user=adm?{name:'ผู้ดูแลระบบ',email:'admin'}:await api('/users/me');
+  S.user=adm?{name:'ผู้ดูแลระบบ',email:'admin'}:await api('/users/me');if(!adm){const av=AV.get(S.user);if(av)S.user.img=av}loadFO();
   S.page=adm?'dash':'home';S.phase='idle';S.cur=null;S.loading=true;render();await load();S.loading=false}
-function logout(){S.token=null;S.user=null;S.page='home';S.phase='idle';S.cur=null;store.set('tok',null);store.set('role',null);render()}
+function logout(){S.role='user';S.token=null;S.user=null;S.page='home';S.phase='idle';S.cur=null;store.set('tok',null);store.set('role',null);render()}
 
 // ===== ตรวจเสียง =====
 function pk(x,n){const o=[],st=Math.floor(x.length/n)||1;for(let i=0;i<n;i++){let m=0;for(let j=i*st;j<Math.min(x.length,(i+1)*st);j+=8)m=Math.max(m,Math.abs(x[j]));o.push(m)}const t=Math.max(...o)||1;return o.map(v=>v/t)}
@@ -515,7 +566,7 @@ async function toWav(a){
   w(0,'RIFF');v.setUint32(4,36+x.length*2,true);w(8,'WAVEfmt ');v.setUint32(16,16,true);v.setUint16(20,1,true);v.setUint16(22,1,true);v.setUint32(24,sr,true);v.setUint32(28,sr*2,true);v.setUint16(32,2,true);v.setUint16(34,16,true);w(36,'data');v.setUint32(40,x.length*2,true);
   for(let i=0;i<x.length;i++){const t=Math.max(-1,Math.min(1,x[i]));v.setInt16(44+i*2,t<0?t*32768:t*32767,true)}
   return new Blob([buf],{type:'audio/wav'})}
-async function run(blob,name){
+async function run(blob,name,method){
   S.err='';S.phase='busy';render();
   try{
     let a,wav;
@@ -528,7 +579,7 @@ async function run(blob,name){
     d.name=String(name).replace(/\.(webm|wav|mp3|m4a|ogg|flac|aac|opus|mp4)$/i,'');d.url=URL.createObjectURL(blob);d.peaks=pk(a.getChannelData(0),64);if(!d.dur)d.dur=Math.round(a.duration);
     if(d.id){try{const det=norm(await api('/history/'+d.id));if(det.th!==undefined)d.th=det.th;if(det.fake!==undefined)d.fake=det.fake;if(det.scores.length)d.scores=det.scores;if(det.segs.length)d.segs=det.segs}catch(e){}}
     if(d.id)AU.put(d.id,wav);
-    S.cur=d;S.phase='done'}
+    await loadFO();d.method=method;S.cur=d;S.phase='done'}
   catch(e){S.phase='idle';S.err=e.message}
   render()}
 function drawLive(arr){
@@ -538,11 +589,11 @@ function drawLive(arr){
   for(let i=0;i<n;i++){const v=arr?Math.pow((arr[Math.floor(i/n*arr.length*.6)]||0)/255,1.4):0,bh=Math.max(4,v*h);g.beginPath();if(g.roundRect)g.roundRect(i*bw+bw*.3,(h-bh)/2,bw*.4,bh,2);else g.rect(i*bw+bw*.3,(h-bh)/2,bw*.4,bh);g.fill()}}
 async function rec(){
   if(S.rec){S.rec.mr.stop();return}
-  try{const st=await navigator.mediaDevices.getUserMedia({audio:true}),mr=new MediaRecorder(st),ch=[];mr.ondataavailable=e=>ch.push(e.data);
+  try{const st=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:false,noiseSuppression:false,autoGainControl:false,channelCount:1}}),mr=new MediaRecorder(st),ch=[];mr.ondataavailable=e=>ch.push(e.data);
     let ac=null,an=null,buf=null;
     try{ac=new(window.AudioContext||window.webkitAudioContext)();an=ac.createAnalyser();an.fftSize=128;ac.createMediaStreamSource(st).connect(an);buf=new Uint8Array(an.frequencyBinCount)}catch(e){ac=null;an=null}
     const tick=()=>{if(!S.rec)return;if(an){an.getByteFrequencyData(buf);drawLive(buf)}S.rec.raf=requestAnimationFrame(tick)};
-    mr.onstop=()=>{st.getTracks().forEach(t=>t.stop());clearInterval(S.rec.t);cancelAnimationFrame(S.rec.raf);if(ac&&ac.close)ac.close();S.rec=null;run(new Blob(ch,{type:mr.mimeType}),'บันทึกเสียง '+T(new Date())+'.webm')};
+    mr.onstop=()=>{st.getTracks().forEach(t=>t.stop());clearInterval(S.rec.t);cancelAnimationFrame(S.rec.raf);if(ac&&ac.close)ac.close();S.rec=null;run(new Blob(ch,{type:mr.mimeType}),'บันทึกเสียง '+T(new Date())+'.webm','recorded_in_app')};
     mr.start();S.rec={mr,sec:0,raf:0,t:setInterval(()=>{S.rec.sec++;const e=$('#rt');if(e)e.textContent=mmss(S.rec.sec)},1000)};S.err='';
     render();S.rec.raf=requestAnimationFrame(tick);return}
   catch(e){S.err='เปิดไมโครโฟนไม่ได้ ตรวจสิทธิ์การใช้ไมโครโฟนของเบราว์เซอร์ หรือใช้การอัปโหลดไฟล์แทน'}
@@ -557,6 +608,13 @@ app.addEventListener('click',e=>{const b=e.target.closest('button');if(S.cal.ope
   if(d.cal!==undefined){if(d.cal=='toggle'){S.cal.open=!S.cal.open;if(S.cal.open){const t=S.f.date?new Date(S.f.date+'T00:00:00'):new Date();S.cal.y=t.getFullYear();S.cal.m=t.getMonth()}}else{S.cal.m+=+d.cal;if(S.cal.m<0){S.cal.m=11;S.cal.y--}if(S.cal.m>11){S.cal.m=0;S.cal.y++}}return render()}
   if(d.day!==undefined){S.f.date=d.day;S.cal.open=false;return render()}
   if(d.chip!==undefined){S.f.res=d.chip;return render()}
+  if(d.q&&d.v!==undefined&&S.cur&&S.fo){const a=S.cur.fd||(S.cur.fd={}),k=d.q,qd=S.fo.questions.find(x=>x.key==k);if($('#cm'))S.cur.comment=$('#cm').value;
+    if(qd&&qd.type=='multi'){if(d.v=='__none')a[k]=Array.isArray(a[k])&&!a[k].length?undefined:[];else{const c=Array.isArray(a[k])?a[k].slice():[],i=c.indexOf(d.v);i>=0?c.splice(i,1):c.push(d.v);a[k]=c.length?c:undefined}}
+    else a[k]=a[k]===d.v?undefined:d.v;
+    if(k=='audio_source'&&a[k]!='speaker_replay')delete a.playback_device;return render()}
+  if(d.ua!==undefined){S.ua=d.ua;if($('#uq'))S.uq=$('#uq').value.trim();return go('users')}
+  if(d.uview){S.fu=S.users.find(x=>x.id==d.uview)||null;return go('hist','',true)}
+  if(d.utog)return guard(async()=>{const u=S.users.find(x=>x.id==d.utog);if(!u)return;if(u.is_active&&!confirm('ระงับบัญชี '+u.email+' ผู้ใช้จะเข้าสู่ระบบไม่ได้จนกว่าจะเปิดใช้อีกครั้ง'))return;await api('/admin/users/'+u.id,{method:'PATCH',body:{is_active:!u.is_active}});await load()});
   if(d.go!==undefined)return go(d.go,d.res);
   if(d.role){S.role=d.role;S.err='';return render()}
   if(d.tab){S.tab=d.tab;S.err='';return render()}
@@ -569,14 +627,19 @@ app.addEventListener('click',e=>{const b=e.target.closest('button');if(S.cal.ope
       try{await api('/auth/forgot-password',{method:'POST',body:{email:e}})}catch(x){throw fpErr(x)}S.fp=2});break;
     case'fpreset':guard(async()=>{const c=$('#fc').value.trim(),p1=$('#f1').value,p2=$('#f2').value;if(!c)throw new Error('ใส่รหัสยืนยันที่ได้รับทางอีเมล');if(p1.length<8)throw new Error('รหัสผ่านต้องยาวอย่างน้อย 8 ตัวอักษร');if(p1!==p2)throw new Error('รหัสผ่านใหม่สองช่องไม่ตรงกัน');
       try{await api('/auth/reset-password',{method:'POST',body:{email:S.fpEmail,code:c,token:c,new_password:p1,password:p1}})}catch(x){throw fpErr(x)}S.fp=3});break;
+    case'usearch':searchUsers();break;
+    case'ufclr':go('hist');break;
+    case'dn':{const v=$('#dn').value.trim();S.dm=null;api('/users/me',{method:'PATCH',body:{display_name:v||null}}).then(u=>{S.user=Object.assign({},S.user,u);S.dm={ok:1,m:'บันทึกชื่อแล้ว'}}).catch(e=>{S.dm={m:e.message}}).then(render);break}
     case'tgl':S.reg=!S.reg;S.err='';render();break;
     case'clr':S.f={date:'',res:''};render();break;
     case'again':S.phase='idle';S.cur=null;S.err='';render();break;
     case'rec':rec();break;
     case'out':logout();break;
-    case'send':guard(async()=>{S.cur.comment=$('#cm').value;if(S.cur.agree===null)throw new Error('เลือกก่อนว่าผลนี้ถูกต้องหรือไม่ถูกต้อง');
-      if(!S.cur.id){const h=list(await api('/history')).map(norm).sort((a,b)=>b.at-a.at)[0];if(!h||!h.id)throw new Error('หา id ของผลตรวจนี้ไม่เจอ backend ส่ง field: '+Object.keys(S.cur.raw||{}).join(', ')+' | ประวัติมี '+(await api('/history').then(r=>list(r).length).catch(()=>'?'))+' รายการ');S.cur.id=h.id}
-      await api('/history/'+S.cur.id+'/feedback',{method:'POST',body:{user_agrees:S.cur.agree,comment:S.cur.comment}});LS.set(S.cur.id,{agree:S.cur.agree,comment:S.cur.comment});S.cur.sent=true});break;
+    case'send':guard(async()=>{const cm=$('#cm');if(cm)S.cur.comment=cm.value;if(S.cur.agree===null)throw new Error('เลือกก่อนว่าผลนี้ถูกต้องหรือไม่ถูกต้อง');
+      if(!S.cur.id){const h=list(await api('/history')).map(norm).sort((a,b)=>b.at-a.at)[0];if(!h||!h.id)throw new Error('หาผลตรวจนี้ในประวัติไม่เจอ ส่งความเห็นได้เฉพาะตอนเข้าสู่ระบบ');S.cur.id=h.id}
+      const body=fbBody(),u='/history/'+S.cur.id+'/feedback';
+      try{await api(u,{method:'POST',body})}catch(x){if(x.status==409)await api(u,{method:'PUT',body});else throw x}
+      LS.set(S.cur.id,{agree:S.cur.agree,comment:S.cur.comment});S.cur.sent=true});break;
     case'th':guard(async()=>{const v=+$('#rg').value;await api('/admin/threshold',{method:'POST',body:{value:v,threshold:v}});S.msg='บันทึกแล้ว ค่าใหม่ใช้กับการตรวจครั้งต่อไป';await load()});break;
     case'pw':guard(async()=>{const a=$('#p0').value,n=$('#p1').value,c=$('#p2').value;S.msg='';
       if(n.length<8)throw new Error('รหัสผ่านใหม่ต้องยาวอย่างน้อย 8 ตัวอักษร');if(n!==c)throw new Error('รหัสผ่านใหม่สองช่องไม่ตรงกัน');
@@ -586,14 +649,17 @@ app.addEventListener('click',e=>{const b=e.target.closest('button');if(S.cal.ope
     case'reg':guard(async()=>{const em=$('#em').value.trim(),pw=$('#pw').value;if(pw.length<8)throw new Error('รหัสผ่านต้องยาวอย่างน้อย 8 ตัวอักษร');
       const j=await api('/auth/register',{method:'POST',noAuthRedirect:true,body:{email:em,password:pw}});S.reg=false;await enter(j.access_token,false)});break;
   }});
-app.addEventListener('input',e=>{if(e.target.id=='rg'){S.th=+e.target.value;$('#tv').textContent=S.th.toFixed(2);e.target.style.setProperty('--x',((S.th-.5)/.45*100).toFixed(1)+'%')}});
+app.addEventListener('input',e=>{const t=e.target;if(S.cur&&t.dataset&&t.dataset.q)(S.cur.fd||(S.cur.fd={}))[t.dataset.q]=t.value;if(S.cur&&t.id=='cm')S.cur.comment=t.value;if(e.target.id=='rg'){S.th=+e.target.value;$('#tv').textContent=S.th.toFixed(2);e.target.style.setProperty('--x',((S.th-.5)/.45*100).toFixed(1)+'%')}});
 app.addEventListener('change',e=>{const t=e.target;
   if(t.dataset.f){S.f[t.dataset.f]=t.value;render()}
-  if(t.id=='fi'&&t.files[0])run(t.files[0],t.files[0].name);
-  if(t.id=='av'&&t.files[0]){S.user.img=URL.createObjectURL(t.files[0]);render()}});
+  if(t.id=='fi'&&t.files[0])run(t.files[0],t.files[0].name,'uploaded_file');
+  if(t.id=='av'&&t.files[0]){avShrink(t.files[0]).then(d=>{S.user.img=d;S.dm=null;if(!AV.set(S.user,d))S.dm={m:'รูปนี้ใหญ่เกินกว่าเบราว์เซอร์จะจำไว้ได้ รูปจะหายเมื่อออกจากระบบ'};render()}).catch(e=>{S.dm={m:e.message};render()})}});
 app.addEventListener('dragover',e=>e.preventDefault());
-app.addEventListener('drop',e=>{e.preventDefault();const f=e.dataTransfer.files[0];if(f&&S.page=='home'&&S.phase=='idle'&&S.tab=='up')run(f,f.name)});
+app.addEventListener('drop',e=>{e.preventDefault();const f=e.dataTransfer.files[0];if(f&&S.page=='home'&&S.phase=='idle'&&S.tab=='up')run(f,f.name,'uploaded_file')});
 addEventListener('resize',()=>{if(S.phase=='done'&&$('#wave'))draw();if(!S.rec&&$('#live'))drawLive()});
+
+app.addEventListener('keydown',e=>{if(e.key=='Enter'&&e.target.id=='uq'){e.preventDefault();searchUsers()}});
+app.addEventListener('toggle',e=>{if(e.target.classList&&e.target.classList.contains('qd'))S.qopen=e.target.open},true);
 
 // เปิดหน้าใหม่แล้ว token ยังอยู่ใน sessionStorage ให้เข้าต่อได้เลย
 (async()=>{const t=store.get('tok');render();
