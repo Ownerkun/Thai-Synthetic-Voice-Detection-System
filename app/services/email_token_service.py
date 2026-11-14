@@ -14,14 +14,11 @@ from sqlalchemy.orm import Session
 from app.core.config import get_settings
 from app.models.email_token import RESET_PASSWORD, VERIFY_EMAIL, EmailToken
 from app.models.user import UserAccount
+from app.core.timeutil import as_utc
 
 
 def _hash(raw_token: str) -> str:
     return hashlib.sha256(raw_token.encode("utf-8")).hexdigest()
-
-
-def as_utc(value: datetime) -> datetime:
-    return value.replace(tzinfo=timezone.utc) if value.tzinfo is None else value.astimezone(timezone.utc)
 
 
 def _ttl(purpose: str) -> timedelta:

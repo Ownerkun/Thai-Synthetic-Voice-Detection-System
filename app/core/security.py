@@ -4,6 +4,7 @@ Password hashing + JWT ใช้ร่วมกันทั้ง UserAccount �
 """
 
 from datetime import datetime, timedelta, timezone
+import time
 from typing import Literal
 from uuid import UUID
 
@@ -11,6 +12,7 @@ import jwt
 from passlib.context import CryptContext
 
 from app.core.config import get_settings
+from app.services.email_token_service import as_utc
 
 settings = get_settings()
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
@@ -30,16 +32,17 @@ def create_access_token(subject_id: UUID, role: Role) -> str:
     expire = datetime.now(timezone.utc) + timedelta(
         minutes=settings.access_token_expire_minutes
     )
-    payload = {"sub": str(subject_id), "role": role, "exp": expire}
+    payload = {"sub": str(subject_id), "role": role, "exp": expire, "iat": time.time()}
     return jwt.encode(
         payload, settings.jwt_secret_key, algorithm=settings.jwt_algorithm
     )
 
 
 class TokenPayload:
-    def __init__(self, subject_id: UUID, role: Role):
+    def __init__(self, subject_id: UUID, role: Role, issued_at: float | None = None):
         self.subject_id = subject_id
         self.role = role
+        self.issued_at = issued_at  # None = token รุ่นเก่าที่ไม่มี iat
 
 
 def decode_access_token(token: str) -> TokenPayload | None:
@@ -48,6 +51,12 @@ def decode_access_token(token: str) -> TokenPayload | None:
         payload = jwt.decode(
             token, settings.jwt_secret_key, algorithms=[settings.jwt_algorithm]
         )
-        return TokenPayload(subject_id=UUID(payload["sub"]), role=payload["role"])
+        return TokenPayload(subject_id=UUID(payload["sub"]), role=payload["role"], issued_at=payload.get("iat"))
     except (jwt.PyJWTError, KeyError, ValueError):
         return None
+
+def is_session_revoked(payload: TokenPayload, password_changed_at: datetime | None) -> bool:
+    """token ที่ออกก่อนการรีเซ็ตรหัสผ่านใช้ไม่ได้อีก (ถ้ารหัสผ่านไม่เคยถูกรีเซ็ตก็ไม่มีอะไรถูกเพิกถอน)"""
+    if password_changed_at is None:
+        return False
+    return payload.issued_at is None or payload.issued_at < as_utc(password_changed_at).timestamp()

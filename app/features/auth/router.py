@@ -5,7 +5,7 @@ from fastapi import APIRouter, BackgroundTasks, HTTPException, status
 from app.core.security import create_access_token, hash_password, verify_password
 from app.deps import DbSession
 from app.models.admin import AdminAccount
-from app.models.email_token import VERIFY_EMAIL
+from app.models.email_token import RESET_PASSWORD, VERIFY_EMAIL
 from app.models.user import UserAccount
 from app.schemas.auth import (
     AdminLoginRequest,
@@ -14,13 +14,14 @@ from app.schemas.auth import (
     MessageOut,
     RegisterRequest,
     RegisterResponse,
+    ResetPasswordRequest,
     TokenRequest,
     TokenResponse,
     UserOut,
 )
 
 from app.services.email_token_service import consume_token, delete_tokens, issue_token
-from app.services.mail_service import send_verification_email
+from app.services.mail_service import send_password_reset_email, send_verification_email
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -74,8 +75,33 @@ def resend_verification(payload: EmailRequest, db: DbSession, background_tasks: 
         raw_token = issue_token(db, user, VERIFY_EMAIL)  # None = เพิ่งส่งไป ยังอยู่ในช่วงรอ
         if raw_token is not None:
             background_tasks.add_task(send_verification_email, user.email, user.display_name, raw_token)
-    # ตอบเหมือนกันทุกกรณี ไม่บอกว่าอีเมลนี้มีในระบบหรือไม่
     return MessageOut(detail="If this email is waiting for verification, a new link has been sent")
+
+@router.post("/forgot-password", response_model=MessageOut, status_code=status.HTTP_202_ACCEPTED)
+def forgot_password(payload: EmailRequest, db: DbSession, background_tasks: BackgroundTasks) -> MessageOut:
+    user = db.query(UserAccount).filter(UserAccount.email == payload.email).first()
+    if user is not None and user.is_active:  # บัญชีที่ยังไม่ยืนยันอีเมลก็ขอได้ (ใช้ลิงก์รีเซ็ตแทนการยืนยันได้ ดู reset_password)
+        raw_token = issue_token(db, user, RESET_PASSWORD)  # None = เพิ่งส่งไป ยังอยู่ในช่วงรอ
+        if raw_token is not None:
+            background_tasks.add_task(send_password_reset_email, user.email, user.display_name, raw_token)
+    return MessageOut(detail="If this email is registered, a password reset link has been sent")
+
+
+@router.post("/reset-password", response_model=MessageOut)
+def reset_password(payload: ResetPasswordRequest, db: DbSession) -> MessageOut:
+    user = consume_token(db, payload.token, RESET_PASSWORD)
+    if user is None:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid or expired token")
+
+    now = datetime.now(timezone.utc)
+    user.password_hash = hash_password(payload.new_password)
+    user.password_changed_at = now  # token (JWT) ที่ออกก่อนหน้านี้ใช้ไม่ได้อีก: ถ้ามีคนอื่นถือ token เดิมอยู่ จะถูกเตะออก
+    if user.email_verified_at is None:
+        user.email_verified_at = now  # เปิดลิงก์จากอีเมลได้ = เป็นเจ้าของอีเมลจริง ถือว่ายืนยันแล้วด้วย
+    delete_tokens(db, user.id, RESET_PASSWORD)  # ลิงก์รีเซ็ตอื่นที่ค้างอยู่ใช้ไม่ได้อีก
+    delete_tokens(db, user.id, VERIFY_EMAIL)
+    db.commit()
+    return MessageOut(detail="Password updated. Please log in with your new password")
 
 
 @router.post("/login", response_model=TokenResponse)
