@@ -9,6 +9,21 @@ class RegisterRequest(BaseModel):
     password: str = Field(min_length=8, max_length=128)
     display_name: str | None = Field(default=None, max_length=100)
 
+class RegisterResponse(BaseModel):
+    email: EmailStr
+    detail: str = "Verification email sent. Please check your inbox to activate your account."
+
+
+class MessageOut(BaseModel):
+    detail: str
+
+
+class EmailRequest(BaseModel):
+    email: EmailStr
+
+
+class TokenRequest(BaseModel):
+    token: str = Field(min_length=1, max_length=200)
 
 class LoginRequest(BaseModel):
     email: EmailStr
