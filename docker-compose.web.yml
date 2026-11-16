@@ -1,0 +1,14 @@
+# วางไว้ข้าง ๆ docker-compose.yml ของ backend แล้วรัน:
+#   docker compose -f docker-compose.yml -f docker-compose.web.yml up -d web
+# (ทำให้ nginx อยู่ network เดียวกับ api จึงเรียก http://api:8000 ได้)
+services:
+  web:
+    image: nginx:alpine
+    restart: unless-stopped
+    depends_on:
+      - api
+    ports:
+      - "5500:80"
+    volumes:
+      - ./frontend/index.html:/usr/share/nginx/html/index.html:ro
+      - ./frontend/nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
