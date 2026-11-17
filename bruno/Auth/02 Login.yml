@@ -16,6 +16,7 @@ http:
         "email": "user@example.com",
         "password": "SecurePass1!"
       }
+  auth: none
 
 settings:
   encodeUrl: true
@@ -26,7 +27,7 @@ settings:
 
 examples:
   - name: 200 OK
-    description: Login successful — copy access_token into the "token" environment variable
+    description: "เข้าสู่ระบบสำเร็จ — คัดลอก access_token ไปใส่ตัวแปร \"token\" ของ environment"
     request:
       url: "{{baseUrl}}/auth/login"
       method: POST
@@ -40,9 +41,6 @@ examples:
     response:
       status: 200
       statusText: OK
-      headers:
-        - name: Content-Type
-          value: application/json
       body:
         type: json
         data: |-
@@ -69,4 +67,46 @@ examples:
         data: |-
           {
             "detail": "Invalid email or password"
+          }
+  - name: 403 Email Not Verified
+    description: "รหัสผ่านถูก แต่ยังไม่ได้กดลิงก์ยืนยันอีเมล"
+    request:
+      url: "{{baseUrl}}/auth/login"
+      method: POST
+      body:
+        type: json
+        data: |-
+          {
+            "email": "user@example.com",
+            "password": "SecurePass1!"
+          }
+    response:
+      status: 403
+      statusText: Forbidden
+      body:
+        type: json
+        data: |-
+          {
+            "detail": "Email not verified"
+          }
+  - name: 403 Account Suspended
+    description: "รหัสผ่านถูก แต่บัญชีถูกระงับ"
+    request:
+      url: "{{baseUrl}}/auth/login"
+      method: POST
+      body:
+        type: json
+        data: |-
+          {
+            "email": "user@example.com",
+            "password": "SecurePass1!"
+          }
+    response:
+      status: 403
+      statusText: Forbidden
+      body:
+        type: json
+        data: |-
+          {
+            "detail": "Account suspended"
           }

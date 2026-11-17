@@ -26,8 +26,8 @@ settings:
   maxRedirects: 5
 
 examples:
-  - name: 200 OK
-    description: Registration successful
+  - name: 201 Created
+    description: "สมัครสำเร็จ ยังไม่มี token ต้องกดลิงก์ในอีเมลก่อน (dev: ดูลิงก์ใน docker compose logs api)"
     request:
       url: "{{baseUrl}}/auth/register"
       method: POST
@@ -40,20 +40,17 @@ examples:
             "display_name": "Test User"
           }
     response:
-      status: 200
-      statusText: OK
-      headers:
-        - name: Content-Type
-          value: application/json
+      status: 201
+      statusText: Created
       body:
         type: json
         data: |-
           {
-            "access_token": "<jwt_token>",
-            "token_type": "bearer"
+            "email": "user@example.com",
+            "detail": "Verification email sent. Please check your inbox to activate your account."
           }
-  - name: 400 Email Already in Use
-    description: Duplicate email
+  - name: 409 Email Already in Use
+    description: "อีเมลซ้ำ"
     request:
       url: "{{baseUrl}}/auth/register"
       method: POST
@@ -65,8 +62,8 @@ examples:
             "password": "SecurePass1!"
           }
     response:
-      status: 400
-      statusText: Bad Request
+      status: 409
+      statusText: Conflict
       body:
         type: json
         data: |-

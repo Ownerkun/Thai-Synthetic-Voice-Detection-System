@@ -12,7 +12,7 @@ from datetime import datetime, timezone
 from app.core.database import SessionLocal
 from app.models.detection import DetectionRecord, Feedback
 from app.models.user import UserAccount
-from tests.conftest import admin_login_headers, make_wav_bytes, register_and_get_headers
+from tests.conftest import admin_login_headers, make_wav_bytes, register_and_get_headers, register_verified
 
 
 def _tag() -> str:
@@ -63,10 +63,7 @@ def test_list_detections_requires_admin_token(client):
 def test_list_detections_shows_guest_and_user_results_with_the_expected_fields(client):
     admin = admin_login_headers(client)
     email = f"{uuid.uuid4().hex[:10]}@example.com"
-    res = client.post(
-        "/auth/register", json={"email": email, "password": "Password1234"}
-    )
-    user_headers = {"Authorization": f"Bearer {res.json()['access_token']}"}
+    user_headers = register_verified(client, {"email": email, "password": "Password1234"})
     guest_name = f"guest-{uuid.uuid4().hex[:8]}.wav"
     user_name = f"user-{uuid.uuid4().hex[:8]}.wav"
 

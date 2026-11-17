@@ -1,6 +1,6 @@
 import uuid
 
-from tests.conftest import admin_login_headers
+from tests.conftest import admin_login_headers, register_verified
 
 PASSWORD = "Password1234"
 
@@ -8,8 +8,7 @@ PASSWORD = "Password1234"
 def _register(client) -> tuple[str, str]:
     """Returns (email, user id)"""
     email = f"{uuid.uuid4().hex[:12]}@example.com"
-    res = client.post("/auth/register", json={"email": email, "password": PASSWORD})
-    assert res.status_code == 201, res.text
+    register_verified(client, {"email": email, "password": PASSWORD})
     found = client.get(
         "/admin/users", params={"q": email}, headers=admin_login_headers(client)
     ).json()

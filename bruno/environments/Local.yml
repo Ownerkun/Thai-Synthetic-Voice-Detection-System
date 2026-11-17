@@ -15,3 +15,6 @@ variables:
   - name: otherToken
     value: ""
     description: "JWT of a second user (not the owner of detectionId) — copy access_token from Login (Other User)"
+  - name: emailToken
+    value: ""
+    description: "โทเคนจากลิงก์ในอีเมลยืนยัน/รีเซ็ตรหัสผ่าน (ส่วนหลัง ?token=) — dev: ดูอีเมลใน docker compose logs api"

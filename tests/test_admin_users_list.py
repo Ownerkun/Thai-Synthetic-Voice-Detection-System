@@ -1,6 +1,6 @@
 import uuid
 
-from tests.conftest import admin_login_headers, make_wav_bytes
+from tests.conftest import admin_login_headers, make_wav_bytes, register_verified
 
 
 def _create_user(
@@ -11,9 +11,7 @@ def _create_user(
     body = {"email": email, "password": "Password1234"}
     if display_name is not None:
         body["display_name"] = display_name
-    res = client.post("/auth/register", json=body)
-    assert res.status_code == 201, res.text
-    return email, {"Authorization": f"Bearer {res.json()['access_token']}"}
+    return email, register_verified(client, body)
 
 
 def _predict(client, headers: dict) -> None:

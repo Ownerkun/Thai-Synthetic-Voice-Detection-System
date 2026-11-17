@@ -4,7 +4,7 @@ Smoke test ครอบคลุม end-to-end pipeline หลักของ AP
 รันด้วย: pytest -q   (ใช้ sqlite แทน postgres เฉพาะตอนเทส ผ่าน app/core/types.GUID)
 """
 
-from tests.conftest import make_wav_bytes
+from tests.conftest import make_wav_bytes, register_verified
 
 
 def test_health_uses_mock_model_when_no_onnx_file(client):
@@ -28,13 +28,9 @@ def test_predict_anonymous_not_saved_to_history(client):
 
 
 def test_register_login_predict_and_history_flow(client):
-    register_res = client.post(
-        "/auth/register",
-        json={"email": "student@example.com", "password": "S3cur3Passw0rd!"},
+    headers = register_verified(
+        client, {"email": "student@example.com", "password": "S3cur3Passw0rd!"}
     )
-    assert register_res.status_code == 201, register_res.text
-    token = register_res.json()["access_token"]
-    headers = {"Authorization": f"Bearer {token}"}
 
     wav_bytes = make_wav_bytes(duration_seconds=3.0)
     predict_res = client.post(

@@ -3,7 +3,7 @@
 """
 import uuid
 
-from tests.conftest import admin_login_headers
+from tests.conftest import admin_login_headers, register_verified
 
 
 def _register(client, display_name: str | None = None, password: str = "Password1234") -> tuple[dict, str]:
@@ -12,9 +12,7 @@ def _register(client, display_name: str | None = None, password: str = "Password
     body = {"email": email, "password": password}
     if display_name is not None:
         body["display_name"] = display_name
-    res = client.post("/auth/register", json=body)
-    assert res.status_code == 201, res.text
-    return {"Authorization": f"Bearer {res.json()['access_token']}"}, email
+    return register_verified(client, body), email
 
 
 # ---------- GET /users/me ----------
