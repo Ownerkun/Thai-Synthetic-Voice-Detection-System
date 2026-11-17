@@ -4,6 +4,7 @@ Application settings โหลดค่าจาก .env
 """
 
 from functools import lru_cache
+from typing import Literal
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -55,6 +56,24 @@ class Settings(BaseSettings):
     segment_samples: int = 16_000 * 4  # ค่าเริ่มต้น เผื่อ meta ไม่ได้ระบุ (4 วินาที @16kHz)
     inference_temperature: float = 1.0
     default_spoof_threshold: float = 0.5
+
+    # --- อีเมล (ยืนยันอีเมล / รีเซ็ตรหัสผ่าน) ---
+    # console = แค่พิมพ์เมลลง log (dev) · smtp = ส่งจริงผ่าน SMTP · memory = เก็บไว้ใน memory (ใช้ในเทสต์)
+    mail_backend: Literal["console", "smtp", "memory"] = "console"
+    # ถ้าใช้ Gmail SMTP ต้องเป็นที่อยู่ Gmail เดียวกับ SMTP_USERNAME (ไม่งั้น Gmail จะเขียนทับผู้ส่งให้)
+    mail_from_address: str = "no-reply@example.com"
+    mail_from_name: str = "Thai Synthetic Voice Detection"
+    smtp_host: str = "smtp.gmail.com"
+    smtp_port: int = 587
+    smtp_username: str | None = None
+    smtp_password: str | None = None
+    smtp_security: Literal["starttls", "ssl", "none"] = "starttls"  # 587 = starttls, 465 = ssl
+    smtp_timeout_seconds: float = 10.0
+    # ลิงก์ในอีเมลชี้ไปที่หน้าเว็บ (frontend) ไม่ใช่ API: {base}/verify-email?token=... และ {base}/reset-password?token=...
+    frontend_base_url: str = "http://localhost:3000"
+    verify_email_ttl_minutes: int = 60 * 24  # ลิงก์ยืนยันอีเมลใช้ได้ 24 ชั่วโมง
+    reset_password_ttl_minutes: int = 60  # ลิงก์รีเซ็ตรหัสผ่านใช้ได้ 1 ชั่วโมง
+    email_token_cooldown_seconds: int = 60  # ขอลิงก์ซ้ำได้ทุกกี่วินาที
 
     # --- Admin bootstrap (ใช้สร้างแอดมินคนแรกตอน startup ถ้ายังไม่มีในระบบ) ---
     bootstrap_admin_username: str | None = "admin"

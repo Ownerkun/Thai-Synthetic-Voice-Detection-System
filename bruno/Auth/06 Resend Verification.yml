@@ -1,0 +1,46 @@
+info:
+  name: Resend Verification
+  type: http
+  seq: 6
+
+http:
+  method: POST
+  url: "{{baseUrl}}/auth/resend-verification"
+  headers:
+    - name: Content-Type
+      value: application/json
+  body:
+    type: json
+    data: |-
+      {
+        "email": "user@example.com"
+      }
+  auth: none
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+
+examples:
+  - name: 202 Accepted
+    description: "ตอบเหมือนกันทุกกรณี (อีเมลไม่มีในระบบ / ยืนยันแล้ว / ยังอยู่ในช่วงรอ ก็ได้ข้อความนี้)"
+    request:
+      url: "{{baseUrl}}/auth/resend-verification"
+      method: POST
+      body:
+        type: json
+        data: |-
+          {
+            "email": "user@example.com"
+          }
+    response:
+      status: 202
+      statusText: Accepted
+      body:
+        type: json
+        data: |-
+          {
+            "detail": "If this email is waiting for verification, a new link has been sent"
+          }

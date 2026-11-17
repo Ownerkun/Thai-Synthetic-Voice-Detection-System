@@ -13,35 +13,39 @@
 ## ภาพรวม
 
 - Base URL (dev ผ่าน Docker): `http://localhost:8000`
-- Auth: `Authorization: Bearer <token>` (ได้ token จาก `/auth/login`, `/auth/register` หรือ `/auth/admin/login`)
+- Auth: `Authorization: Bearer <token>` (ได้ token จาก `/auth/login`, `/auth/verify-email` หรือ `/auth/admin/login`)
 - ทุก error ใช้รูปแบบเดียวกัน: `{"detail": "ข้อความ"}` — ยกเว้น validation error (422) ที่ `detail` เป็น array
 - Content-Type: `application/json` สำหรับ endpoint ทั่วไป, `multipart/form-data` เฉพาะ `/predict`
 
-| Endpoint                 | Method | ต้อง Login       | คำอธิบาย                                                      |
-| ------------------------ | ------ | ---------------- | ------------------------------------------------------------- |
-| `/health`                | GET    | ไม่ต้อง          | เช็คสถานะ + ว่าใช้โมเดลจริงหรือ mock                          |
-| `/auth/register`         | POST   | ไม่ต้อง          | สมัครสมาชิกผู้ใช้ทั่วไป                                       |
-| `/auth/login`            | POST   | ไม่ต้อง          | เข้าสู่ระบบผู้ใช้ทั่วไป                                       |
-| `/auth/admin/login`      | POST   | ไม่ต้อง          | เข้าสู่ระบบผู้ดูแล                                            |
-| `/predict`               | POST   | ไม่บังคับ        | ตรวจสอบเสียง (1 หรือหลายไฟล์)                                 |
-| `/history`               | GET    | **ต้อง** (user)  | ดูรายการประวัติของตนเอง                                       |
-| `/history/{id}`          | GET    | **ต้อง** (user)  | ดูรายละเอียด + คะแนนรายช่วง                                   |
-| `/history/{id}`          | DELETE | **ต้อง** (user)  | ลบรายการประวัติ                                               |
-| `/history/{id}/feedback` | POST   | **ต้อง** (user)  | ให้ feedback ว่าผลถูกต้องไหม (ครั้งแรก)                       |
-| `/history/{id}/feedback` | GET    | **ต้อง** (user)  | ดู feedback ที่เคยให้ไว้กับรายการนี้                          |
-| `/history/{id}/feedback` | PUT    | **ต้อง** (user)  | แก้คำตอบ feedback ที่เคยให้ไว้แล้ว                            |
-| `/feedback`              | GET    | **ต้อง** (user)  | ประวัติ feedback ทั้งหมดที่ฉันเคยให้ (ใหม่→เก่า)              |
-| `/feedback/options`      | GET    | ไม่ต้อง          | คำถามและตัวเลือก (ภาษาไทย) ของแบบสอบถามรายละเอียด feedback    |
-| `/users/me`              | GET    | **ต้อง** (user)  | ดูข้อมูลบัญชีของตัวเอง                                        |
-| `/users/me`              | PATCH  | **ต้อง** (user)  | แก้ชื่อที่แสดง (`display_name`)                               |
-| `/users/me/password`     | PUT    | **ต้อง** (user)  | เปลี่ยนรหัสผ่าน (ต้องส่งรหัสเดิม)                             |
-| `/admin/threshold`       | GET    | **ต้อง** (admin) | ดูค่า threshold ปัจจุบัน                                      |
-| `/admin/threshold`       | POST   | **ต้อง** (admin) | อัปเดตค่า threshold (มีผลทันที)                               |
-| `/admin/stats`           | GET    | **ต้อง** (admin) | สถิติภาพรวมระบบ                                               |
-| `/admin/users`           | GET    | **ต้อง** (admin) | รายชื่อผู้ใช้ + ค้นหา + filter ระงับ/ใช้งานปกติ + แบ่งหน้า    |
-| `/admin/users/{id}`      | PATCH  | **ต้อง** (admin) | แก้ display_name / ระงับ-เปิดใช้งานบัญชี                      |
-| `/admin/detections`      | GET    | **ต้อง** (admin) | ผลตรวจของทุกคน (รวม guest) + filter + เรียงลำดับ + แบ่งหน้า   |
-| `/admin/detections/{id}` | GET    | **ต้อง** (admin) | รายละเอียดผลตรวจ 1 รายการ + รายช่วงเสียง + feedback + เจ้าของ |
+| Endpoint                    | Method | ต้อง Login       | คำอธิบาย                                                      |
+| --------------------------- | ------ | ---------------- | ------------------------------------------------------------- |
+| `/health`                   | GET    | ไม่ต้อง          | เช็คสถานะ + ว่าใช้โมเดลจริงหรือ mock                          |
+| `/auth/register`            | POST   | ไม่ต้อง          | สมัครสมาชิก (ยังไม่ได้ token: ส่งอีเมลยืนยันให้)              |
+| `/auth/verify-email`        | POST   | ไม่ต้อง          | ยืนยันอีเมลด้วยโทเคนจากลิงก์ → ได้ token เข้าสู่ระบบ          |
+| `/auth/resend-verification` | POST   | ไม่ต้อง          | ขอลิงก์ยืนยันอีเมลใหม่                                        |
+| `/auth/forgot-password`     | POST   | ไม่ต้อง          | ขอลิงก์ตั้งรหัสผ่านใหม่ทางอีเมล                               |
+| `/auth/reset-password`      | POST   | ไม่ต้อง          | ตั้งรหัสผ่านใหม่ด้วยโทเคนจากลิงก์                             |
+| `/auth/login`               | POST   | ไม่ต้อง          | เข้าสู่ระบบผู้ใช้ทั่วไป (ต้องยืนยันอีเมลแล้ว)                 |
+| `/auth/admin/login`         | POST   | ไม่ต้อง          | เข้าสู่ระบบผู้ดูแล                                            |
+| `/predict`                  | POST   | ไม่บังคับ        | ตรวจสอบเสียง (1 หรือหลายไฟล์)                                 |
+| `/history`                  | GET    | **ต้อง** (user)  | ดูรายการประวัติของตนเอง                                       |
+| `/history/{id}`             | GET    | **ต้อง** (user)  | ดูรายละเอียด + คะแนนรายช่วง                                   |
+| `/history/{id}`             | DELETE | **ต้อง** (user)  | ลบรายการประวัติ                                               |
+| `/history/{id}/feedback`    | POST   | **ต้อง** (user)  | ให้ feedback ว่าผลถูกต้องไหม (ครั้งแรก)                       |
+| `/history/{id}/feedback`    | GET    | **ต้อง** (user)  | ดู feedback ที่เคยให้ไว้กับรายการนี้                          |
+| `/history/{id}/feedback`    | PUT    | **ต้อง** (user)  | แก้คำตอบ feedback ที่เคยให้ไว้แล้ว                            |
+| `/feedback`                 | GET    | **ต้อง** (user)  | ประวัติ feedback ทั้งหมดที่ฉันเคยให้ (ใหม่→เก่า)              |
+| `/feedback/options`         | GET    | ไม่ต้อง          | คำถามและตัวเลือก (ภาษาไทย) ของแบบสอบถามรายละเอียด feedback    |
+| `/users/me`                 | GET    | **ต้อง** (user)  | ดูข้อมูลบัญชีของตัวเอง                                        |
+| `/users/me`                 | PATCH  | **ต้อง** (user)  | แก้ชื่อที่แสดง (`display_name`)                               |
+| `/users/me/password`        | PUT    | **ต้อง** (user)  | เปลี่ยนรหัสผ่าน (ต้องส่งรหัสเดิม)                             |
+| `/admin/threshold`          | GET    | **ต้อง** (admin) | ดูค่า threshold ปัจจุบัน                                      |
+| `/admin/threshold`          | POST   | **ต้อง** (admin) | อัปเดตค่า threshold (มีผลทันที)                               |
+| `/admin/stats`              | GET    | **ต้อง** (admin) | สถิติภาพรวมระบบ                                               |
+| `/admin/users`              | GET    | **ต้อง** (admin) | รายชื่อผู้ใช้ + ค้นหา + filter ระงับ/ใช้งานปกติ + แบ่งหน้า    |
+| `/admin/users/{id}`         | PATCH  | **ต้อง** (admin) | แก้ display_name / ระงับ-เปิดใช้งานบัญชี                      |
+| `/admin/detections`         | GET    | **ต้อง** (admin) | ผลตรวจของทุกคน (รวม guest) + filter + เรียงลำดับ + แบ่งหน้า   |
+| `/admin/detections/{id}`    | GET    | **ต้อง** (admin) | รายละเอียดผลตรวจ 1 รายการ + รายช่วงเสียง + feedback + เจ้าของ |
 
 ---
 
@@ -86,22 +90,22 @@ curl -X POST http://localhost:8000/auth/register \
 
 `display_name` ใส่หรือไม่ใส่ก็ได้ (optional) | `password` ต้อง ≥ 8 ตัวอักษร | `email` ต้องเป็นรูปแบบอีเมลที่ถูกต้อง
 
-**201 Created**
+**201 Created** — สร้างบัญชีแล้ว แต่ **ยังไม่มี `access_token`** ต้องกดลิงก์ยืนยันในอีเมลก่อน ([ตั้งค่าอีเมล](EMAIL_SETUP.md))
 
 ```json
 {
-  "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJiNTgyMDZmNi00ZGM1LTRiOWEtYmQ3Zi1iMDVjMmVhOGEwMmEiLCJyb2xlIjoidXNlciIsImV4cCI6MTc5MDA2MjQ5NX0.Ifqx5ju7DiD14IyHlIAwkxfoN0kRYE-92-vNXGuuH8Q",
-  "token_type": "bearer"
+  "email": "somchai@example.com",
+  "detail": "Verification email sent. Please check your inbox to activate your account."
 }
 ```
 
-เก็บ `access_token` ไว้ (เช่น localStorage หรือ cookie) แล้วแนบเป็น `Authorization: Bearer <access_token>`
-ในคำขอถัดไปที่ต้องการ login
+อีเมลถูกส่ง **หลังตอบกลับแล้ว** ถ้าส่งไม่สำเร็จคำตอบก็ยังเป็น `201` ผู้ใช้กด `POST /auth/resend-verification` ได้
+ลิงก์ในอีเมลชี้ไปที่หน้าเว็บ `{FRONTEND_BASE_URL}/verify-email?token=...` (ไม่ใช่ API) → หน้านั้นเรียก `POST /auth/verify-email`
 
 **409 Conflict** — อีเมลซ้ำ
 
 ```json
-{ "detail": "อีเมลนี้ถูกใช้แล้ว" }
+{ "detail": "Email already in use" }
 ```
 
 **422 Unprocessable Entity** — ข้อมูลไม่ผ่าน validation เช่น email ผิดรูปแบบ หรือ password สั้นไป
@@ -147,6 +151,105 @@ curl -X POST http://localhost:8000/auth/login \
 ```
 
 ถ้ารหัสผ่านผิด จะได้ `401 Invalid email or password` เหมือนเดิมเสมอ (ไม่บอกว่าบัญชีนี้ถูกระงับ ให้คนที่ไม่รู้รหัสผ่าน)
+
+**403 Forbidden** — รหัสผ่านถูก แต่ **ยังไม่ได้ยืนยันอีเมล** (ไม่ออก token) frontend ควรแสดงปุ่ม "ส่งลิงก์ยืนยันอีกครั้ง" → `POST /auth/resend-verification`
+
+```json
+{ "detail": "Email not verified" }
+```
+
+แยกจาก `"Account suspended"` ด้วยข้อความ `detail` · ถ้าทั้งระงับและยังไม่ยืนยัน จะได้ `"Account suspended"` · ลำดับตรวจ: รหัสผ่าน → ถูกระงับ → ยังไม่ยืนยันอีเมล
+(ผู้ใช้ที่สมัครก่อนมีระบบยืนยันอีเมล ถือว่ายืนยันแล้ว login ได้ตามปกติ)
+
+---
+
+## POST /auth/verify-email
+
+หน้าเว็บอ่าน `token` จากลิงก์ในอีเมลแล้วเรียก endpoint นี้ (ใช้ POST เพื่อไม่ให้โปรแกรมสแกนลิงก์ของผู้ให้บริการอีเมลใช้โทเคนทิ้งก่อนผู้ใช้กด)
+
+```bash
+curl -X POST http://localhost:8000/auth/verify-email \
+  -H "Content-Type: application/json" \
+  -d '{"token":"krKn_abzIy49XU2IW9KEHF6Zj4pUDV2Uppt6wK7KLwc"}'
+```
+
+**200 OK** — ยืนยันสำเร็จ และเข้าสู่ระบบให้เลย (รูปแบบเดียวกับ login)
+
+```json
+{ "access_token": "eyJhbGciOiJIUzI1NiIs...", "token_type": "bearer" }
+```
+
+**400 Bad Request** — โทเคนผิด / หมดอายุ (24 ชั่วโมง) / ใช้ไปแล้ว (ใช้ได้ครั้งเดียว) → แสดงปุ่มขอลิงก์ใหม่
+
+```json
+{ "detail": "Invalid or expired token" }
+```
+
+**403 Forbidden** — บัญชีถูกระงับ (ยืนยันอีเมลให้แล้วแต่ไม่ออก token) · **422** — ไม่ส่ง `token` หรือส่งค่าว่าง
+
+---
+
+## POST /auth/resend-verification
+
+```bash
+curl -X POST http://localhost:8000/auth/resend-verification \
+  -H "Content-Type: application/json" \
+  -d '{"email":"somchai@example.com"}'
+```
+
+**202 Accepted** — ตอบข้อความเดียวกันทุกกรณี (อีเมลไม่มีในระบบ / ยืนยันแล้ว / ถูกระงับ / เพิ่งส่งไปไม่ถึง 60 วินาที) เพื่อไม่ให้ใครใช้เดาว่าอีเมลไหนสมัครไว้
+
+```json
+{
+  "detail": "If this email is waiting for verification, a new link has been sent"
+}
+```
+
+ลิงก์เดิมที่ยังไม่หมดอายุใช้ได้ต่อ · **422** — รูปแบบอีเมลไม่ถูกต้อง
+
+---
+
+## POST /auth/forgot-password
+
+```bash
+curl -X POST http://localhost:8000/auth/forgot-password \
+  -H "Content-Type: application/json" \
+  -d '{"email":"somchai@example.com"}'
+```
+
+**202 Accepted** — ตอบข้อความเดียวกันทุกกรณี · ลิงก์ในอีเมลใช้ได้ 60 นาที ครั้งเดียว ชี้ไปที่หน้าเว็บ `{FRONTEND_BASE_URL}/reset-password?token=...`
+
+```json
+{ "detail": "If this email is registered, a password reset link has been sent" }
+```
+
+บัญชีที่ถูกระงับไม่ได้รับอีเมล · บัญชีที่ยังไม่ยืนยันอีเมลขอได้ (รีเซ็ตสำเร็จถือว่ายืนยันอีเมลแล้วด้วย) · ขอซ้ำภายใน 60 วินาทีจะไม่ส่งอีเมลเพิ่ม (คำตอบยังเป็น 202)
+
+---
+
+## POST /auth/reset-password
+
+```bash
+curl -X POST http://localhost:8000/auth/reset-password \
+  -H "Content-Type: application/json" \
+  -d '{"token":"i8SgXcSWP3in6UonOMOZ2odHjNiYfjySJy6Udr4nof8","new_password":"NewS3cur3Pass!"}'
+```
+
+`new_password` ต้อง ≥ 8 ตัวอักษร (กฎเดียวกับตอนสมัคร)
+
+**200 OK** — ไม่ออก token ให้ ให้ไปหน้า login · **token (JWT) ทุกอันที่ออกก่อนหน้านี้ใช้ไม่ได้อีก** (`/history` ฯลฯ ตอบ 401 → ให้ login ใหม่)
+
+```json
+{ "detail": "Password updated. Please log in with your new password" }
+```
+
+**400 Bad Request** — โทเคนผิด / หมดอายุ / ใช้ไปแล้ว (ใช้ลิงก์ยืนยันอีเมลมารีเซ็ตไม่ได้ และกลับกัน)
+
+```json
+{ "detail": "Invalid or expired token" }
+```
+
+**422** — รหัสผ่านใหม่สั้นเกินไป (โทเคนไม่ถูกใช้ ลองใหม่ด้วยลิงก์เดิมได้)
 
 ---
 
@@ -1264,12 +1367,12 @@ curl http://localhost:8000/admin/detections/d1ac9092-a27f-4de6-80e5-eb8610c6bfec
 
 ## สรุป error status code ที่ frontend ต้องดักไว้
 
-| Status                     | ความหมาย                                                                     | ตัวอย่างจุดที่เจอ                                                                       |
-| -------------------------- | ---------------------------------------------------------------------------- | --------------------------------------------------------------------------------------- |
-| 400                        | ข้อมูลรูปแบบถูกแต่เงื่อนไขไม่ผ่าน (token ยังใช้ได้ **อย่าเด้งไปหน้า login**) | `PUT /users/me/password` เมื่อรหัสเดิมไม่ถูกต้อง                                        |
-| 401                        | ไม่ได้ login / token หมดอายุ / role ไม่ตรง / **บัญชีถูกระงับหรือถูกลบ**      | `/history`, `/admin/*` เมื่อไม่มี/ผิด token หรือบัญชีถูกระงับ                           |
-| 403                        | บัญชีถูกระงับ (รหัสผ่านถูก แต่ login ไม่ได้)                                 | `POST /auth/login`                                                                      |
-| 404                        | ไม่พบข้อมูล หรือไม่ใช่เจ้าของ                                                | `/history/{id}` ที่ไม่มีจริงหรือเป็นของคนอื่น                                           |
-| 409                        | ข้อมูลขัดแย้งกับที่มีอยู่                                                    | อีเมลซ้ำตอนสมัคร, feedback ซ้ำ                                                          |
-| 422                        | request body ไม่ผ่าน validation                                              | password สั้นไป, threshold นอกช่วง 0–1                                                  |
-| 200 (แต่มี `failed_files`) | ตรวจสอบเสียงสำเร็จบางไฟล์                                                    | อัปโหลดไฟล์ผิดฟอร์แมต/เสียหาย/ว่างเปล่าปนกับไฟล์ที่ถูกต้อง — ดู `failed_files[].reason` |
+| Status                     | ความหมาย                                                                                                                | ตัวอย่างจุดที่เจอ                                                                                                                  |
+| -------------------------- | ----------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| 400                        | ข้อมูลรูปแบบถูกแต่เงื่อนไขไม่ผ่าน (token ยังใช้ได้ **อย่าเด้งไปหน้า login**)                                            | `PUT /users/me/password` เมื่อรหัสเดิมไม่ถูกต้อง · `POST /auth/verify-email`, `/auth/reset-password` เมื่อโทเคนผิด/หมดอายุ/ใช้แล้ว |
+| 401                        | ไม่ได้ login / token หมดอายุ / role ไม่ตรง / **บัญชีถูกระงับหรือถูกลบ**                                                 | `/history`, `/admin/*` เมื่อไม่มี/ผิด token หรือบัญชีถูกระงับ                                                                      |
+| 403                        | login ไม่ได้ทั้งที่รหัสผ่านถูก: `detail` = `Account suspended` (ถูกระงับ) หรือ `Email not verified` (ยังไม่ยืนยันอีเมล) | `POST /auth/login`, `POST /auth/verify-email` (เฉพาะ suspended)                                                                    |
+| 404                        | ไม่พบข้อมูล หรือไม่ใช่เจ้าของ                                                                                           | `/history/{id}` ที่ไม่มีจริงหรือเป็นของคนอื่น                                                                                      |
+| 409                        | ข้อมูลขัดแย้งกับที่มีอยู่                                                                                               | อีเมลซ้ำตอนสมัคร, feedback ซ้ำ                                                                                                     |
+| 422                        | request body ไม่ผ่าน validation                                                                                         | password สั้นไป, threshold นอกช่วง 0–1                                                                                             |
+| 200 (แต่มี `failed_files`) | ตรวจสอบเสียงสำเร็จบางไฟล์                                                                                               | อัปโหลดไฟล์ผิดฟอร์แมต/เสียหาย/ว่างเปล่าปนกับไฟล์ที่ถูกต้อง — ดู `failed_files[].reason`                                            |

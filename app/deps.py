@@ -5,7 +5,7 @@ from fastapi import Depends, Header, HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
-from app.core.security import decode_access_token
+from app.core.security import decode_access_token, is_session_revoked
 from app.models.admin import AdminAccount
 from app.models.user import UserAccount
 
@@ -34,7 +34,7 @@ def get_optional_user_id(db: DbSession, authorization: Annotated[str | None, Hea
     if payload is None or payload.role != "user":
         return None
     user = db.get(UserAccount, payload.subject_id)
-    if user is None or not user.is_active:
+    if user is None or not user.is_active or is_session_revoked(payload, user.password_changed_at):
         return None
     return user.id
 
@@ -48,6 +48,8 @@ def get_current_user(db: DbSession, authorization: Annotated[str | None, Header(
     user = db.get(UserAccount, payload.subject_id)
     if user is None or not user.is_active:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid or suspended account")
+    if is_session_revoked(payload, user.password_changed_at):
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Session expired, please log in again")
     return user
 
 

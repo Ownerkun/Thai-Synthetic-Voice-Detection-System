@@ -20,7 +20,7 @@ models/
 
 ไม่ต้องแก้โค้ดส่วนอื่นเลย ดู `app/services/onnx_analyzer.py`
 
-> **เหตุผลที่เลือก PostgreSQL**  ดูรายละเอียดได้ที่ [`docs/WHY_POSTGRESQL.md`](docs/WHY_POSTGRESQL.md)
+> **เหตุผลที่เลือก PostgreSQL** ดูรายละเอียดได้ที่ [`docs/WHY_POSTGRESQL.md`](docs/WHY_POSTGRESQL.md)
 
 ## โครงสร้างโปรเจกต์
 
@@ -33,8 +33,10 @@ app/
     audio_preprocessor.py   # AudioPreprocessor (Data Cleaning)
     onnx_analyzer.py         # OnnxSpoofAnalyzer จริง + MockSpoofAnalyzer สลับอัตโนมัติ
     threshold_service.py     # อ่านค่า threshold ล่าสุดจาก DB
+    mail_service.py          # ส่งอีเมล (console / SMTP / memory) · email_token_service.py = โทเคนในลิงก์อีเมล
   features/
-    auth/          POST /auth/register, /auth/login, /auth/admin/login
+    auth/          POST /auth/register, /auth/login, /auth/admin/login,
+                   /auth/verify-email, /auth/resend-verification, /auth/forgot-password, /auth/reset-password
     detection/     POST /predict, GET /health
     history/       GET /history, GET /history/{id}, DELETE /history/{id},
                    POST /history/{id}/feedback  (ทุก endpoint ต้อง login)
@@ -80,6 +82,12 @@ uvicorn app.main:app --reload
 pytest -q
 ```
 
+## ตั้งค่าอีเมล (ยืนยันอีเมลตอนสมัคร + ลืมรหัสผ่าน)
+
+สมัครแล้วต้องกดลิงก์ในอีเมลก่อนจึง login ได้ และมี `POST /auth/forgot-password` ส่งลิงก์ตั้งรหัสผ่านใหม่
+ค่าเริ่มต้น `MAIL_BACKEND=console` (ไม่ส่งจริง พิมพ์อีเมลลง log) ตอนใช้งานจริงตั้ง `MAIL_BACKEND=smtp` + `SMTP_*` + `FRONTEND_BASE_URL`
+ดูขั้นตอนตั้งค่า Gmail SMTP / ตัวเลือกผู้ให้บริการอื่น / วิธีทดสอบ (`scripts/send_test_email.py`) ที่ [`docs/EMAIL_SETUP.md`](docs/EMAIL_SETUP.md)
+
 ## ทดสอบ endpoint เร็ว ๆ ด้วย curl
 
 ```bash
@@ -87,9 +95,15 @@ pytest -q
 curl -F "files=@sample.wav" http://localhost:8000/predict
 
 # สมัครสมาชิก แล้วเก็บ token
-TOKEN=$(curl -s -X POST http://localhost:8000/auth/register \
+# สมัครสมาชิก → ระบบส่งอีเมลยืนยัน (ตอน dev MAIL_BACKEND=console: ลิงก์อยู่ใน `docker compose logs api`)
+curl -X POST http://localhost:8000/auth/register \
   -H "Content-Type: application/json" \
-  -d '{"email":"test@example.com","password":"S3cur3Passw0rd!"}' | python3 -c "import sys,json;print(json.load(sys.stdin)['access_token'])")
+  -d '{"email":"test@example.com","password":"S3cur3Passw0rd!"}'
+
+# เอา token จากท้ายลิงก์ (?token=...) ไปยืนยันอีเมล จะได้ access_token กลับมาเลย
+TOKEN=$(curl -s -X POST http://localhost:8000/auth/verify-email \
+  -H "Content-Type: application/json" \
+  -d '{"token":"<token จากลิงก์ในอีเมล>"}' | python3 -c "import sys,json;print(json.load(sys.stdin)['access_token'])")
 
 # ตรวจสอบเสียงแบบ login (บันทึกลงประวัติ)
 curl -F "files=@sample.wav" -H "Authorization: Bearer $TOKEN" http://localhost:8000/predict

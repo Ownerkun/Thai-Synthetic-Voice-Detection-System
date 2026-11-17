@@ -2,17 +2,13 @@ import uuid
 
 from app.core.database import SessionLocal
 from app.models.user import UserAccount
-from tests.conftest import make_wav_bytes
+from tests.conftest import make_wav_bytes, register_verified
 
 
 def _register(client) -> tuple[str, dict]:
     """Return (email, auth headers) of a brand-new user"""
     email = f"{uuid.uuid4().hex[:12]}@example.com"
-    res = client.post(
-        "/auth/register", json={"email": email, "password": "Password1234"}
-    )
-    assert res.status_code == 201, res.text
-    return email, {"Authorization": f"Bearer {res.json()['access_token']}"}
+    return email, register_verified(client, {"email": email, "password": "Password1234"})
 
 
 def _predict(client, headers: dict):
