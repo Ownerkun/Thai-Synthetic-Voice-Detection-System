@@ -95,6 +95,12 @@ def test_migration_marks_existing_users_as_verified_and_can_downgrade(tmp_path):
         assert verified_at is not None  # ผู้ใช้เดิมไม่ถูกล็อก
         assert conn.execute(text("SELECT password_changed_at FROM user_account")).scalar_one() is None
     assert "email_token" in inspect(engine).get_table_names()
+    # ดัชนีต้องครบหลังผ่าน migration ทั้งสาย (รวมตัวที่ปรับ created_at ซึ่งบน SQLite สร้างตารางใหม่ให้)
+    indexes = {ix["name"]: ix for ix in inspect(engine).get_indexes("email_token")}
+    assert indexes["ix_email_token_token_hash"]["unique"]
+    assert "ix_email_token_user_id" in indexes
+    created_at = next(c for c in inspect(engine).get_columns("email_token") if c["name"] == "created_at")
+    assert created_at["nullable"] is False
 
     _alembic(db_url, "downgrade", "b7c3e1f4a9d2")
     inspector = inspect(create_engine(db_url))
