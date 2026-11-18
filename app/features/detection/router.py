@@ -8,6 +8,7 @@ from app.core.config import get_settings
 from app.deps import DbSession, get_optional_user_id
 from app.models.detection import DetectionRecord, SegmentScore
 from app.schemas.detection import BatchDetectionResultOut, DetectionResultOut, SegmentResultOut, FailedFileOut
+from app.services.audio_converter import ffmpeg_available
 from app.services.audio_preprocessor import AudioPreprocessor, UnsupportedAudioError
 from app.services.onnx_analyzer import get_analyzer
 from app.services.threshold_service import get_current_threshold
@@ -23,6 +24,7 @@ def health() -> dict:
         "status": "ok",
         "model_version": analyzer.model_version,
         "using_mock_model": "mock" in analyzer.model_version.lower(),
+        "ffmpeg_available": ffmpeg_available(),
     }
 
 
