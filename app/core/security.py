@@ -12,7 +12,7 @@ import jwt
 from passlib.context import CryptContext
 
 from app.core.config import get_settings
-from app.services.email_token_service import as_utc
+from app.core.timeutil import as_utc
 
 settings = get_settings()
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
