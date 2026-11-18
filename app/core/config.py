@@ -44,8 +44,11 @@ class Settings(BaseSettings):
     # --- Audio / Data Cleaning (ตาม UML: AudioPreprocessor) ---
     target_sample_rate: int = 16_000
     max_duration_seconds: float = 10.0
-    allowed_audio_extensions: tuple[str, ...] = (".wav", ".flac")
+    # นามสกุลไฟล์ที่ /predict รับ .wav .flac อ่านด้วย soundfile ที่เหลือแปลงผ่าน ffmpeg (ดู audio_converter.py)
+    allowed_audio_extensions: tuple[str, ...] = (".wav", ".flac", ".mp3", ".m4a", ".aac", ".ogg", ".opus", ".webm", ".mp4",)
     max_upload_size_bytes: int = 20 * 1024 * 1024  # 20 MB กันไฟล์ผิดปกติ
+    ffmpeg_path: str = "ffmpeg"  # ชื่อคำสั่ง หรือ path เต็ม
+    ffmpeg_timeout_seconds: float = 30.0  # ใช้เวลาแปลงไฟล์นานกว่านี้ให้ล้มเหลว
 
     # --- Model / ONNX Runtime (ตาม UML: OnnxSpoofAnalyzer) ---
     # ถ้าไฟล์นี้ไม่มีอยู่จริง ระบบจะสลับไปใช้ MockSpoofAnalyzer โดยอัตโนมัติ
