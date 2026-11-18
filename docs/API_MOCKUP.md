@@ -17,35 +17,35 @@
 - ทุก error ใช้รูปแบบเดียวกัน: `{"detail": "ข้อความ"}` — ยกเว้น validation error (422) ที่ `detail` เป็น array
 - Content-Type: `application/json` สำหรับ endpoint ทั่วไป, `multipart/form-data` เฉพาะ `/predict`
 
-| Endpoint                    | Method | ต้อง Login       | คำอธิบาย                                                      |
-| --------------------------- | ------ | ---------------- | ------------------------------------------------------------- |
-| `/health`                   | GET    | ไม่ต้อง          | เช็คสถานะ + ว่าใช้โมเดลจริงหรือ mock                          |
-| `/auth/register`            | POST   | ไม่ต้อง          | สมัครสมาชิก (ยังไม่ได้ token: ส่งอีเมลยืนยันให้)              |
-| `/auth/verify-email`        | POST   | ไม่ต้อง          | ยืนยันอีเมลด้วยโทเคนจากลิงก์ → ได้ token เข้าสู่ระบบ          |
-| `/auth/resend-verification` | POST   | ไม่ต้อง          | ขอลิงก์ยืนยันอีเมลใหม่                                        |
-| `/auth/forgot-password`     | POST   | ไม่ต้อง          | ขอลิงก์ตั้งรหัสผ่านใหม่ทางอีเมล                               |
-| `/auth/reset-password`      | POST   | ไม่ต้อง          | ตั้งรหัสผ่านใหม่ด้วยโทเคนจากลิงก์                             |
-| `/auth/login`               | POST   | ไม่ต้อง          | เข้าสู่ระบบผู้ใช้ทั่วไป (ต้องยืนยันอีเมลแล้ว)                 |
-| `/auth/admin/login`         | POST   | ไม่ต้อง          | เข้าสู่ระบบผู้ดูแล                                            |
-| `/predict`                  | POST   | ไม่บังคับ        | ตรวจสอบเสียง (1 หรือหลายไฟล์)                                 |
-| `/history`                  | GET    | **ต้อง** (user)  | ดูรายการประวัติของตนเอง                                       |
-| `/history/{id}`             | GET    | **ต้อง** (user)  | ดูรายละเอียด + คะแนนรายช่วง                                   |
-| `/history/{id}`             | DELETE | **ต้อง** (user)  | ลบรายการประวัติ                                               |
-| `/history/{id}/feedback`    | POST   | **ต้อง** (user)  | ให้ feedback ว่าผลถูกต้องไหม (ครั้งแรก)                       |
-| `/history/{id}/feedback`    | GET    | **ต้อง** (user)  | ดู feedback ที่เคยให้ไว้กับรายการนี้                          |
-| `/history/{id}/feedback`    | PUT    | **ต้อง** (user)  | แก้คำตอบ feedback ที่เคยให้ไว้แล้ว                            |
-| `/feedback`                 | GET    | **ต้อง** (user)  | ประวัติ feedback ทั้งหมดที่ฉันเคยให้ (ใหม่→เก่า)              |
-| `/feedback/options`         | GET    | ไม่ต้อง          | คำถามและตัวเลือก (ภาษาไทย) ของแบบสอบถามรายละเอียด feedback    |
-| `/users/me`                 | GET    | **ต้อง** (user)  | ดูข้อมูลบัญชีของตัวเอง                                        |
-| `/users/me`                 | PATCH  | **ต้อง** (user)  | แก้ชื่อที่แสดง (`display_name`)                               |
-| `/users/me/password`        | PUT    | **ต้อง** (user)  | เปลี่ยนรหัสผ่าน (ต้องส่งรหัสเดิม)                             |
-| `/admin/threshold`          | GET    | **ต้อง** (admin) | ดูค่า threshold ปัจจุบัน                                      |
-| `/admin/threshold`          | POST   | **ต้อง** (admin) | อัปเดตค่า threshold (มีผลทันที)                               |
-| `/admin/stats`              | GET    | **ต้อง** (admin) | สถิติภาพรวมระบบ                                               |
-| `/admin/users`              | GET    | **ต้อง** (admin) | รายชื่อผู้ใช้ + ค้นหา + filter ระงับ/ใช้งานปกติ + แบ่งหน้า    |
-| `/admin/users/{id}`         | PATCH  | **ต้อง** (admin) | แก้ display_name / ระงับ-เปิดใช้งานบัญชี                      |
-| `/admin/detections`         | GET    | **ต้อง** (admin) | ผลตรวจของทุกคน (รวม guest) + filter + เรียงลำดับ + แบ่งหน้า   |
-| `/admin/detections/{id}`    | GET    | **ต้อง** (admin) | รายละเอียดผลตรวจ 1 รายการ + รายช่วงเสียง + feedback + เจ้าของ |
+| Endpoint                    | Method | ต้อง Login       | คำอธิบาย                                                                 |
+| --------------------------- | ------ | ---------------- | ------------------------------------------------------------------------ |
+| `/health`                   | GET    | ไม่ต้อง          | เช็คสถานะ + ว่าใช้โมเดลจริงหรือ mock + ว่าเซิร์ฟเวอร์แปลงไฟล์เสียงได้ไหม |
+| `/auth/register`            | POST   | ไม่ต้อง          | สมัครสมาชิก (ยังไม่ได้ token: ส่งอีเมลยืนยันให้)                         |
+| `/auth/verify-email`        | POST   | ไม่ต้อง          | ยืนยันอีเมลด้วยโทเคนจากลิงก์ → ได้ token เข้าสู่ระบบ                     |
+| `/auth/resend-verification` | POST   | ไม่ต้อง          | ขอลิงก์ยืนยันอีเมลใหม่                                                   |
+| `/auth/forgot-password`     | POST   | ไม่ต้อง          | ขอลิงก์ตั้งรหัสผ่านใหม่ทางอีเมล                                          |
+| `/auth/reset-password`      | POST   | ไม่ต้อง          | ตั้งรหัสผ่านใหม่ด้วยโทเคนจากลิงก์                                        |
+| `/auth/login`               | POST   | ไม่ต้อง          | เข้าสู่ระบบผู้ใช้ทั่วไป (ต้องยืนยันอีเมลแล้ว)                            |
+| `/auth/admin/login`         | POST   | ไม่ต้อง          | เข้าสู่ระบบผู้ดูแล                                                       |
+| `/predict`                  | POST   | ไม่บังคับ        | ตรวจสอบเสียง (1 หรือหลายไฟล์)                                            |
+| `/history`                  | GET    | **ต้อง** (user)  | ดูรายการประวัติของตนเอง                                                  |
+| `/history/{id}`             | GET    | **ต้อง** (user)  | ดูรายละเอียด + คะแนนรายช่วง                                              |
+| `/history/{id}`             | DELETE | **ต้อง** (user)  | ลบรายการประวัติ                                                          |
+| `/history/{id}/feedback`    | POST   | **ต้อง** (user)  | ให้ feedback ว่าผลถูกต้องไหม (ครั้งแรก)                                  |
+| `/history/{id}/feedback`    | GET    | **ต้อง** (user)  | ดู feedback ที่เคยให้ไว้กับรายการนี้                                     |
+| `/history/{id}/feedback`    | PUT    | **ต้อง** (user)  | แก้คำตอบ feedback ที่เคยให้ไว้แล้ว                                       |
+| `/feedback`                 | GET    | **ต้อง** (user)  | ประวัติ feedback ทั้งหมดที่ฉันเคยให้ (ใหม่→เก่า)                         |
+| `/feedback/options`         | GET    | ไม่ต้อง          | คำถามและตัวเลือก (ภาษาไทย) ของแบบสอบถามรายละเอียด feedback               |
+| `/users/me`                 | GET    | **ต้อง** (user)  | ดูข้อมูลบัญชีของตัวเอง                                                   |
+| `/users/me`                 | PATCH  | **ต้อง** (user)  | แก้ชื่อที่แสดง (`display_name`)                                          |
+| `/users/me/password`        | PUT    | **ต้อง** (user)  | เปลี่ยนรหัสผ่าน (ต้องส่งรหัสเดิม)                                        |
+| `/admin/threshold`          | GET    | **ต้อง** (admin) | ดูค่า threshold ปัจจุบัน                                                 |
+| `/admin/threshold`          | POST   | **ต้อง** (admin) | อัปเดตค่า threshold (มีผลทันที)                                          |
+| `/admin/stats`              | GET    | **ต้อง** (admin) | สถิติภาพรวมระบบ                                                          |
+| `/admin/users`              | GET    | **ต้อง** (admin) | รายชื่อผู้ใช้ + ค้นหา + filter ระงับ/ใช้งานปกติ + แบ่งหน้า               |
+| `/admin/users/{id}`         | PATCH  | **ต้อง** (admin) | แก้ display_name / ระงับ-เปิดใช้งานบัญชี                                 |
+| `/admin/detections`         | GET    | **ต้อง** (admin) | ผลตรวจของทุกคน (รวม guest) + filter + เรียงลำดับ + แบ่งหน้า              |
+| `/admin/detections/{id}`    | GET    | **ต้อง** (admin) | รายละเอียดผลตรวจ 1 รายการ + รายช่วงเสียง + feedback + เจ้าของ            |
 
 ---
 
@@ -60,13 +60,17 @@ curl http://localhost:8000/health
 ```json
 {
   "status": "ok",
-  "model_version": "mock-v0 (โมเดลจริงยังไม่พร้อม)",
-  "using_mock_model": true
+  "model_version": "mock-v0 (real model not yet available)",
+  "using_mock_model": true,
+  "ffmpeg_available": true
 }
 ```
 
 เมื่อวางโมเดลจริงแล้ว `using_mock_model` จะเป็น `false` และ `model_version` จะเป็นค่าที่มาจาก `model.json`
 → frontend ใช้ field นี้แสดง banner เตือนผู้ใช้ได้ เช่น "ระบบอยู่ระหว่างทดสอบ ผลยังไม่แม่นยำ 100%"
+`ffmpeg_available: false` แปลว่าเซิร์ฟเวอร์เครื่องนั้นแปลงไฟล์ที่ไม่ใช่ `.wav`/`.flac` ไม่ได้
+(ไฟล์เหล่านั้นจะได้ `conversion_unavailable` ใน `failed_files`) — ปกติบน Docker image เป็น `true` เสมอ
+frontend ไม่จำเป็นต้องอ่านฟิลด์นี้ ใช้ตรวจตอน deploy
 
 ---
 
@@ -287,7 +291,11 @@ curl -X POST http://localhost:8000/auth/admin/login \
 `Authorization` header **ใส่หรือไม่ใส่ก็ได้**: มี token ที่ถูกต้อง → บันทึกผลลงประวัติ (`saved_to_history: true`),
 ไม่มีหรือ token ผิด → ยังตรวจสอบได้ปกติ แต่ไม่บันทึกประวัติ (`saved_to_history: false`)
 
-รองรับเฉพาะ `.wav`, `.flac` ความยาวเกิน 10 วินาทีจะถูกตัดอัตโนมัติ (ดู `duration_seconds` ในผลลัพธ์)
+รองรับ `.wav`, `.flac`, `.mp3`, `.m4a`, `.aac`, `.ogg`, `.opus`, `.webm`, `.mp4` (ตัวอักษรเล็ก/ใหญ่ได้) — Backend แปลงเป็น
+16 kHz mono ให้เอง **frontend ไม่ต้องแปลงไฟล์ก่อนส่ง** ไฟล์จาก `MediaRecorder` ของเบราว์เซอร์ (Chrome/Firefox ได้ `.webm`,
+Safari ได้ `.mp4`) ส่งมาได้เลย · ความยาวเกิน 10 วินาทีจะถูกตัดอัตโนมัติ (ดู `duration_seconds` ในผลลัพธ์) · ไฟล์ใหญ่สุด 20 MB
+ตรวจจากเนื้อไฟล์จริง ไม่ใช่แค่นามสกุล: ไฟล์ที่ตั้งชื่อ `.wav` แต่เนื้อเป็น webm ก็ยังอ่านได้ · `audio_format` ที่บันทึกคือ
+นามสกุลที่ส่งมา (เช่น `m4a`)
 
 ### ตัวอย่าง 1 — ไม่ login, ไฟล์เดียว ยาวเกิน 10 วิ (ถูกตัดอัตโนมัติ)
 
@@ -425,35 +433,23 @@ curl -F "files=@call_a.wav" -F "files=@call_b.wav" \
 ### ตัวอย่าง 3 — ไฟล์บางไฟล์รูปแบบไม่ถูกต้อง (ผสมกับไฟล์ที่ถูกต้อง)
 
 ```bash
-curl -F "files=@clip2.wav" -F "files=@clip.mp3" -F "files=@broken.wav" http://localhost:8000/predict
+curl -F "files=@clip2.wav" -F "files=@notes.txt" -F "files=@broken.mp3" http://localhost:8000/predict
 ```
 
 **200 OK** — status code ยังเป็น 200 เสมอ! ไฟล์ที่ผ่านอยู่ใน `results` ส่วนไฟล์ที่ไม่ผ่านอยู่ใน `failed_files`
 **พร้อมสาเหตุ** (ไม่ throw error รวมทั้ง request เพราะอาจมีไฟล์อื่นที่ตรวจสำเร็จปนอยู่)
 
 ```json
-{
-  "results": [
     {
-      "id": "…",
-      "original_filename": "clip2.wav",
-      "verdict": "spoof",
-      "…": "…"
-    }
-  ],
-  "failed_files": [
-    {
-      "filename": "clip.mp3",
+      "filename": "notes.txt",
       "reason": "unsupported_format",
-      "message": "Unsupported file type '.mp3' - allowed: .wav, .flac"
+      "message": "Unsupported file type '.txt' - allowed: .wav, .flac, .mp3, .m4a, .aac, .ogg, .opus, .webm, .mp4"
     },
     {
-      "filename": "broken.wav",
+      "filename": "broken.mp3",
       "reason": "decode_failed",
       "message": "Could not read the audio data - the file may be corrupted or not a real audio file"
     }
-  ]
-}
 ```
 
 > ⚠️ **เปลี่ยน contract:** ก่อนหน้านี้ `failed_files` เป็น `["clip.mp3"]` (list ของชื่อไฟล์)
@@ -463,17 +459,19 @@ curl -F "files=@clip2.wav" -F "files=@clip.mp3" -F "files=@broken.wav" http://lo
 
 ### รหัส `reason` (frontend ควรดูจากฟิลด์นี้ ไม่ใช่จาก `message`)
 
-| `reason`             | เกิดเมื่อ                                                   | `message` ตัวอย่าง                                                                   | ข้อความไทยที่แนะนำให้แสดง                          |
-| -------------------- | ----------------------------------------------------------- | ------------------------------------------------------------------------------------ | -------------------------------------------------- |
-| `unsupported_format` | นามสกุลไม่ใช่ `.wav` / `.flac` (หรือไม่มีนามสกุล)           | `Unsupported file type '(none)' - allowed: .wav, .flac`                              | ไฟล์ชนิดนี้ไม่รองรับ (รองรับเฉพาะ .wav และ .flac)  |
-| `file_too_large`     | ไฟล์ใหญ่กว่า 20 MB                                          | `The file is 21.0 MB - the limit is 20 MB`                                           | ไฟล์ใหญ่เกินไป (ไม่เกิน 20 MB)                     |
-| `empty_audio`        | ไฟล์ 0 ไบต์ **หรือ** เปิดได้แต่ไม่มีเสียงเลย (0 samples)    | `The file is empty` / `The file contains no audio samples`                           | ไฟล์นี้ไม่มีเสียง                                  |
-| `decode_failed`      | อ่านข้อมูลเสียงไม่ได้ (ไฟล์เสียหาย หรือไม่ใช่ไฟล์เสียงจริง) | `Could not read the audio data - the file may be corrupted or not a real audio file` | เปิดไฟล์ไม่ได้ ไฟล์อาจเสียหาย ลองอัดหรือบันทึกใหม่ |
+| `reason`                 | เกิดเมื่อ                                                                           | `message` ตัวอย่าง                                                                   | ข้อความไทยที่แนะนำให้แสดง                                                    |
+| ------------------------ | ----------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------- |
+| `unsupported_format`     | นามสกุลไม่อยู่ในรายการที่รองรับ (หรือไม่มีนามสกุล)                                  | `Unsupported file type '(none)' - allowed: .wav, .flac, .mp3, …`                     | ไฟล์ชนิดนี้ไม่รองรับ (รองรับ wav, flac, mp3, m4a, aac, ogg, opus, webm, mp4) |
+| `file_too_large`         | ไฟล์ใหญ่กว่า 20 MB                                                                  | `The file is 21.0 MB - the limit is 20 MB`                                           | ไฟล์ใหญ่เกินไป (ไม่เกิน 20 MB)                                               |
+| `empty_audio`            | ไฟล์ 0 ไบต์ **หรือ** เปิดได้แต่ไม่มีเสียงเลย (0 samples)                            | `The file is empty` / `The file contains no audio samples`                           | ไฟล์นี้ไม่มีเสียง                                                            |
+| `decode_failed`          | อ่านข้อมูลเสียงไม่ได้ (ไฟล์เสียหาย หรือไม่ใช่ไฟล์เสียงจริง)                         | `Could not read the audio data - the file may be corrupted or not a real audio file` | เปิดไฟล์ไม่ได้ ไฟล์อาจเสียหาย ลองอัดหรือบันทึกใหม่                           |
+| `conversion_unavailable` | ต้องแปลงไฟล์ด้วย ffmpeg แต่เซิร์ฟเวอร์ไม่มี (ปัญหาฝั่งเซิร์ฟเวอร์ ไม่ใช่ไฟล์ผู้ใช้) | `The server cannot convert .m4a files right now - please try .wav or .flac`          | ระบบแปลงไฟล์ชนิดนี้ไม่ได้ชั่วคราว ลองส่งเป็น .wav หรือ .flac                 |
 
 - `message` เป็นภาษาอังกฤษไว้ให้ดูตอน debug เท่านั้น ข้อความอาจปรับถ้อยคำได้ในอนาคต — อย่าเอาไป `if (message === "...")`
 - ถ้า `reason` มีค่าใหม่ที่ frontend ไม่รู้จัก ให้แสดงข้อความกลางๆ ไว้เป็น fallback เช่น "ไฟล์นี้ตรวจสอบไม่ได้"
 - ไฟล์ที่ไม่ผ่านจะ **ไม่ถูกบันทึกลงประวัติ**
-- ลำดับการตรวจ: นามสกุล → ว่างเปล่า → ขนาด → อ่านข้อมูลเสียง (ไฟล์ `.mp3` ขนาด 0 ไบต์จึงได้ `unsupported_format`)
+- ลำดับการตรวจ: นามสกุล → ว่างเปล่า → ขนาด → อ่านข้อมูลเสียง (ไฟล์ `.txt` ขนาด 0 ไบต์จึงได้ `unsupported_format`)
+- `decode_failed` ใช้กับไฟล์ที่แปลงไม่ได้ทุกกรณี: เสียหาย, ไม่ใช่เสียงจริง, วิดีโอที่ไม่มีแทร็กเสียง, หรือแปลงนานเกิน 30 วินาที
 
 ---
 
