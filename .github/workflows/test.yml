@@ -1,0 +1,47 @@
+name: test
+
+# รัน pytest ทุกครั้งที่เปิด/อัปเดต PR และทุกครั้งที่ push เข้า main
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  pytest:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11" # ตรงกับ python ใน docker/api/Dockerfile
+          cache: pip
+          cache-dependency-path: requirements*.txt
+      # ffmpeg: เทสต์แปลงไฟล์เสียงต้องใช้ตัวจริง (ถ้าไม่มีเทสต์จะถูกข้ามเงียบ ๆ) · libsndfile1: ให้ soundfile อ่านไฟล์เสียง
+      - run: sudo apt-get update && sudo apt-get install -y --no-install-recommends ffmpeg libsndfile1
+      - run: pip install -r requirements-dev.txt
+      - run: pytest -q -rs
+
+  # ยืนยันว่า migration รันบน PostgreSQL ได้ และตรงกับโมเดล (จับกรณีเพิ่มคอลัมน์ในโมเดลแต่ลืมเขียน migration)
+  migrations:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: spoof_detection
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U postgres" --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      DATABASE_URL: postgresql+psycopg://postgres:postgres@localhost:5432/spoof_detection
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: requirements*.txt
+      - run: pip install -r requirements.txt
+      - run: alembic upgrade head
+      - run: alembic check # โมเดลกับ migration ต้องไม่ต่างกัน
