@@ -102,11 +102,11 @@ def test_admin_login_and_threshold_update_affects_next_predict(client):
 
 def test_predict_rejects_unsupported_extension(client):
     res = client.post(
-        "/predict", files={"files": ("clip.mp3", b"not-really-audio", "audio/mpeg")}
+        "/predict", files={"files": ("clip.txt", b"not-really-audio", "text/plain")}
     )
     assert res.status_code == 200
     body = res.json()
     assert body["results"] == []
     assert len(body["failed_files"]) == 1
-    assert body["failed_files"][0]["filename"] == "clip.mp3"
+    assert body["failed_files"][0]["filename"] == "clip.txt"
     assert body["failed_files"][0]["reason"] == "unsupported_format"

@@ -49,9 +49,9 @@ def test_valid_wav_still_processes():
 
 def test_validate_format_rejects_wrong_extension():
     with pytest.raises(UnsupportedAudioError) as err:
-        AudioPreprocessor().validate_format("clip.mp3", 1000)
+        AudioPreprocessor().validate_format("clip.txt", 1000)
     assert err.value.reason == FailureReason.UNSUPPORTED_FORMAT
-    assert ".mp3" in str(err.value)
+    assert ".txt" in str(err.value)
 
 
 def test_validate_format_rejects_file_without_extension():
@@ -83,5 +83,5 @@ def test_validate_format_accepts_wav_and_flac_in_any_letter_case():
 
 def test_extension_is_checked_before_size():
     with pytest.raises(UnsupportedAudioError) as err:
-        AudioPreprocessor().validate_format("clip.mp3", 0)
+        AudioPreprocessor().validate_format("clip.txt", 0)
     assert err.value.reason == FailureReason.UNSUPPORTED_FORMAT

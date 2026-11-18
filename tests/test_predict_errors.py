@@ -19,19 +19,19 @@ def _wav_with_no_samples() -> bytes:
 
 
 def test_unsupported_extension_is_reported_with_reason(client):
-    res = _post(client, ("clip.mp3", b"whatever"))
+    res = _post(client, ("clip.txt", b"whatever"))
     assert res.status_code == 200
     body = res.json()
     assert body["results"] == []
     assert len(body["failed_files"]) == 1
     failure = body["failed_files"][0]
-    assert failure["filename"] == "clip.mp3"
+    assert failure["filename"] == "clip.txt"
     assert failure["reason"] == "unsupported_format"
-    assert ".mp3" in failure["message"]
+    assert ".txt" in failure["message"]
 
 
 def test_failed_file_has_exactly_filename_reason_and_message(client):
-    failure = _post(client, ("clip.mp3", b"whatever")).json()["failed_files"][0]
+    failure = _post(client, ("clip.txt", b"whatever")).json()["failed_files"][0]
     assert set(failure.keys()) == {"filename", "reason", "message"}
 
 
@@ -64,12 +64,12 @@ def test_mixed_batch_keeps_the_good_file_and_explains_every_bad_one(client):
     body = _post(
         client,
         ("good.wav", make_wav_bytes()),
-        ("bad.mp3", b"x"),
+        ("bad.txt", b"x"),
         ("broken.wav", b"garbage" * 10),
     ).json()
     assert [r["original_filename"] for r in body["results"]] == ["good.wav"]
     reasons = {f["filename"]: f["reason"] for f in body["failed_files"]}
-    assert reasons == {"bad.mp3": "unsupported_format", "broken.wav": "decode_failed"}
+    assert reasons == {"bad.txt": "unsupported_format", "broken.wav": "decode_failed"}
 
 
 def test_successful_upload_has_empty_failed_files(client):
@@ -80,5 +80,5 @@ def test_successful_upload_has_empty_failed_files(client):
 
 def test_rejected_file_is_not_saved_to_history(client):
     headers = register_and_get_headers(client)
-    _post(client, ("bad.mp3", b"x"), ("broken.wav", b"garbage" * 10), headers=headers)
+    _post(client, ("bad.txt", b"x"), ("broken.wav", b"garbage" * 10), headers=headers)
     assert client.get("/history", headers=headers).json() == []

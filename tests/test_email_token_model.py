@@ -100,3 +100,46 @@ def test_migration_marks_existing_users_as_verified_and_can_downgrade(tmp_path):
     inspector = inspect(create_engine(db_url))
     assert "email_token" not in inspector.get_table_names()
     assert "email_verified_at" not in {c["name"] for c in inspector.get_columns("user_account")}
+
+
+def _insert_old_user(engine) -> None:
+    with engine.begin() as conn:
+        conn.execute(
+            text("INSERT INTO user_account (id, email, password_hash, is_active) VALUES (:id, :email, 'x', 1)"),
+            {"id": str(uuid.uuid4()), "email": "old-user@example.com"},
+        )
+
+
+def test_migration_works_when_create_all_already_created_the_email_token_table(tmp_path):
+    # เกิดจริงบนเครื่อง dev: app/main.py เรียก create_all ตอนสตาร์ท จึงสร้างตาราง email_token ให้ก่อนที่ migration จะได้รัน
+    # (แต่เติมคอลัมน์ใน user_account ให้ไม่ได้) → create_table ใน migration เคยล้มด้วย "relation email_token already exists"
+    db_url = f"sqlite:///{tmp_path / 'migration.db'}"
+    engine = create_engine(db_url)
+    Base.metadata.create_all(engine)
+    with engine.begin() as conn:
+        conn.execute(text("ALTER TABLE user_account DROP COLUMN email_verified_at"))
+        conn.execute(text("ALTER TABLE user_account DROP COLUMN password_changed_at"))
+    _insert_old_user(engine)
+    _alembic(db_url, "stamp", "b7c3e1f4a9d2")
+
+    _alembic(db_url, "upgrade", "head")
+
+    with engine.connect() as conn:
+        assert conn.execute(text("SELECT email_verified_at FROM user_account")).scalar_one() is not None
+    assert "email_token" in inspect(engine).get_table_names()
+    _alembic(db_url, "downgrade", "b7c3e1f4a9d2")
+    assert "email_token" not in inspect(create_engine(db_url)).get_table_names()
+
+
+def test_migration_does_not_overwrite_columns_that_already_exist(tmp_path):
+    # ถ้าคอลัมน์ถูกเพิ่มไว้แล้ว (เช่นเติมเอง) ห้ามไปตั้ง "ยืนยันแล้ว" ทับผู้ใช้ที่ยังไม่ได้ยืนยันจริง
+    db_url = f"sqlite:///{tmp_path / 'migration.db'}"
+    engine = create_engine(db_url)
+    Base.metadata.create_all(engine)
+    _insert_old_user(engine)
+    _alembic(db_url, "stamp", "b7c3e1f4a9d2")
+
+    _alembic(db_url, "upgrade", "head")
+
+    with engine.connect() as conn:
+        assert conn.execute(text("SELECT email_verified_at FROM user_account")).scalar_one() is None
