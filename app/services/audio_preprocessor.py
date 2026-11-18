@@ -11,10 +11,14 @@ import numpy as np
 import soundfile as sf
 
 from app.core.config import get_settings
+from app.services.audio_converter import ConverterUnavailableError, convert_to_wav
 from app.services.audio_types import AudioBuffer, FailureReason
 
 logger = logging.getLogger(__name__)
 
+
+# นามสกุลที่ soundfile อ่านตรงได้ ที่เหลือใน allowed_audio_extensions ต้องแปลงด้วย ffmpeg
+_NATIVE_FORMATS = {"wav", "flac"}
 
 class UnsupportedAudioError(ValueError):
     def __init__(self, reason: FailureReason, message: str) -> None:
@@ -51,18 +55,39 @@ class AudioPreprocessor:
             )
 
     def decode(self, file_bytes: bytes, source_format: str) -> AudioBuffer:
-        try:
-            waveform, sample_rate = sf.read(io.BytesIO(file_bytes), dtype="float32", always_2d=False)
-        except Exception as exc:  # noqa: BLE001 ห่อ error ของ libsndfile ให้เป็นข้อความที่ API เข้าใจ
-        # the raw libsndfile message is only for our logs, the client gets a generic message
-            logger.warning("Could not decode %s upload: %s", source_format, exc)
-            raise UnsupportedAudioError(
-                FailureReason.DECODE_FAILED,
-                "Could not read the audio data - the file may be corrupted or not a real audio file",
-            ) from exc
+        if source_format in _NATIVE_FORMATS:
+            try:
+                waveform, sample_rate = self._read_native(file_bytes)
+            except Exception as exc:  # noqa: BLE001 error ของ libsndfile เก็บไว้ใน log เท่านั้น ผู้ใช้ได้ข้อความกลาง ๆ
+                logger.info("soundfile could not read %s upload (%s) - trying ffmpeg", source_format, exc)
+                waveform, sample_rate = self._read_via_ffmpeg(file_bytes, source_format)
+        else:
+            waveform, sample_rate = self._read_via_ffmpeg(file_bytes, source_format)
         if len(waveform) == 0:
             raise UnsupportedAudioError(FailureReason.EMPTY_AUDIO, "The file contains no audio samples")
         return AudioBuffer(waveform=np.asarray(waveform, dtype=np.float32), sample_rate=sample_rate, source_format=source_format)
+
+    def _read_native(self, file_bytes: bytes) -> tuple[np.ndarray, int]:
+        with sf.SoundFile(io.BytesIO(file_bytes)) as f:
+            frames = max(1, int(self.max_duration_seconds * f.samplerate))
+            return f.read(frames=frames, dtype="float32", always_2d=False), f.samplerate
+
+    def _read_via_ffmpeg(self, file_bytes: bytes, source_format: str) -> tuple[np.ndarray, int]:
+        try:
+            wav_bytes = convert_to_wav(file_bytes, self.max_duration_seconds)
+            with sf.SoundFile(io.BytesIO(wav_bytes)) as f:
+                return f.read(dtype="float32", always_2d=False), f.samplerate
+        except ConverterUnavailableError as exc:
+            logger.error("Cannot convert %s upload: %s", source_format, exc)
+            if source_format in _NATIVE_FORMATS:
+                raise _decode_failed() from exc
+            raise UnsupportedAudioError(
+                FailureReason.CONVERSION_UNAVAILABLE,
+                f"The server cannot convert .{source_format} files right now please try .wav or .flac",
+            ) from exc
+        except Exception as exc:  # noqa: BLE001 ConversionError, soundfile อ่านผลลัพธ์ไม่ได้
+            logger.warning("Could not decode %s upload: %s", source_format, exc)
+            raise _decode_failed() from exc
 
     def to_mono(self, buffer: AudioBuffer) -> AudioBuffer:
         wf = buffer.waveform
@@ -141,3 +166,11 @@ def _resample_signal(waveform: np.ndarray, orig_sr: int, target_sr: int) -> np.n
 
         g = gcd(orig_sr, target_sr)
         return resample_poly(waveform, target_sr // g, orig_sr // g)
+
+def _decode_failed() -> UnsupportedAudioError:
+    return UnsupportedAudioError(
+        FailureReason.DECODE_FAILED,
+        "Could not read the audio data the file may be corrupted or not a real audio file",
+    )
+
+

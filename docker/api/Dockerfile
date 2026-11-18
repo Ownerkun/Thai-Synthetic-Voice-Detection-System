@@ -25,6 +25,7 @@ FROM python:3.11-slim-bookworm AS runtime
 # libsndfile1
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libsndfile1 \
+    ffmpeg \
     curl \
     && rm -rf /var/lib/apt/lists/* \
     && useradd --create-home --uid 1000 appuser
