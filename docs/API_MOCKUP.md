@@ -17,35 +17,36 @@
 - ทุก error ใช้รูปแบบเดียวกัน: `{"detail": "ข้อความ"}` — ยกเว้น validation error (422) ที่ `detail` เป็น array
 - Content-Type: `application/json` สำหรับ endpoint ทั่วไป, `multipart/form-data` เฉพาะ `/predict`
 
-| Endpoint                    | Method | ต้อง Login       | คำอธิบาย                                                                 |
-| --------------------------- | ------ | ---------------- | ------------------------------------------------------------------------ |
-| `/health`                   | GET    | ไม่ต้อง          | เช็คสถานะ + ว่าใช้โมเดลจริงหรือ mock + ว่าเซิร์ฟเวอร์แปลงไฟล์เสียงได้ไหม |
-| `/auth/register`            | POST   | ไม่ต้อง          | สมัครสมาชิก (ยังไม่ได้ token: ส่งอีเมลยืนยันให้)                         |
-| `/auth/verify-email`        | POST   | ไม่ต้อง          | ยืนยันอีเมลด้วยโทเคนจากลิงก์ → ได้ token เข้าสู่ระบบ                     |
-| `/auth/resend-verification` | POST   | ไม่ต้อง          | ขอลิงก์ยืนยันอีเมลใหม่                                                   |
-| `/auth/forgot-password`     | POST   | ไม่ต้อง          | ขอลิงก์ตั้งรหัสผ่านใหม่ทางอีเมล                                          |
-| `/auth/reset-password`      | POST   | ไม่ต้อง          | ตั้งรหัสผ่านใหม่ด้วยโทเคนจากลิงก์                                        |
-| `/auth/login`               | POST   | ไม่ต้อง          | เข้าสู่ระบบผู้ใช้ทั่วไป (ต้องยืนยันอีเมลแล้ว)                            |
-| `/auth/admin/login`         | POST   | ไม่ต้อง          | เข้าสู่ระบบผู้ดูแล                                                       |
-| `/predict`                  | POST   | ไม่บังคับ        | ตรวจสอบเสียง (1 หรือหลายไฟล์)                                            |
-| `/history`                  | GET    | **ต้อง** (user)  | ดูรายการประวัติของตนเอง                                                  |
-| `/history/{id}`             | GET    | **ต้อง** (user)  | ดูรายละเอียด + คะแนนรายช่วง                                              |
-| `/history/{id}`             | DELETE | **ต้อง** (user)  | ลบรายการประวัติ                                                          |
-| `/history/{id}/feedback`    | POST   | **ต้อง** (user)  | ให้ feedback ว่าผลถูกต้องไหม (ครั้งแรก)                                  |
-| `/history/{id}/feedback`    | GET    | **ต้อง** (user)  | ดู feedback ที่เคยให้ไว้กับรายการนี้                                     |
-| `/history/{id}/feedback`    | PUT    | **ต้อง** (user)  | แก้คำตอบ feedback ที่เคยให้ไว้แล้ว                                       |
-| `/feedback`                 | GET    | **ต้อง** (user)  | ประวัติ feedback ทั้งหมดที่ฉันเคยให้ (ใหม่→เก่า)                         |
-| `/feedback/options`         | GET    | ไม่ต้อง          | คำถามและตัวเลือก (ภาษาไทย) ของแบบสอบถามรายละเอียด feedback               |
-| `/users/me`                 | GET    | **ต้อง** (user)  | ดูข้อมูลบัญชีของตัวเอง                                                   |
-| `/users/me`                 | PATCH  | **ต้อง** (user)  | แก้ชื่อที่แสดง (`display_name`)                                          |
-| `/users/me/password`        | PUT    | **ต้อง** (user)  | เปลี่ยนรหัสผ่าน (ต้องส่งรหัสเดิม)                                        |
-| `/admin/threshold`          | GET    | **ต้อง** (admin) | ดูค่า threshold ปัจจุบัน                                                 |
-| `/admin/threshold`          | POST   | **ต้อง** (admin) | อัปเดตค่า threshold (มีผลทันที)                                          |
-| `/admin/stats`              | GET    | **ต้อง** (admin) | สถิติภาพรวมระบบ                                                          |
-| `/admin/users`              | GET    | **ต้อง** (admin) | รายชื่อผู้ใช้ + ค้นหา + filter ระงับ/ใช้งานปกติ + แบ่งหน้า               |
-| `/admin/users/{id}`         | PATCH  | **ต้อง** (admin) | แก้ display_name / ระงับ-เปิดใช้งานบัญชี                                 |
-| `/admin/detections`         | GET    | **ต้อง** (admin) | ผลตรวจของทุกคน (รวม guest) + filter + เรียงลำดับ + แบ่งหน้า              |
-| `/admin/detections/{id}`    | GET    | **ต้อง** (admin) | รายละเอียดผลตรวจ 1 รายการ + รายช่วงเสียง + feedback + เจ้าของ            |
+| Endpoint                           | Method | ต้อง Login       | คำอธิบาย                                                                                                 |
+| ---------------------------------- | ------ | ---------------- | -------------------------------------------------------------------------------------------------------- |
+| `/health`                          | GET    | ไม่ต้อง          | เช็คสถานะ + ว่าใช้โมเดลจริงหรือ mock + ว่าเซิร์ฟเวอร์แปลงไฟล์เสียงได้ไหม                                 |
+| `/auth/register`                   | POST   | ไม่ต้อง          | สมัครสมาชิก (ยังไม่ได้ token: ส่งอีเมลยืนยันให้)                                                         |
+| `/auth/verify-email`               | POST   | ไม่ต้อง          | ยืนยันอีเมลด้วยโทเคนจากลิงก์ → ได้ token เข้าสู่ระบบ                                                     |
+| `/auth/resend-verification`        | POST   | ไม่ต้อง          | ขอลิงก์ยืนยันอีเมลใหม่                                                                                   |
+| `/auth/forgot-password`            | POST   | ไม่ต้อง          | ขอลิงก์ตั้งรหัสผ่านใหม่ทางอีเมล                                                                          |
+| `/auth/reset-password`             | POST   | ไม่ต้อง          | ตั้งรหัสผ่านใหม่ด้วยโทเคนจากลิงก์                                                                        |
+| `/auth/login`                      | POST   | ไม่ต้อง          | เข้าสู่ระบบผู้ใช้ทั่วไป (ต้องยืนยันอีเมลแล้ว)                                                            |
+| `/auth/admin/login`                | POST   | ไม่ต้อง          | เข้าสู่ระบบผู้ดูแล                                                                                       |
+| `/predict`                         | POST   | ไม่บังคับ        | ตรวจสอบเสียง (1 หรือหลายไฟล์)                                                                            |
+| `/history`                         | GET    | **ต้อง** (user)  | ดูรายการประวัติของตนเอง                                                                                  |
+| `/history/{id}`                    | GET    | **ต้อง** (user)  | ดูรายละเอียด + คะแนนรายช่วง                                                                              |
+| `/history/{id}`                    | DELETE | **ต้อง** (user)  | ลบรายการประวัติ                                                                                          |
+| `/history/{id}/feedback`           | POST   | **ต้อง** (user)  | ให้ feedback ว่าผลถูกต้องไหม (ครั้งแรก)                                                                  |
+| `/history/{id}/feedback`           | GET    | **ต้อง** (user)  | ดู feedback ที่เคยให้ไว้กับรายการนี้                                                                     |
+| `/history/{id}/feedback`           | PUT    | **ต้อง** (user)  | แก้คำตอบ feedback ที่เคยให้ไว้แล้ว                                                                       |
+| `/feedback`                        | GET    | **ต้อง** (user)  | ประวัติ feedback ทั้งหมดที่ฉันเคยให้ (ใหม่→เก่า)                                                         |
+| `/feedback/options`                | GET    | ไม่ต้อง          | คำถามและตัวเลือก (ภาษาไทย) ของแบบสอบถามรายละเอียด feedback                                               |
+| `/users/me`                        | GET    | **ต้อง** (user)  | ดูข้อมูลบัญชีของตัวเอง                                                                                   |
+| `/users/me`                        | PATCH  | **ต้อง** (user)  | แก้ชื่อที่แสดง (`display_name`)                                                                          |
+| `/users/me/password`               | PUT    | **ต้อง** (user)  | เปลี่ยนรหัสผ่าน (ต้องส่งรหัสเดิม)                                                                        |
+| `/admin/threshold`                 | GET    | **ต้อง** (admin) | ดูค่า threshold ปัจจุบัน                                                                                 |
+| `/admin/threshold`                 | POST   | **ต้อง** (admin) | อัปเดตค่า threshold (มีผลทันที)                                                                          |
+| `/admin/stats`                     | GET    | **ต้อง** (admin) | สถิติภาพรวมระบบ                                                                                          |
+| `/admin/users`                     | GET    | **ต้อง** (admin) | รายชื่อผู้ใช้ + ค้นหา + filter ระงับ/ใช้งานปกติ + แบ่งหน้า                                               |
+| `/admin/users/{id}`                | PATCH  | **ต้อง** (admin) | แก้ display_name / ระงับ-เปิดใช้งานบัญชี                                                                 |
+| `/admin/detections`                | GET    | **ต้อง** (admin) | ผลตรวจของทุกคน (รวม guest) + filter + เรียงลำดับ + แบ่งหน้า                                              |
+| `/admin/detections/filter-options` | GET    | **ต้อง** (admin) | ค่าที่ใช้กรองได้ทั้งหมด: รายการ `model_version` + ช่วง `threshold_used` (ไม่ตกหล่นแม้ข้อมูลเกิน 200 แถว) |
+| `/admin/detections/{id}`           | GET    | **ต้อง** (admin) | รายละเอียดผลตรวจ 1 รายการ + รายช่วงเสียง + feedback + เจ้าของ                                            |
 
 ---
 
@@ -1188,28 +1189,29 @@ curl -X PATCH http://localhost:8000/admin/users/d839abb0-e093-4a30-870a-ad71663b
 
 Query (ทุกตัวไม่บังคับ — ใส่หลายตัวพร้อมกัน = ต้องตรงทุกเงื่อนไข):
 
-| Query                  | ค่าเริ่มต้น  | คำอธิบาย                                                                                              |
-| ---------------------- | ------------ | ----------------------------------------------------------------------------------------------------- |
-| `verdict`              | —            | `real` หรือ `spoof`                                                                                   |
-| `date_from`, `date_to` | —            | วันที่ `YYYY-MM-DD` **ตามเวลาไทย** นับรวมทั้งวัน (`date_from=date_to=2026-10-01` = ทั้งวันที่ 1 ต.ค.) |
-| `q`                    | —            | ค้นหาจากชื่อไฟล์ (บางส่วนก็ได้ ไม่สนตัวพิมพ์; 1–100 ตัวอักษร)                                         |
-| `user_id`              | —            | เฉพาะผลตรวจของผู้ใช้คนนี้ (UUID)                                                                      |
-| `user_email`           | —            | ค้นหาจากอีเมลผู้ใช้ (บางส่วนก็ได้ ไม่สนตัวพิมพ์)                                                      |
-| `guest`                | —            | `true` = เฉพาะที่ไม่ได้ login · `false` = เฉพาะที่ login                                              |
-| `model_version`        | —            | ตรงทุกตัวอักษร (ดูค่าที่มีได้จากผลลัพธ์)                                                              |
-| `partial_spoof`        | —            | `true` = เฉพาะที่ระบบสงสัยว่าปลอมบางช่วง · `false` = เฉพาะที่ไม่สงสัย                                 |
-| `feedback`             | —            | `agree` · `disagree` · `none` (ยังไม่มี feedback)                                                     |
-| `audio_source`         | —            | ค่าเดียวกับ `audio_source` ของแบบสอบถาม feedback (เช่น `speaker_replay`)                              |
-| `environment`          | —            | `quiet_room` · `noisy_indoor` · `outdoors` · `in_vehicle` · `crowded_public`                          |
-| `audio_issue`          | —            | เฉพาะผลที่ผู้ใช้ติ๊กปัญหานี้ไว้ (ติ๊กได้หลายข้อ จึงตรงเมื่อปัญหานี้อยู่ในรายการ) เช่น `echo`          |
-| `truth_basis`          | —            | `self_recorded` · `self_generated` · `know_the_speaker` · `not_sure`                                  |
-| `speaker_accent`       | —            | `central` · `northern` · `northeastern` · `southern` · `other`                                        |
-| `speaker_age_group`    | —            | `under_20` · `20_39` · `40_59` · `60_plus`                                                            |
-| `min_prob`, `max_prob` | —            | ช่วงของ `mean_probability` 0–1 (รวมค่าปลายทั้งสองข้าง)                                                |
-| `sort`                 | `created_at` | `created_at` · `mean_probability` · `processing_ms`                                                   |
-| `order`                | `desc`       | `asc` หรือ `desc`                                                                                     |
-| `limit`                | 50           | 1–200                                                                                                 |
-| `offset`               | 0            | ≥ 0                                                                                                   |
+| Query                            | ค่าเริ่มต้น  | คำอธิบาย                                                                                                                                            |
+| -------------------------------- | ------------ | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `verdict`                        | —            | `real` หรือ `spoof`                                                                                                                                 |
+| `date_from`, `date_to`           | —            | วันที่ `YYYY-MM-DD` **ตามเวลาไทย** นับรวมทั้งวัน (`date_from=date_to=2026-10-01` = ทั้งวันที่ 1 ต.ค.)                                               |
+| `q`                              | —            | ค้นหาจากชื่อไฟล์ (บางส่วนก็ได้ ไม่สนตัวพิมพ์; 1–100 ตัวอักษร)                                                                                       |
+| `user_id`                        | —            | เฉพาะผลตรวจของผู้ใช้คนนี้ (UUID)                                                                                                                    |
+| `user_email`                     | —            | ค้นหาจากอีเมลผู้ใช้ (บางส่วนก็ได้ ไม่สนตัวพิมพ์)                                                                                                    |
+| `guest`                          | —            | `true` = เฉพาะที่ไม่ได้ login · `false` = เฉพาะที่ login                                                                                            |
+| `model_version`                  | —            | ตรงทุกตัวอักษร (รายการทั้งหมดที่มีดูได้จาก `GET /admin/detections/filter-options`)                                                                  |
+| `partial_spoof`                  | —            | `true` = เฉพาะที่ระบบสงสัยว่าปลอมบางช่วง · `false` = เฉพาะที่ไม่สงสัย                                                                               |
+| `feedback`                       | —            | `agree` · `disagree` · `none` (ยังไม่มี feedback)                                                                                                   |
+| `audio_source`                   | —            | ค่าเดียวกับ `audio_source` ของแบบสอบถาม feedback (เช่น `speaker_replay`)                                                                            |
+| `environment`                    | —            | `quiet_room` · `noisy_indoor` · `outdoors` · `in_vehicle` · `crowded_public`                                                                        |
+| `audio_issue`                    | —            | เฉพาะผลที่ผู้ใช้ติ๊กปัญหานี้ไว้ (ติ๊กได้หลายข้อ จึงตรงเมื่อปัญหานี้อยู่ในรายการ) เช่น `echo`                                                        |
+| `truth_basis`                    | —            | `self_recorded` · `self_generated` · `know_the_speaker` · `not_sure`                                                                                |
+| `speaker_accent`                 | —            | `central` · `northern` · `northeastern` · `southern` · `other`                                                                                      |
+| `speaker_age_group`              | —            | `under_20` · `20_39` · `40_59` · `60_plus`                                                                                                          |
+| `min_prob`, `max_prob`           | —            | ช่วงของ `mean_probability` 0–1 (รวมค่าปลายทั้งสองข้าง)                                                                                              |
+| `min_threshold`, `max_threshold` | —            | ช่วงของ `threshold_used` (เกณฑ์ที่ใช้ตัดสินผลตรวจนั้นตอนตรวจ) 0–1 รวมค่าปลายทั้งสองข้าง · ช่วงที่มีจริงดูจาก `GET /admin/detections/filter-options` |
+| `sort`                           | `created_at` | `created_at` · `mean_probability` · `processing_ms`                                                                                                 |
+| `order`                          | `desc`       | `asc` หรือ `desc`                                                                                                                                   |
+| `limit`                          | 50           | 1–200                                                                                                                                               |
+| `offset`                         | 0            | ≥ 0                                                                                                                                                 |
 
 > กลุ่ม filter จากแบบสอบถาม (`audio_source` ... `speaker_age_group`): ผลที่ไม่มี feedback หรือผู้ใช้ไม่ได้ตอบข้อนั้น **จะไม่ถูกนับ** เมื่อใช้ filter นั้น · ใช้ร่วมกับ `feedback=disagree` ได้ เช่น ดูเฉพาะเคสที่ผู้ใช้ไม่เห็นด้วยและอัดผ่านลำโพง
 
@@ -1269,8 +1271,50 @@ curl "http://localhost:8000/admin/detections?verdict=real&sort=mean_probability&
 | `sort=bad` / `order=up` / `verdict=maybe` / `feedback=maybe` | `Input should be ...` (ระบุค่าที่ใช้ได้ให้)                     |
 | `date_from=2026-10-30&date_to=2026-10-01`                    | `date_from must not be after date_to`                           |
 | `min_prob=0.9&max_prob=0.1` หรือค่านอก 0–1                   | `min_prob must not be greater than max_prob`                    |
+| `min_threshold=0.8&max_threshold=0.2` หรือค่านอก 0–1         | `min_threshold must not be greater than max_threshold`          |
 | `q=` (ว่าง) หรือ `limit=0` / `limit=201` / `offset=-1`       | นอกช่วงที่กำหนด                                                 |
 | ชื่อ query ที่ไม่รู้จัก (เช่น `verdit=spoof`)                | `Extra inputs are not permitted` — พิมพ์ผิดแล้วไม่ถูกเมินเงียบๆ |
+
+---
+
+## GET /admin/detections/filter-options
+
+ค่าที่ใช้เติม dropdown / แถบเลื่อนของหน้า "ผลตรวจทั้งหมด" — ดึงจาก **ผลตรวจทั้งหมดในฐานข้อมูล**
+ไม่ใช่เฉพาะหน้าที่โหลดมา (`GET /admin/detections` คืนได้ครั้งละไม่เกิน 200 แถว ถ้า frontend สร้างตัวเลือกจากแถวที่โหลดมา
+ค่าที่มีอยู่แต่ในแถวเก่า ๆ จะไม่เจอ)
+
+ไม่มี query · ต้องใช้ admin token
+
+```bash
+curl http://localhost:8000/admin/detections/filter-options -H "Authorization: Bearer <ADMIN_TOKEN>"
+```
+
+**200 OK**
+
+```json
+{
+  "total": 253,
+  "model_versions": [
+    {
+      "value": "v1.0",
+      "count": 251,
+      "last_used_at": "2026-11-19T04:12:30.512301Z"
+    },
+    {
+      "value": "mock-v0 (real model not yet available)",
+      "count": 2,
+      "last_used_at": "2026-10-02T09:00:00Z"
+    }
+  ],
+  "threshold_used": { "min": 0.45, "max": 0.7 }
+}
+```
+
+- `model_versions[].value` ใส่ใน `?model_version=` ได้ตรง ๆ · เรียงจากใช้ล่าสุด → เก่าสุด · `count` = จำนวนผลตรวจทั้งหมดของเวอร์ชันนั้น
+- `threshold_used.min` / `.max` = ช่วงที่มีอยู่จริงในข้อมูล ใช้ตั้งขอบของแถบเลื่อน แล้วส่งเป็น `?min_threshold=` / `?max_threshold=` ได้ (นับรวมทั้งสองขอบ)
+- ยังไม่มีผลตรวจเลย → `total: 0`, `model_versions: []`, `threshold_used: { "min": null, "max": null }`
+- ไม่ใช่ admin / ไม่มี token → `401` `{"detail": "Insufficient permissions"}`
+- `threshold_used` เป็นค่าที่เก็บไว้ตอนตรวจแต่ละครั้ง (admin เปลี่ยนเกณฑ์ผ่าน `POST /admin/threshold` ได้ ผลตรวจเก่าจึงอาจมีหลายค่า)
 
 ---
 
