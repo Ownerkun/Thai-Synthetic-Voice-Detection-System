@@ -3,17 +3,21 @@ from uuid import UUID
 from datetime import date, datetime, time, timedelta, timezone
 
 from fastapi import APIRouter, Depends, Query, HTTPException, status
-from sqlalchemy import String, cast
+from sqlalchemy import String, cast, func
 
+from app.core.timeutil import as_utc
 from app.deps import DbSession, get_current_admin
 from app.models.admin import AdminAccount
 from app.models.detection import DetectionRecord, Feedback
 from app.models.user import UserAccount
 from app.schemas.admin_detection import (
+    AdminDetectionFilterOptionsOut,
     AdminDetectionFilters,
     AdminDetectionItemOut,
     AdminDetectionListOut,
-    AdminDetectionDetailOut
+    AdminDetectionDetailOut,
+    ModelVersionOptionOut,
+    ThresholdRangeOut
 )
 from app.schemas.detection import SegmentResultOut
 from app.schemas.feedback import FeedbackDetailsOut, extract_details
@@ -110,6 +114,10 @@ def _apply_filters(query, params: AdminDetectionFilters):
         query = query.filter(DetectionRecord.mean_probability >= params.min_prob)
     if params.max_prob is not None:
         query = query.filter(DetectionRecord.mean_probability <= params.max_prob)
+    if params.min_threshold is not None:
+        query = query.filter(DetectionRecord.threshold_used >= params.min_threshold)
+    if params.max_threshold is not None:
+        query = query.filter(DetectionRecord.threshold_used <= params.max_threshold)
 
 
     return query
@@ -139,6 +147,27 @@ def _to_item(record: DetectionRecord, user_email: str | None, user_agrees: bool 
         user_id=record.user_id,
         user_email=user_email,
         feedback=feedback,
+    )
+
+@router.get("/filter-options", response_model=AdminDetectionFilterOptionsOut)
+def filter_options(db: DbSession, _admin: CurrentAdmin) -> AdminDetectionFilterOptionsOut:
+    last_used = func.max(DetectionRecord.created_at)
+    rows = (
+        db.query(DetectionRecord.model_version, func.count(DetectionRecord.id), last_used)
+        .group_by(DetectionRecord.model_version)
+        .order_by(last_used.desc(), DetectionRecord.model_version)
+        .all()
+    )
+    lowest, highest = db.query(
+        func.min(DetectionRecord.threshold_used), func.max(DetectionRecord.threshold_used)
+    ).one()
+    return AdminDetectionFilterOptionsOut(
+        total=sum(count for _, count, _ in rows),
+        model_versions=[
+            ModelVersionOptionOut(value=version, count=count, last_used_at=as_utc(used_at))
+            for version, count, used_at in rows
+        ],
+        threshold_used=ThresholdRangeOut(min=lowest, max=highest),
     )
 
 @router.get("/{detection_id}", response_model=AdminDetectionDetailOut)

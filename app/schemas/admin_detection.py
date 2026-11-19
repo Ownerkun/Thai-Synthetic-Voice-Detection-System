@@ -44,6 +44,8 @@ class AdminDetectionFilters(BaseModel):
     speaker_age_group: SpeakerAgeGroup | None = None
     min_prob: float | None = Field(default=None, ge=0.0, le=1.0)
     max_prob: float | None = Field(default=None, ge=0.0, le=1.0)
+    min_threshold: float | None = Field(default=None, ge=0.0, le=1.0)
+    max_threshold: float | None = Field(default=None, ge=0.0, le=1.0)
 
     @model_validator(mode="after")
     def check_date_range(self) -> "AdminDetectionFilters":
@@ -51,6 +53,8 @@ class AdminDetectionFilters(BaseModel):
             raise ValueError("date_from must not be after date_to")
         if self.min_prob is not None and self.max_prob is not None and self.min_prob > self.max_prob:
             raise ValueError("min_prob must not be greater than max_prob")
+        if self.min_threshold is not None and self.max_threshold is not None and self.min_threshold > self.max_threshold:
+            raise ValueError("min_threshold must not be greater than max_threshold")
         return self
 
 
@@ -88,3 +92,17 @@ class AdminDetectionDetailOut(AdminDetectionItemOut):
     feedback_updated_at: datetime | None
     feedback_details: FeedbackDetailsOut | None  # คำตอบแบบสอบถาม None = ยังไม่มี feedback, มี feedback แต่ไม่ได้ตอบ = object ที่ทุกฟิลด์เป็น null
     segments: list[SegmentResultOut]
+
+class ModelVersionOptionOut(BaseModel):
+    value: str  # ใส่ใน ?model_version= ได้ตรง ๆ
+    count: int  # จำนวนผลตรวจทั้งหมดที่ใช้โมเดลเวอร์ชันนี้
+    last_used_at: datetime  # ผลตรวจล่าสุดของเวอร์ชันนี้ (เรียงจากใช้ล่าสุดไปเก่าสุด)
+
+class ThresholdRangeOut(BaseModel):
+    min: float | None  # None = ยังไม่มีผลตรวจเลย
+    max: float | None
+
+class AdminDetectionFilterOptionsOut(BaseModel):
+    total: int  # จำนวนผลตรวจทั้งหมดในระบบ (ไม่ขึ้นกับ limit/offset ของรายการ)
+    model_versions: list[ModelVersionOptionOut]
+    threshold_used: ThresholdRangeOut  # ช่วง threshold_used ที่มีอยู่จริงในข้อมูล ใช้กับ ?min_threshold= / ?max_threshold=
