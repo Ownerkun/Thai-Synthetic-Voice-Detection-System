@@ -1,0 +1,940 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#FCFAFF" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#171424" media="(prefers-color-scheme: dark)">
+<title>ระบบตรวจสอบเสียงสังเคราะห์ภาษาไทย</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@200;300;400;500&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#FCFAFF;--surf:#F3EFFC;--line:#E6DFF5;--ink:#2E2A44;--mute:#7E789A;--accent:#8E7CE0;--real:#2E9E78;--fake:#E0626F;--btn:#D3C7F8;--on-btn:#2E2A44;--sky:#D8EDFA;--rose:#FADDE1;--mint:#D6F0E5;--lilac:#E4DCFB;--peach:#FDE6D5;color-scheme:light}
+@media (prefers-color-scheme:dark){:root{--bg:#171424;--surf:#221E34;--line:#352F4D;--ink:#EFEBFA;--mute:#A9A2C4;--accent:#B5A6FF;--real:#6FD3A8;--fake:#FF8D98;--btn:#4A3F82;--on-btn:#F3F0FF;--sky:#1F3A4D;--rose:#4A2A33;--mint:#1F4236;--lilac:#3A3066;--peach:#4A3427;color-scheme:dark}}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font:400 16px/1.75 'IBM Plex Sans Thai','Noto Sans Thai',system-ui,sans-serif}
+b,strong{font-weight:500}
+h1,h2,h3{font-weight:300;margin:0;line-height:1.35}
+h1{font-size:clamp(30px,6vw,44px)}h2{font-size:24px}h3{font-size:18px;font-weight:500}
+p{margin:0}
+button{font:inherit;color:inherit;cursor:pointer}
+svg.i{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round;flex:none}
+.num{font-variant-numeric:tabular-nums}
+.mute{color:var(--mute)}.small{font-size:14px}.center{text-align:center}
+:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+.row{display:flex;gap:16px;align-items:center;flex-wrap:wrap}
+.err{color:var(--fake);margin-top:14px}
+.ok{color:var(--real);margin-top:14px;display:flex;gap:8px;align-items:center}
+
+/* header + navigation */
+.bar{position:sticky;top:0;z-index:5;background:var(--bg);padding-top:env(safe-area-inset-top,0px)}
+.bar>div{max-width:960px;margin:0 auto;display:flex;align-items:center;gap:28px;padding:20px 24px}
+.brand{display:flex;align-items:center;gap:12px;font-size:17px;font-weight:500;margin-right:auto}
+.logo{display:flex;align-items:center;gap:3px;height:24px}
+.logo i{width:2.5px;border-radius:2px;background:var(--ink)}
+.tag{font-size:12px;border:1px solid var(--line);border-radius:999px;padding:0 10px;color:var(--mute);font-weight:400}
+.nav{display:flex;gap:28px}
+.nav button{border:0;background:none;color:var(--mute);padding:6px 0;border-bottom:2px solid transparent}
+.nav button svg{display:none}
+.nav button:hover{color:var(--ink)}
+.nm{display:inline-block;max-width:11em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;vertical-align:bottom}
+.dock .nm{max-width:7em}
+.nav button.on{color:var(--ink);font-weight:500;border-color:var(--ink)}
+.out{border:0;background:none;color:var(--mute);padding:6px 0}
+.dock{display:none}
+.page{max-width:560px;margin:0 auto;padding:40px 24px 96px}
+.page.wide{max-width:960px}
+@media(max-width:720px){
+  .nav{display:none}
+  .bar>div{padding:14px 20px}
+  .dock{display:flex;position:fixed;left:0;right:0;bottom:0;z-index:5;background:var(--bg);border-top:1px solid var(--line);padding:8px 8px calc(8px + env(safe-area-inset-bottom,0px))}
+  .dock button{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;border:0;background:none;color:var(--mute);font-size:12px;padding:6px 0}
+  .dock button.on{color:var(--ink);font-weight:500}
+  .page{padding:24px 20px 120px}
+}
+
+/* shared parts */
+.card{margin-top:56px;padding-top:28px;border-top:1px solid var(--line)}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:48px;padding:0 28px;border:0;border-radius:999px;background:var(--btn);color:var(--on-btn);font-weight:500}
+.btn.block{width:100%}
+.btn.ghost{background:none;color:var(--ink);border:1px solid var(--line)}
+.btn.ghost:hover{border-color:var(--ink)}
+.btn.sm{min-height:36px;padding:0 18px;font-size:14px}
+.in{width:100%;min-height:48px;padding:10px 0;border:0;border-bottom:1px solid var(--line);border-radius:0;background:none;color:var(--ink);font:inherit}
+.in:focus{outline:none;border-bottom-color:var(--ink);box-shadow:0 1px 0 var(--ink)}
+textarea.in{min-height:96px;resize:vertical;border:1px solid var(--line);border-radius:14px;padding:12px 14px}
+textarea.in:focus{box-shadow:none;border-color:var(--ink)}
+label.f{display:block;margin-top:20px;color:var(--mute);font-size:14px}
+label.f .in{margin-top:2px;color:var(--ink);font-size:16px}
+.pill{display:inline-flex;align-items:center;gap:6px;font-size:14px;color:var(--mute);margin-right:10px}
+.pill::before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor}
+.pill.real{color:var(--real)}.pill.fake{color:var(--fake)}
+.seg2{display:flex;gap:28px;border-bottom:1px solid var(--line)}
+.seg2 button{border:0;background:none;padding:10px 0;color:var(--mute);border-bottom:2px solid transparent;margin-bottom:-1px}
+.seg2 button.on{color:var(--ink);font-weight:500;border-color:var(--ink)}
+.chips{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:28px}
+.chip{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);background:none;border-radius:999px;padding:5px 16px;color:var(--mute)}
+.chip svg.i{width:18px;height:18px}
+.chip:hover{border-color:var(--ink);color:var(--ink)}
+.chip.on{background:var(--ink);border-color:var(--ink);color:var(--bg);font-weight:500}
+.empty{text-align:center;padding:64px 16px;color:var(--mute)}
+.iconbtn{border:0;background:none;color:var(--mute);padding:6px;border-radius:10px}
+.iconbtn:hover{color:var(--fake)}
+
+/* login */
+.login{min-height:100vh;display:grid;place-items:center;padding:48px 24px 200px;position:relative;overflow:hidden}
+.lg{width:100%;max-width:400px;position:relative;z-index:1}
+.bars{position:absolute;left:0;right:0;bottom:0;height:150px;display:flex;align-items:flex-end;gap:6px;padding:0 24px;pointer-events:none}
+.bars i{flex:1;background:color-mix(in srgb,var(--ink) 11%,var(--bg));border-radius:2px 2px 0 0;transform-origin:bottom;animation:rise .9s cubic-bezier(.2,.8,.2,1) both;animation-delay:calc(var(--n)*18ms)}
+@keyframes rise{from{transform:scaleY(.04);opacity:0}to{transform:scaleY(1);opacity:1}}
+
+/* home */
+.stage{margin-top:36px}
+.live{display:block;width:100%;height:84px;margin-top:36px}
+.timer{font-size:72px;font-weight:200;line-height:1;text-align:center;margin-top:12px}
+.rec{position:relative;width:112px;height:112px;border-radius:50%;border:1.5px solid var(--ink);background:none;color:var(--ink);display:grid;place-items:center;margin:28px auto 14px}
+.rec:hover{background:var(--surf)}
+.rec svg.i{width:34px;height:34px}
+.rec.on{border-color:var(--fake);color:var(--fake)}
+.rec.on::after{content:"";position:absolute;inset:-9px;border-radius:50%;border:1px solid var(--fake);animation:ping 1.5s ease-out infinite}
+@keyframes ping{from{opacity:.9;transform:scale(.92)}to{opacity:0;transform:scale(1.2)}}
+.drop{display:grid;place-items:center;gap:8px;text-align:center;border:1px dashed var(--line);border-radius:28px;padding:80px 16px;margin-top:32px;cursor:pointer;position:relative}
+.drop:hover,.drop:focus-within{border-color:var(--ink)}
+.drop input{position:absolute;opacity:0;width:1px;height:1px}
+.drop svg.i{width:32px;height:32px;color:var(--mute)}
+.spin{width:36px;height:36px;border-radius:50%;border:2px solid var(--line);border-top-color:var(--ink);margin:20px auto;animation:sp 1s linear infinite}
+@keyframes sp{to{transform:rotate(360deg)}}
+
+/* result */
+.res{--c:var(--real);margin-top:36px}
+.res.fake{--c:var(--fake)}
+.bignum{font-size:clamp(112px,34vw,200px);font-weight:200;line-height:.95;color:var(--c);letter-spacing:-.04em}
+.bignum.long{font-size:clamp(72px,21vw,120px)}
+.bignum small{font-size:.26em;font-weight:300;letter-spacing:0;margin-left:.08em}
+.vword{font-size:26px;font-weight:500;margin-top:14px}
+audio{display:block;width:100%;height:36px;margin-top:28px}
+.scope{margin-top:28px}
+canvas#wave{display:block;width:100%;height:88px}
+.segs{display:flex;gap:4px;margin-top:14px}
+.sg{min-width:0}
+.sg i{display:block;height:6px;border-radius:3px}
+.sg span{display:block;margin-top:6px;font-size:12px;color:var(--mute)}
+.axis{display:flex;justify-content:space-between;font-size:13px;color:var(--mute);margin-top:4px}
+.choices{display:flex;gap:12px;margin-top:16px}
+.choice{flex:1;display:flex;align-items:center;justify-content:center;gap:8px;min-height:48px;border:1px solid var(--line);background:none;border-radius:999px;font-weight:500}
+.choice:hover{border-color:var(--ink)}
+.choice.yes.on{background:var(--real);border-color:var(--real);color:var(--bg)}
+.choice.no.on{background:var(--fake);border-color:var(--fake);color:var(--bg)}
+
+/* history */
+.hlist{margin-top:24px;border-bottom:1px solid var(--line)}
+.hrow{--c:var(--real);display:grid;grid-template-columns:auto 1fr auto auto;gap:16px;align-items:start;padding:22px 0;border-top:1px solid var(--line)}
+.hrow.fake{--c:var(--fake)}
+.hrow .dot{width:8px;height:8px;border-radius:50%;background:var(--c);margin-top:11px}
+.hrow .g{min-width:0;overflow-wrap:anywhere}
+.hrow .sc{text-align:right}
+.bigpct{font-size:40px;font-weight:200;line-height:1.1;color:var(--c)}
+.cmt{margin-top:10px;padding-left:12px;border-left:2px solid var(--line);font-size:14px;color:var(--mute);white-space:pre-wrap;overflow-wrap:anywhere}
+.dbg{margin-top:16px;padding:12px;border:1px dashed var(--line);border-radius:12px;font-size:12px;overflow:auto;white-space:pre-wrap;overflow-wrap:anywhere}
+@media(max-width:560px){.hrow{grid-template-columns:auto 1fr auto}.hrow .iconbtn{grid-column:3;grid-row:2;justify-self:end}}
+
+/* calendar */
+.datewrap{position:relative}
+.cal{position:absolute;top:calc(100% + 8px);left:0;z-index:6;width:300px;max-width:calc(100vw - 40px);background:var(--bg);border:1px solid var(--line);border-radius:20px;padding:16px}
+.calh{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+.calg{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;text-align:center}
+.calg i{font-style:normal;color:var(--mute);font-size:13px;padding:4px 0}
+.day{border:0;background:none;border-radius:999px;min-height:36px;color:var(--ink)}
+.day:hover{background:var(--surf)}
+.day.today{box-shadow:inset 0 0 0 1px var(--ink)}
+.day.sel{background:var(--ink);color:var(--bg);font-weight:500}
+.calf{display:flex;gap:8px;justify-content:space-between;margin-top:12px}
+@media(max-width:720px){.cal{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);width:min(320px,90vw)}}
+
+/* profile */
+.avatar{width:88px;height:88px;border-radius:50%;background:var(--surf);display:grid;place-items:center;font-size:34px;font-weight:200;overflow:hidden}
+.avatar img{width:100%;height:100%;object-fit:cover}
+.dl{margin:20px 0 0}
+.dl div{display:flex;justify-content:space-between;gap:16px;padding:14px 0;border-top:1px solid var(--line)}
+.dl dt{color:var(--mute)}.dl dd{margin:0;text-align:right;overflow-wrap:anywhere}
+
+/* admin */
+.stats{display:grid;grid-template-columns:repeat(4,1fr);margin-top:36px;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+.stat{--c:var(--mute);background:none;border:0;color:inherit;text-align:left;padding:24px 0 24px 24px;display:block;width:100%}
+.stat:first-child{padding-left:0}
+.stat+.stat{border-left:1px solid var(--line)}
+button.stat:hover strong{color:var(--accent)}
+.stat .k{display:flex;align-items:center;gap:8px;color:var(--mute);font-size:14px}
+.stat .k i{width:8px;height:8px;border-radius:50%;background:var(--c)}
+.stat strong{display:block;font-size:56px;font-weight:200;line-height:1.1;margin-top:8px}
+@media(max-width:720px){.stats{grid-template-columns:1fr 1fr}.stat{padding:20px 0 20px 20px}.stat:nth-child(odd){padding-left:0;border-left:0}.stat:nth-child(n+3){border-top:1px solid var(--line)}}
+.ratio{display:flex;height:8px;gap:3px;margin-top:18px}
+.ratio button{border:0;min-width:8px;border-radius:4px;padding:0}
+.ratio .rf{background:var(--fake)}.ratio .rr{background:var(--real)}
+.legend{display:flex;gap:24px;flex-wrap:wrap;margin-top:12px;color:var(--mute);font-size:14px}
+.chart{display:flex;align-items:flex-end;gap:12px;height:160px;margin-top:20px}
+.chart div{flex:1;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;font-size:13px;color:var(--mute);height:100%}
+.chart i{display:block;width:100%;max-width:28px;background:color-mix(in srgb,var(--ink) 16%,var(--bg));border-radius:4px 4px 0 0;margin:6px 0}
+.chart div.today i{background:var(--ink)}
+.chart b{color:var(--ink);font-weight:500}
+.tw{overflow-x:auto}.tw table{min-width:720px}.tw td:first-child{white-space:nowrap}
+table{border-collapse:collapse;width:100%;font-size:15px;min-width:640px}
+th,td{text-align:left;padding:14px 12px 14px 0;border-top:1px solid var(--line);vertical-align:top}
+th{border-top:0;color:var(--mute);font-weight:400;font-size:13px}
+.thbig{font-size:clamp(96px,22vw,140px);font-weight:200;line-height:1;text-align:center;margin-top:20px;letter-spacing:-.04em}
+input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:4px;border-radius:2px;background:linear-gradient(to right,var(--real) 0 var(--x,70%),var(--fake) var(--x,70%) 100%);margin:36px 0 14px}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:24px;height:24px;border-radius:50%;background:var(--bg);border:2px solid var(--ink);cursor:grab}
+input[type=range]::-moz-range-thumb{width:18px;height:18px;border-radius:50%;background:var(--bg);border:2px solid var(--ink)}
+.zones{display:flex;justify-content:space-between;gap:12px;font-size:14px}
+
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important}}
+
+/* pastel colour layer */
+body{background:linear-gradient(180deg,var(--lilac) 0,var(--bg) 320px) no-repeat,var(--bg)}
+.bar{background:color-mix(in srgb,var(--lilac) 90%,transparent);backdrop-filter:blur(8px)}
+.btn{box-shadow:none;transition:none}.btn:hover{background:color-mix(in srgb,var(--btn) 80%,var(--accent))}
+.btn:hover,.btn:active{transform:none;box-shadow:none}
+.btn.ghost{background:var(--surf);border:0}.btn.ghost:hover{background:var(--lilac)}
+.chip{background:var(--surf);border-color:transparent}.chip:hover{background:var(--lilac);color:var(--ink)}
+.chip.on{background:var(--btn);color:var(--on-btn);border-color:transparent}
+.tag{background:var(--surf);border-color:transparent}
+.nav button.on,.seg2 button.on{border-color:var(--accent)}
+.in{border-bottom-color:color-mix(in srgb,var(--accent) 45%,var(--line))}
+.in:focus{border-bottom-color:var(--accent);box-shadow:0 1px 0 var(--accent)}
+textarea.in{background:var(--surf);border-color:transparent;box-shadow:none}textarea.in:focus{border-color:var(--accent);box-shadow:none}
+.drop{background:var(--peach);border:0;color:var(--ink)}.drop:hover{background:color-mix(in srgb,var(--peach) 70%,var(--lilac))}
+.drop svg.i{color:var(--accent);border:0;padding:0;background:none;width:32px;height:32px}
+.rec{background:var(--rose);border:0;color:var(--fake);width:120px;height:120px;box-shadow:none;transition:none}
+.rec:hover,.rec:active{transform:none;box-shadow:none;background:color-mix(in srgb,var(--rose) 70%,var(--lilac))}
+.rec.on{background:var(--fake);color:#fff}.rec svg.i{width:34px;height:34px}
+.live{background:none;border:0;border-radius:0;height:84px;margin-top:36px}
+.timer{font-family:inherit;font-size:72px;font-weight:200}
+.stage{padding:0;background:none;border:0;box-shadow:none;margin-top:36px}
+.stage .seg2{background:none;padding:0;border:0;border-radius:0;border-bottom:1px solid var(--line);gap:28px}
+.seg2{padding:0;border:0;border-radius:0;background:none;border-bottom:1px solid var(--line);gap:28px}
+.seg2 button{flex:none;border:0;border-bottom:2px solid transparent;border-radius:0;padding:10px 0;margin-bottom:-1px;background:none;box-shadow:none}
+.seg2 button.on{background:none;box-shadow:none;border-color:var(--accent);color:var(--ink)}
+.bars i{background:color-mix(in srgb,var(--accent) 22%,var(--bg))}
+.bars i:nth-child(3n){background:color-mix(in srgb,var(--real) 22%,var(--bg))}
+.bars i:nth-child(5n){background:color-mix(in srgb,var(--fake) 20%,var(--bg))}
+.res{background:color-mix(in srgb,var(--c) 12%,var(--bg));border:0;border-radius:32px;padding:28px 24px 24px;margin:36px -8px 0;box-shadow:none}
+.hrow{background:var(--surf);border:0;border-radius:22px;padding:18px 20px;margin-bottom:10px;box-shadow:none}
+.hrow.real{background:var(--mint)}.hrow.fake{background:var(--rose)}
+.hlist{border-bottom:0}
+.cmt{background:color-mix(in srgb,var(--bg) 70%,transparent);border:0;border-radius:12px;padding:8px 12px}
+.cal{box-shadow:0 12px 40px rgba(60,40,110,.16);border-color:transparent}
+.day.sel{background:var(--btn);color:var(--on-btn)}.day:hover{background:var(--lilac)}.day.today{box-shadow:inset 0 0 0 1px var(--accent)}
+.avatar{background:var(--lilac)}
+.dock{background:color-mix(in srgb,var(--lilac) 90%,transparent)}.dock button.on{color:var(--accent)}
+.stats{border:0;gap:12px}
+.stat,.stat:first-child{padding:20px 22px;border:0!important;border-radius:24px;background:var(--surf)}
+.stats>:nth-child(1){background:var(--sky)}.stats>:nth-child(2){background:var(--rose)}.stats>:nth-child(3){background:var(--mint)}.stats>:nth-child(4){background:var(--lilac)}
+.stat+.stat{border-left:0}
+@media(max-width:720px){.stat:nth-child(odd){padding-left:22px}.stat:nth-child(n+3){border-top:0}}
+.ratio .rf{background:var(--fake)}.ratio .rr{background:var(--real)}
+.chart i{background:color-mix(in srgb,var(--accent) 30%,var(--bg))}.chart div.today i{background:var(--accent)}
+.card{margin-top:44px}
+input[type=range]{background:linear-gradient(to right,var(--mint) 0 var(--x,70%),var(--rose) var(--x,70%) 100%);height:8px;border:0;margin:36px 0 14px}
+input[type=range]::-webkit-slider-thumb{width:26px;height:26px;background:var(--bg);border:3px solid var(--accent);box-shadow:none}
+input[type=range]::-moz-range-thumb{width:20px;height:20px;background:var(--bg);border:3px solid var(--accent);box-shadow:none}
+.thbig{font-family:inherit;font-weight:200;color:var(--ink);-webkit-text-stroke:0;text-shadow:none;margin-top:20px}
+.err{background:none;border:0;padding:0;color:var(--fake);border-radius:0}
+.ok{background:none;border:0;padding:0;color:var(--real)}
+
+/* shims for features added later (mascot hidden, plain layout) */
+.mc,.sticker,.hero::before,.hero::after{display:none}
+.logo{display:flex;align-items:center;gap:3px;height:24px;width:auto;border:0;background:none;box-shadow:none;transform:none}
+.logo b{display:flex;align-items:center;gap:3px;height:24px}.logo i{width:2.5px;border-radius:2px;background:var(--accent)}
+.nb{display:inline-block}.brand{font-family:inherit;min-width:0;line-height:1.3}.brand .tag{flex:none}@media(max-width:560px){.bar .brand{font-size:14px;gap:8px}}@media(min-width:561px){.bar .nav button,.bar>button{white-space:nowrap}.bar .brand{flex:1 1 200px}}
+.hello{display:block}.bubble{background:none;border:0;box-shadow:none;padding:0;margin:0;color:var(--mute);border-radius:0;font-size:16px}
+.hero{background:none;border:0;box-shadow:none;padding:0;display:block}
+.hero h1{margin:6px 0 0}.hero p{color:var(--mute);margin:14px 0 28px}
+.login{display:block;max-width:none;min-height:100vh;padding:48px 24px 200px;position:relative;margin:0}
+.login .hero,.login .lg{max-width:400px;margin:0 auto}.login .hero{margin-top:28px;text-align:left}
+.lg{position:relative;z-index:1;margin-top:20px}.lg>.brand{display:none}.hero::before{display:none}
+.lg .card{margin-top:0;padding:0;border:0;box-shadow:none;background:none}
+.login::after{content:"";position:absolute;left:0;right:0;bottom:0;height:150px;background:repeating-linear-gradient(90deg,color-mix(in srgb,var(--accent) 22%,var(--bg)) 0 10px,transparent 10px 20px,color-mix(in srgb,var(--real) 22%,var(--bg)) 20px 30px,transparent 30px 44px,color-mix(in srgb,var(--fake) 20%,var(--bg)) 44px 54px,transparent 54px 70px);-webkit-mask:linear-gradient(0deg,#000,transparent);mask:linear-gradient(0deg,#000,transparent);pointer-events:none;opacity:.8}
+.reshead{display:block}.reshead>div{display:flex;flex-direction:column-reverse}
+.vword{background:none;border:0;border-radius:0;box-shadow:none;transform:none;padding:0;font-family:inherit;font-size:26px;font-weight:500;margin-top:14px}
+.bignum{font-family:inherit;font-size:clamp(112px,34vw,200px);font-weight:200;color:var(--c);-webkit-text-stroke:0;text-shadow:none;letter-spacing:-.04em;line-height:.95;margin:0}
+.bignum small{-webkit-text-stroke:0;font-weight:300}
+.resmeta{color:var(--mute);margin-top:4px;opacity:1}
+.warn{border:0;background:var(--peach);border-radius:12px}
+.scope{background:none;border:0;padding:0;border-radius:0;margin-top:28px}
+.sg i{border:0;height:6px;border-radius:3px}.sg span{text-align:left;font-weight:400;color:var(--mute)}
+.choice{background:var(--surf);border:0;box-shadow:none;border-radius:999px;transition:none}
+.choice:hover,.choice.yes.on,.choice.no.on{transform:none;box-shadow:none}
+.choice.yes.on{background:var(--mint)}.choice.no.on{background:var(--rose)}
+.hrow .dot{width:10px;height:10px;border:0;background:var(--c);margin-top:10px;display:block}.hrow .dot svg{display:none}
+.bigpct{font-family:inherit;font-weight:200;font-size:40px;-webkit-text-stroke:0}
+.pill{border:0;background:var(--surf);padding:0 10px;margin:0 6px 4px 0;border-radius:999px}.pill.real{background:var(--mint)}.pill.fake{background:var(--rose)}
+.cmt{border:0}
+.empty .mc{display:none}
+.stage.center::before{content:"";display:block;width:36px;height:36px;border-radius:50%;border:2px solid var(--line);border-top-color:var(--accent);margin:20px auto;animation:sp 1s linear infinite}
+.stat strong,.stat .k i{font-family:inherit}.stat strong{font-weight:200;font-size:56px}
+.stat .k i{border:0;width:8px;height:8px}
+.pctbadge{font-family:inherit;font-weight:300;-webkit-text-stroke:0;font-size:28px}
+.agree{background:var(--peach);border:0;border-radius:14px}.agree b{font-family:inherit;font-weight:500}
+.stat .sub{border:0;border-radius:999px;padding:0 10px;background:color-mix(in srgb,var(--bg) 60%,transparent)}
+.pwd{position:relative;display:block}.pwd .in{padding-right:48px}
+.eye{position:absolute;right:4px;top:50%;transform:translateY(-50%);border:0;background:none;border-radius:10px;padding:5px;color:var(--mute);display:grid;place-items:center}
+.eye:hover,.eye.on{color:var(--accent)}
+label.f .pwd{margin-top:2px}label.f .pwd .in{margin-top:0}
+.susp{margin-top:18px}.suspt{font-size:14px;margin-bottom:8px}.suspl{display:flex;flex-wrap:wrap;gap:8px}.sch{display:inline-flex;gap:10px;align-items:center;border:1px solid var(--fake);background:none;color:var(--ink);border-radius:999px;padding:6px 14px;font:inherit;font-size:13px;line-height:1.5;cursor:pointer}.sch.hi{background:color-mix(in srgb,var(--fake) 24%,transparent)}.sch:hover{background:color-mix(in srgb,var(--fake) 16%,transparent)}.sch span{color:var(--fake)}
+.admfoot{text-align:center;margin-top:26px}.admfoot .linkbtn{font-size:12px;opacity:.6;text-decoration:none}.admfoot .linkbtn:hover{opacity:1;text-decoration:underline}
+.linkbtn{border:0;background:none;padding:0;color:var(--mute);font-size:14px;text-decoration:underline;text-underline-offset:3px}.linkbtn:hover{color:var(--accent)}
+.pl{margin-top:8px}.pl audio{margin-top:0;height:36px;min-width:220px}.pl .nofile{margin-top:6px;max-width:260px}
+audio{border-radius:999px}
+.tag{font-family:inherit}
+h1,h2,h3,.disp{font-family:inherit;font-weight:300}h3{font-weight:500}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important}}
+
+.qd{margin-top:22px}.qd summary{cursor:pointer;font-weight:500;padding:10px 0}
+.qd .q{border:0;padding:0;margin:18px 0 0;min-width:0}.qd legend{padding:0;font-weight:500;margin-bottom:6px}
+.chips.tight{margin-top:8px}
+.tags{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}.tg{font-size:13px;color:var(--mute);background:color-mix(in srgb,var(--bg) 70%,transparent);border-radius:999px;padding:2px 10px}
+.ban{margin-top:16px;padding:12px 16px;border-radius:16px;background:var(--lilac)}
+.choice.yes.on,.choice.no.on{color:var(--ink)}
+.tw .tg{background:var(--surf)}
+.usearch{display:inline-flex;gap:8px;align-items:center;margin-left:auto}.usearch .in{min-height:36px;width:200px}
+/* v20: ช่วงเวลากราฟ + หน้ารายละเอียด/สรุปผู้ใช้ */
+.chart.mid{gap:6px}.chart.dense{gap:2px;font-size:11px}.chart.dense b{display:none}.chart.dense i{max-width:none}
+.chart span{white-space:nowrap;display:block;height:20px;line-height:20px;min-height:0}.chart{padding:0 20px}.chart>div{min-width:0}.chart span{overflow:visible}
+input.thbig{width:100%;background:none;border:0;outline:none;padding:0;color:inherit;font-family:inherit;-moz-appearance:textfield}input.thbig::-webkit-inner-spin-button,input.thbig::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}
+.drcust{display:flex;gap:16px;align-items:flex-end;flex-wrap:wrap;margin-top:16px}.drcust label{font-size:14px;color:var(--mute);display:grid;gap:2px}.drcust .in{min-height:40px;width:auto}
+.drsum{margin-top:10px}
+.back{margin-bottom:14px}.back svg.i{width:18px;height:18px}
+.tw .linkbtn{color:var(--ink);text-decoration-color:var(--line)}.tw .linkbtn:hover{color:var(--accent)}
+.sch.static{cursor:default}
+/* v26: แบ่งหน้า */
+.pager{display:flex;gap:6px;flex-wrap:wrap;align-items:center;justify-content:center;margin-top:28px;margin-bottom:110px}
+.pgb{min-width:40px;min-height:40px;padding:0 12px;border:0;border-radius:999px;background:var(--surf);color:var(--ink);font-weight:500;display:inline-flex;align-items:center;justify-content:center;gap:4px}
+.pgb:hover:not(:disabled){background:var(--lilac)}.pgb.on{background:var(--btn);color:var(--on-btn)}.pgb:disabled{opacity:.4;cursor:default}
+.pgb svg.i{width:16px;height:16px}.pgd{color:var(--mute);padding:0 2px}
+.ovh{font-size:17px;font-weight:400;margin:36px 0 4px}
+.selrow{display:flex;gap:16px;flex-wrap:wrap;margin-top:14px}.selrow label{display:grid;gap:4px;font-size:13px;color:var(--mute);min-width:180px}.selrow select{padding:8px 10px}
+
+.chartw{overflow-x:auto;margin-top:20px;padding-bottom:6px}
+.chart2{display:flex;gap:8px;padding:0 4px}
+.chart2>div{flex:1;min-width:0;display:flex;flex-direction:column;align-items:center}
+.chart2 .pl{height:150px;width:100%;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;border-bottom:2px solid color-mix(in srgb,var(--ink) 35%,var(--bg))}
+.chart2 b{font-size:17px;font-weight:600;color:var(--ink);line-height:26px;margin-top:2px}
+.chart2 i{display:block;width:100%;max-width:34px;border-radius:6px 6px 0 0;background:color-mix(in srgb,var(--accent) 38%,var(--bg))}
+.chart2 .today i{background:var(--accent)}
+.chart2 span{margin-top:8px;font-size:13px;color:var(--mute);white-space:nowrap;height:20px;line-height:20px}
+.chart2 .today span{color:var(--ink);font-weight:600}
+
+.chart2 .pl{height:auto;border-bottom:0;justify-content:flex-start}
+.chart2 i{height:120px;max-width:none;width:100%;display:flex;align-items:center;justify-content:center;border-radius:12px}
+.chart2 i b{margin:0;line-height:1;font-size:18px}
+.chart2 .today i b{color:#fff}
+
+.av{width:30px;height:30px;border-radius:50%;display:inline-grid;place-items:center;overflow:hidden;flex:none;background:color-mix(in srgb,var(--accent) 38%,var(--bg));color:var(--ink);font-weight:500;font-size:14px;line-height:1}
+.av img{width:100%;height:100%;object-fit:cover}
+.nav button .av{display:inline-grid}
+.bar .acct{display:flex;align-items:center;gap:8px;padding:4px 16px 4px 4px;border-radius:999px;border:0;background:color-mix(in srgb,var(--accent) 16%,var(--bg));color:var(--ink);cursor:pointer;flex:none;margin-left:24px;white-space:nowrap}
+.bar .acct:hover{background:color-mix(in srgb,var(--accent) 24%,var(--bg))}
+.bar .acct.on{box-shadow:0 0 0 2px var(--accent)}
+.dock .av{width:26px;height:26px;font-size:13px}
+.dock button.on .av{box-shadow:0 0 0 2px var(--accent)}
+@media(max-width:720px){.bar .acct{padding:0;background:none;margin-left:12px}.bar .acct .nm{display:none}.bar .acct .av{width:32px;height:32px}}
+
+.chart2>button{font:inherit;border:0;background:none;padding:0;cursor:pointer;flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;gap:6px;color:var(--mute)}
+.chart2>button:disabled{cursor:default}
+.chart2 .pl{flex-direction:row;justify-content:flex-start;height:140px;width:100%;max-width:44px;border-radius:999px;background:color-mix(in srgb,var(--accent) 10%,var(--bg));display:flex;align-items:flex-end;overflow:hidden;border-bottom:0;transition:transform .15s}
+.chart2 .pl i{display:block;width:100%;max-width:none;border-radius:0;background:linear-gradient(180deg,color-mix(in srgb,var(--accent) 55%,var(--bg)),var(--accent))}
+.chart2>button.today .pl i{background:linear-gradient(180deg,var(--accent),color-mix(in srgb,var(--accent) 70%,var(--ink)))}
+.chart2>button:not(:disabled):hover .pl{transform:translateY(-3px)}
+.chart2>button:focus-visible .pl{outline:2px solid var(--accent);outline-offset:2px}
+.chart2>button b{margin:0;font-size:16px;font-weight:600;line-height:22px;color:var(--ink)}
+.chart2>button.z b{color:color-mix(in srgb,var(--mute) 60%,var(--bg));font-weight:400}
+.chart2>button span{margin:0;font-size:13px;height:18px;line-height:18px;color:var(--mute);white-space:nowrap}
+.chart2>button.today span{color:var(--ink);font-weight:600}
+
+.hd2{display:flex;align-items:center;justify-content:space-between;gap:12px}.hd2 h1{margin:0;font-size:28px;flex:1;min-width:0}
+.ib{display:inline-flex;align-items:center;gap:6px;border:0;border-radius:999px;padding:8px 16px;background:var(--surf);color:var(--ink);font-size:14px;cursor:pointer;white-space:nowrap}.ib svg{width:16px;height:16px}
+.cb{width:22px;height:22px;border-radius:7px;border:2px solid var(--line);flex:none;display:inline-grid;place-items:center;color:#fff;margin-top:4px}.cb.on{background:var(--accent);border-color:var(--accent)}.cb svg{width:14px;height:14px}
+.hrow.nosel{opacity:.45}.hrow.nosel .cb{visibility:hidden}
+.selall{display:flex;align-items:center;gap:10px;border:0;background:none;color:var(--mute);font-size:14px;padding:16px 0 4px;cursor:pointer}
+.selbar{position:fixed;left:50%;transform:translateX(-50%);bottom:24px;width:min(560px,calc(100% - 32px));z-index:8;background:var(--ink);color:var(--bg);border-radius:16px;padding:12px 16px;display:flex;justify-content:space-between;align-items:center;font-size:15px}
+.selbar .danger{border:0;background:none;color:#ffb3bb;font-size:15px;cursor:pointer}.selbar .danger:disabled{opacity:.4;cursor:default}
+@media(max-width:720px){.selbar{bottom:calc(84px + env(safe-area-inset-bottom,0px))}}
+.scrim{position:fixed;inset:0;z-index:20;background:rgba(46,42,68,.45);display:grid;place-items:center;padding:20px}
+.modal{background:var(--bg);border-radius:20px;padding:24px;max-width:420px;width:100%;box-shadow:0 12px 40px rgba(60,40,120,.3)}
+.modal h3{margin:0 0 8px;font-size:18px}.modal p{margin:0 0 18px;line-height:1.6}.modal b{color:var(--ink)}
+.modal .mbtn{display:flex;gap:10px;justify-content:flex-end}.btn.danger{background:var(--fake);color:#fff}
+.toast2{position:fixed;left:50%;transform:translateX(-50%);bottom:24px;z-index:25;background:var(--ink);color:var(--bg);border-radius:14px;padding:12px 18px;font-size:14px;max-width:calc(100% - 32px)}
+@media(max-width:720px){.toast2{bottom:calc(84px + env(safe-area-inset-bottom,0px))}}
+
+.plr{display:inline-flex;align-items:center;gap:8px;flex-wrap:wrap}
+.plr .adel{padding:8px;background:color-mix(in srgb,var(--fake) 10%,transparent);color:var(--fake);border-radius:50%;display:inline-grid;place-items:center}
+.plr .adel svg{width:18px;height:18px}
+
+.plr{display:flex;flex-wrap:nowrap;align-items:center;gap:8px;max-width:100%}
+.plr audio{flex:1 1 auto;min-width:0;width:100%;max-width:320px}
+.plr .adel{flex:none}
+.btn.again{display:inline-flex;width:auto;padding:12px 28px;border-radius:999px;background:color-mix(in srgb,var(--accent) 82%,#2E2A44);color:#fff;box-shadow:none}
+.btn.again:hover{background:color-mix(in srgb,var(--accent) 68%,#2E2A44)}
+.btn.lite{background:color-mix(in srgb,var(--accent) 13%,var(--bg));color:var(--ink);box-shadow:none}
+.btn.lite:hover{background:color-mix(in srgb,var(--accent) 22%,var(--bg))}
+
+.bar .outb{display:flex;align-items:center;gap:8px;padding:8px 16px;border-radius:999px;border:0;background:color-mix(in srgb,var(--fake) 12%,var(--bg));color:var(--fake);margin-left:20px;cursor:pointer;white-space:nowrap;flex:none;font:inherit}
+.bar .outb:hover{background:color-mix(in srgb,var(--fake) 20%,var(--bg))}
+.bar .outb svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+@media(max-width:720px){.bar .outb{padding:0;width:38px;height:38px;justify-content:center;margin-left:8px}.bar .outb span{display:none}.bar .outb svg{width:18px;height:18px}}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script>
+// ===== ตั้งค่า: แก้ที่อยู่ของ backend ตรงนี้ =====
+const API=window.API_BASE||(()=>{try{const q=new URLSearchParams(location.search).get('api');if(q)return q.replace(/\/$/,'');if(/^https?:$/.test(location.protocol)&&location.hostname)return location.origin+'/api'}catch(e){}return'http://localhost:8000'})();
+
+const $=s=>document.querySelector(s),esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const D=d=>d.toLocaleDateString('th-TH',{day:'numeric',month:'short',year:'numeric'}),T=d=>d.toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit'});
+const dk=d=>d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+const mmss=s=>Math.floor(s/60)+':'+String(s%60).padStart(2,'0');
+// ช่วงที่น่าสงสัย: ช่วงที่ค่าแสดง >= 50% (= คะแนนดิบ >= เกณฑ์ตัดสิน) ; ระดับ 2 = เกินเกณฑ์
+const adj=(v,th)=>{if(v===undefined||v===null||isNaN(v))return v;th=th||S.th||.5;const c=x=>Math.min(1-2**-53,Math.max(1e-300,x)),lg=x=>Math.log(c(x)/(1-c(x)));return 1/(1+Math.exp(-(lg(v)-lg(th))))};
+const fp=v=>{const p=v*100;return p>=100?'100':p>=99.5?(Math.floor(p*100)/100).toFixed(2):p>0&&p<.5?(p<.01?'&lt;0.01':p.toFixed(2)):String(Math.round(p))};
+const SUS=.5,ts=s=>{const m=Math.floor(s/60);return m+':'+(s-m*60).toFixed(1).padStart(4,'0')};
+const segT=(d,k)=>d.segs&&d.segs.length==d.scores.length?[d.segs[k].s,d.segs[k].e]:[k*(d.dur||0)/d.scores.length,(k+1)*(d.dur||0)/d.scores.length];
+const lvl=(s,th)=>s>=th?2:0;
+const store={get:k=>{try{return sessionStorage.getItem(k)}catch(e){return null}},set:(k,v)=>{try{v==null?sessionStorage.removeItem(k):sessionStorage.setItem(k,v)}catch(e){}}};
+const S={ur:{mode:'',from:'',to:'',open:false},hp:0,hps:10,dr:{n:7,from:'',to:'',open:false},dcnt:[],stk:[],pp:'',did:null,dd:null,us:null,fo:null,qopen:false,users:[],utotal:0,uq:'',ua:'',fu:null,atotal:0,dm:null,fp:0,fpEmail:'',token:null,user:null,role:'user',page:'home',tab:'rec',phase:'idle',cur:null,rec:null,f:{date:'',res:''},reg:false,err:'',msg:'',loading:false,th:.8,hist:[],adet:[],stats:{},thinfo:{}};
+
+S.cal={open:false,y:new Date().getFullYear(),m:new Date().getMonth()};
+const AVK=u=>'av:'+(u.id||u.email);
+const AV={get:u=>{try{return localStorage.getItem(AVK(u))}catch(e){return null}},set:(u,v)=>{try{localStorage.setItem(AVK(u),v);return true}catch(e){return false}}};
+function avShrink(f){return new Promise((ok,no)=>{const im=new Image(),url=URL.createObjectURL(f);im.onload=()=>{const n=256,s=Math.min(im.width,im.height),c=document.createElement('canvas');c.width=c.height=n;c.getContext('2d').drawImage(im,(im.width-s)/2,(im.height-s)/2,s,s,0,0,n,n);ok(c.toDataURL('image/jpeg',.85))};im.onerror=()=>no(new Error('เปิดรูปนี้ไม่ได้ ลองไฟล์ .jpg หรือ .png'));im.src=url})}
+const ERR_TH={'Invalid email or password':'อีเมลหรือรหัสผ่านไม่ถูกต้อง','Invalid username or password':'ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง','Account suspended':'บัญชีนี้ถูกระงับ ติดต่อผู้ดูแลระบบ','Email already in use':'อีเมลนี้ถูกใช้สมัครไปแล้ว','Current password is incorrect':'รหัสผ่านปัจจุบันไม่ถูกต้อง','Feedback already submitted for this record':'ส่งความเห็นของผลนี้ไปแล้ว','Invalid or suspended account':'บัญชีนี้ถูกระงับหรือไม่ถูกต้อง','User not found':'ไม่พบผู้ใช้นี้','Email not verified':'ยังไม่ได้ยืนยันอีเมล กดลิงก์ในอีเมลที่เราส่งให้ก่อนนะ','Invalid or expired token':'ลิงก์ไม่ถูกต้องหรือหมดอายุแล้ว ขอลิงก์ใหม่ได้ที่หน้าเข้าสู่ระบบ','Session expired, please log in again':'เซสชันหมดอายุ โปรดเข้าสู่ระบบใหม่'};
+const thErr=m=>ERR_TH[m]||(/must be different/i.test(m)?'รหัสผ่านใหม่ต้องไม่ซ้ำกับรหัสผ่านเดิม':m);
+// ===== ชั้นเรียก API =====
+async function api(path,o={}){
+  const h={};if(S.token)h.Authorization='Bearer '+S.token;if(o.body)h['Content-Type']='application/json';
+  let r;try{r=await fetch(API+path,{method:o.method||'GET',headers:h,body:o.form||(o.body?JSON.stringify(o.body):undefined)})}
+  catch(e){throw new Error('เชื่อมต่อ API ที่ '+API+' ไม่ได้ ตรวจว่า backend เปิดอยู่และตั้ง CORS ไว้แล้ว')}
+  if(r.status==401&&S.token&&!o.noAuthRedirect){logout();throw new Error('เซสชันหมดอายุ โปรดเข้าสู่ระบบใหม่')}
+  const t=await r.text();let j=null;try{j=t?JSON.parse(t):null}catch(e){}
+  if(!r.ok){let m=j&&(j.detail||j.message);if(Array.isArray(m))m=m.map(x=>x.msg).join(' ');const er=new Error(typeof m=='string'&&m?thErr(m):'เกิดข้อผิดพลาด ('+r.status+')');er.status=r.status;throw er}
+  return j}
+// ===== แปลงชื่อ field จาก backend เป็นรูปแบบที่ UI ใช้ (ปรับตาม schema จริงได้ที่นี่ที่เดียว) =====
+const pick=(o,ks)=>{if(!o)return;for(const k of ks)if(o[k]!==undefined&&o[k]!==null)return o[k]};
+const list=j=>Array.isArray(j)?j:(j&&(j.items||j.results||j.data||j.detections||j.history||j.predictions||j.files))||[];
+const UU=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+function uuidIn(o,d=0){if(!o||typeof o!='object'||d>3)return;const ks=Object.keys(o).filter(k=>!/user|owner|account/i.test(k));
+  for(const k of ks)if(typeof o[k]=='string'&&UU.test(o[k])&&/id/i.test(k))return o[k];
+  for(const k of ks){const r=uuidIn(o[k],d+1);if(r)return r}}
+function deep(o,re,ok,d=0){if(!o||typeof o!='object'||Array.isArray(o)||d>3)return;
+  for(const k of Object.keys(o)){const v=o[k];if(re.test(k)&&!/thresh|index|class|version|id$/i.test(k)&&ok(v))return v}
+  for(const k of Object.keys(o)){const r=deep(o[k],re,ok,d+1);if(r!==undefined)return r}}
+function norm(x){
+  const fb0=pick(x,['feedback','user_feedback']),fb=Array.isArray(fb0)?fb0[0]:fb0,lbv=[x.label,x.result,x.prediction,x.verdict,x.result&&x.result.label,x.prediction&&x.prediction.label].find(v=>typeof v=='string'),lb=lbv?lbv.toLowerCase():'',
+    th=pick(x,['threshold','threshold_used']),sg0=pick(x,['segment_scores','segments','scores']),sg=Array.isArray(sg0)?sg0:[];
+  let sc=pick(x,['spoof_score','score','spoof_probability','probability','mean_probability']);
+  if(sc===undefined)sc=deep(x,/spoof|score|prob|confidence/i,v=>typeof v=='number'&&v>=0&&v<=100);
+  sc=+sc||0;if(sc>1)sc=sc/100;
+  return{id:(v=>UU.test(String(v))?v:uuidIn(x))(pick(x,['id','detection_id','history_id','record_id','uuid'])),raw:x,name:String(pick(x,['filename','file_name','original_filename','name'])||'ไฟล์เสียง').replace(/\.(webm|wav|mp3|m4a|ogg|flac|aac|opus|mp4)$/i,''),score:sc,
+    dur:Math.round(+pick(x,['duration_sec','duration','duration_seconds'])||0),at:new Date(pick(x,['created_at','timestamp','detected_at'])||Date.now()),
+    agree:(typeof fb0=='string'?{agree:true,disagree:false}[fb0]:undefined)??pick(x,['user_agrees','agree'])??(fb?pick(fb,['user_agrees','agree']):undefined)??deep(x,/agree/i,v=>typeof v=='boolean')??null,comment:x.comment||(fb&&fb.comment)||deep(x,/comment/i,v=>typeof v=='string'&&v.trim()!=='')||'',scores:sg.map(s=>+(s&&typeof s=='object'?(s.spoof_probability??s.score??s.probability):s)),segs:sg.filter(s=>s&&typeof s=='object'&&s.end_seconds!==undefined).map(s=>({s:+s.start_seconds||0,e:+s.end_seconds||0})),partial:!!x.possible_partial_spoof,maxp:+x.max_probability||0,
+    fake:lb?/spoof|fake|synth/.test(lb):undefined,th:th!==undefined?+th:undefined,model:x.model_version||'',uid:x.user_id,email:pick(x,['user_email','email'])||(x.user&&x.user.email)||'ผู้เยี่ยมชม'}}
+const jwtRole=t=>{try{return JSON.parse(decodeURIComponent(escape(atob(String(t).split('.')[1].replace(/-/g,'+').replace(/_/g,'/'))))).role||null}catch(e){return null}};
+const decs=t=>{t=String(t).trim();const v=parseFloat(t);if(isNaN(v))return 0;if(/e/i.test(t)){const m=String(v).split('e-');return (m[0].split('.')[1]||'').length+(m[1]?+m[1]:0)}return (t.split('.')[1]||'').length};
+const thTxt=d=>d.th!==undefined?String(+d.th.toFixed(6)):'–';
+const isF=d=>d.fake!==undefined?d.fake:d.score>=(d.th||S.th);
+const avc=()=>{const u=S.user||{};return `<span class="av">${u.img?`<img src="${u.img}" alt="">`:esc((uname(u)[0]||'?').toUpperCase())}</span>`};
+const uname=u=>pick(u,['name','full_name','display_name'])||String(u.email||'').split('@')[0];
+const since=u=>{const v=pick(u,['created_at','createdAt','member_since']);return v?D(new Date(v)):'ไม่ระบุ'};
+const pct=v=>v===undefined?'–':(v<=1?v*100:v).toFixed(1)+'%';
+
+const pill=d=>isF(d)?'<span class="pill fake">สังเคราะห์</span>':'<span class="pill real">เสียงจริง</span>';
+const fbp=d=>d.agree===null?'<span class="pill">ยังไม่ระบุ</span>':d.agree?'<span class="pill real">ผลถูกต้อง</span>':'<span class="pill fake">ผลไม่ถูกต้อง</span>';
+const filt=l=>l.filter(d=>(!S.f.date||dk(d.at)==S.f.date)&&(!S.f.res||(isF(d)?'fake':'real')==S.f.res));
+const errBox=()=>S.err?`<div class="err" role="alert">${esc(S.err)}</div>`:'';
+const IC={logout:'<path d="M9 4H5v16h4M16 8l4 4-4 4M20 12H9"/>',
+  mic:'<rect x="9" y="3" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/>',
+  clock:'<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
+  user:'<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>',
+  grid:'<rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/>',
+  sliders:'<path d="M4 7h10M18 7h2M4 17h2M10 17h10"/><circle cx="16" cy="7" r="2"/><circle cx="8" cy="17" r="2"/>',
+  stop:'<rect x="6" y="6" width="12" height="12" rx="2" fill="currentColor"/>',
+  upload:'<path d="M12 16V4M7 9l5-5 5 5M4 20h16"/>',
+  check:'<path d="M5 12.5l4.5 4.5L19 7"/>',
+  cross:'<path d="M6 6l12 12M18 6L6 18"/>',
+  trash:'<path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/>',
+  cal:'<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/>',
+  play:'<path d="M8 5v14l11-7z" fill="currentColor"/>',
+  eye:'<path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/>',
+  left:'<path d="M15 6l-6 6 6 6"/>',right:'<path d="M9 6l6 6-6 6"/>'};
+const ic=n=>`<svg class="i" viewBox="0 0 24 24" aria-hidden="true">${IC[n]}</svg>`;
+const NAV={user:[['home','mic','ตรวจสอบเสียง'],['hist','clock','ประวัติการตรวจสอบ'],['prof','user','บัญชี']],admin:[['dash','grid','ภาพรวม'],['hist','clock','ประวัติการตรวจสอบ'],['users','user','ผู้ใช้งาน'],['th','sliders','เกณฑ์ตัดสิน']]};
+const MOUTH={idle:'<path d="M66 100 Q80 113 94 100" fill="none" stroke="var(--bd)" stroke-width="4"/>',
+ listen:'<ellipse cx="80" cy="106" rx="8" ry="10" fill="var(--paper)" stroke="var(--bd)" stroke-width="4"/>',
+ busy:'<circle cx="80" cy="104" r="5" fill="var(--bd)"/>',
+ real:'<path d="M62 96 Q80 124 98 96Z" fill="var(--paper)" stroke="var(--bd)" stroke-width="4"/>',
+ fake:'<path d="M60 106 l7 -8 l7 8 l7 -8 l7 8 l7 -8 l5 8" fill="none" stroke="var(--bd)" stroke-width="4"/>'};
+const EYES={idle:'<circle cx="60" cy="78" r="7" fill="var(--bd)"/><circle cx="100" cy="78" r="7" fill="var(--bd)"/>',
+ listen:'<circle cx="60" cy="76" r="10" fill="var(--paper)" stroke="var(--bd)" stroke-width="4"/><circle cx="100" cy="76" r="10" fill="var(--paper)" stroke="var(--bd)" stroke-width="4"/><circle cx="62" cy="77" r="4" fill="var(--bd)"/><circle cx="102" cy="77" r="4" fill="var(--bd)"/>',
+ busy:'<circle cx="60" cy="74" r="7" fill="var(--bd)"/><circle cx="100" cy="74" r="7" fill="var(--bd)"/><circle cx="62" cy="71" r="2.4" fill="var(--paper)"/><circle cx="102" cy="71" r="2.4" fill="var(--paper)"/>',
+ real:'<path d="M50 82 Q60 66 70 82" fill="none" stroke="var(--bd)" stroke-width="4.5"/><path d="M90 82 Q100 66 110 82" fill="none" stroke="var(--bd)" stroke-width="4.5"/>',
+ fake:'<path d="M50 74 L70 78" stroke="var(--bd)" stroke-width="4.5"/><path d="M90 70 L112 62" stroke="var(--bd)" stroke-width="4.5"/><circle cx="62" cy="86" r="6" fill="var(--bd)"/><circle cx="102" cy="86" r="6" fill="var(--bd)"/>'};
+const mascot=(m,sz)=>`<svg class="mc ${m}" viewBox="0 0 160 150" style="${sz?'--s:'+sz+'px':''}" aria-hidden="true"><g fill="none" stroke="var(--bd)" stroke-width="4.5" stroke-linecap="round"><path d="M62 26V14"/><path d="M80 22V4"/><path d="M98 26V12"/></g><path class="body" d="M20 100C10 50 45 22 80 24c38 2 70 26 62 74-4 30-30 42-62 42-32 0-56-10-60-40Z" stroke="var(--bd)" stroke-width="4.5"/>${m=='fake'?'':'<circle cx="44" cy="100" r="7" fill="var(--rose)" opacity=".7"/><circle cx="116" cy="100" r="7" fill="var(--rose)" opacity=".7"/>'}${EYES[m]}${MOUTH[m]}</svg>`;
+const logo=()=>`<span class="logo" aria-hidden="true"><b>${[8,15,20,11,16].map(h=>`<i style="height:${h}px"></i>`).join('')}</b></span>`;
+const MTH=['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'],WD=['อา','จ','อ','พ','พฤ','ศ','ส'];
+function calHTML(){
+  const y=S.cal.y,m=S.cal.m,first=new Date(y,m,1).getDay(),days=new Date(y,m+1,0).getDate(),today=dk(new Date());
+  let cells='';for(let i=0;i<first;i++)cells+='<span></span>';
+  for(let n=1;n<=days;n++){const k=y+'-'+String(m+1).padStart(2,'0')+'-'+String(n).padStart(2,'0');cells+=`<button class="day ${k==S.f.date?'sel':''} ${k==today?'today':''}" data-day="${k}">${n}</button>`}
+  return `<div class="cal" role="dialog" aria-label="เลือกวันที่"><div class="calh"><button class="iconbtn" data-cal="-1" aria-label="เดือนก่อนหน้า">${ic('left')}</button><b>${MTH[m]} ${y+543}</b><button class="iconbtn" data-cal="1" aria-label="เดือนถัดไป">${ic('right')}</button></div><div class="calg">${WD.map(w=>`<i>${w}</i>`).join('')}${cells}</div><div class="calf"><button class="btn ghost sm" data-day="${today}">วันนี้</button><button class="btn ghost sm" data-day="">ล้างวันที่</button></div></div>`}
+const ovals=(set,cur)=>{const a=[...set];if(cur&&!a.includes(+cur))a.push(+cur);return a};
+const admSel=()=>{if(!(S.role=='admin'&&S.page=='hist'))return'';const cnt={};let M;if(S.fopt){M=S.fopt.models.map(m=>(cnt[m.v]=m.n,m.v))}else M=[...S.mopts].sort();if(S.f.model&&!M.includes(S.f.model))M.push(S.f.model);const T=ovals(S.topts,S.f.th);if(S.fopt){[S.fopt.tmin,S.fopt.tmax].forEach(v=>{if(v!==null&&v!==undefined&&!T.some(t=>thEq(t,v)))T.push(+(+v).toFixed(6))})}if(S.curth!==undefined&&!T.some(t=>thEq(t,S.curth)))T.push(+S.curth);T.sort((a,b)=>a-b);
+  return `<div class="selrow"><label>โมเดลที่ตรวจ<select class="in" data-f="model"><option value="">ทั้งหมด</option>${M.map(m=>`<option value="${esc(m)}" ${S.f.model==m?'selected':''}>${esc(m)}${cnt[m]!==undefined?' ('+cnt[m]+')':''}</option>`).join('')}</select></label><label>เกณฑ์ที่ใช้ตอนตรวจ<select class="in" data-f="th"><option value="">ทั้งหมด</option>${T.map(t=>`<option value="${t}" ${S.f.th!==''&&+S.f.th==t?'selected':''}>${(+t).toFixed(6).replace(/0+$/,'').replace(/\.$/,'')}${S.curth!==undefined&&thEq(t,S.curth)?' (ค่าปัจจุบัน)':''}</option>`).join('')}</select></label><label>ผลตอบรับจากผู้ใช้<select class="in" data-f="fb"><option value="">ทั้งหมด</option>${[['agree','ผู้ใช้บอกว่าผลถูกต้อง'],['disagree','ผู้ใช้บอกว่าผลไม่ถูกต้อง'],['none','ยังไม่ให้ความเห็น']].map(o=>`<option value="${o[0]}" ${S.f.fb==o[0]?'selected':''}>${o[1]}</option>`).join('')}</select></label></div>`};
+const filterBar=()=>{const on=S.f.date||S.f.res||S.f.model||S.f.th||S.f.fb;
+  return `<div class="chips">${[['','ทั้งหมด'],['real','เสียงจริง'],['fake','เสียงสังเคราะห์']].map(c=>`<button class="chip ${S.f.res==c[0]?'on':''}" data-chip="${c[0]}">${c[1]}</button>`).join('')}<div class="datewrap"><button class="chip ${S.f.date?'on':''}" data-cal="toggle" aria-haspopup="dialog">${ic('cal')}${S.f.date?D(new Date(S.f.date+'T00:00:00')):'เลือกวันที่'}</button>${S.cal.open?calHTML():''}</div>${on?'<button class="btn ghost sm" data-act="clr">ล้างตัวกรอง</button>':''}</div>${admSel()}`};
+
+function render(){
+  const a=$('#app');if(!S.user){a.innerHTML=loginV();return}
+  if(S.role=='admin'&&S.page=='home'){S.page='dash';if(!S.stats)setTimeout(()=>go('dash'),0)}
+  const adm=S.role=='admin',nav=NAV[adm?'admin':'user'],onp=(S.page=='ddet'||S.page=='usum'||S.page=='udet')?(S.pp||'hist'):S.page,btns=dk=>nav.filter(p=>dk||p[0]!='prof').map(p=>`<button data-go="${p[0]}" class="${onp==p[0]?'on':''}">${p[0]=='prof'&&S.user?'':ic(p[1])}${p[0]=='prof'&&S.user?`${avc()}<span class="nm">${esc(uname(S.user))}</span>`:p[2]}</button>`).join('');
+  const v=S.loading?'<p class="mute">กำลังโหลดข้อมูลจากระบบ</p>':{home:homeV,hist:adm?aHistV:uHistV,prof:profV,dash:dashV,th:thV,users:usersV,ddet:ddetV,usum:usumV,udet:udetV}[S.page]();
+  a.innerHTML=`<header class="bar"><div><div class="brand">${logo()}<span><span class="nb">ระบบตรวจสอบ</span><wbr><span class="nb">เสียงสังเคราะห์</span><wbr><span class="nb">ภาษาไทย</span></span>${adm?'<span class="tag">Admin</span>':''}</div><nav class="nav" aria-label="เมนูหลัก">${btns()}</nav>${S.user&&!adm?`<button class="acct ${onp=='prof'?'on':''}" data-go="prof" aria-label="บัญชีของฉัน">${avc()}<span class="nm">${esc(uname(S.user))}</span></button>`:''}${adm?`<button class="outb" data-act="out" aria-label="ออกจากระบบ">${ic('logout')}<span>ออกจากระบบ</span></button>`:''}</div></header>
+  <main class="page ${adm?'wide':''}">${v}</main><nav class="dock" aria-label="เมนูหลัก">${btns(1)}</nav>${S.cfm?cfmV():''}${S.tst?`<div class="toast2" role="status">${esc(S.tst)}</div>`:''}`;
+  if((S.phase=='done'&&S.page=='home'||S.page=='udet')&&$('#wave'))draw();
+  {const cw=$('.chartw');if(cw)cw.scrollLeft=cw.scrollWidth}
+  if(S.page=='home'&&!S.rec&&$('#live'))drawLive();
+}
+const sentCard=(mood,title,body,extra,btnAct,btnText,backAct,backText)=>`<div class="card center"><div style="display:grid;justify-items:center">${mascot(mood,100)}</div><h2 style="margin-top:8px">${title}</h2><p class="mute" style="margin-top:6px">${body}</p>${extra||''}${errBox()}<button class="btn block" style="margin-top:20px" data-act="${btnAct}">${btnText}</button>${backAct?`<p class="center" style="margin-top:14px"><button class="btn ghost sm" data-act="${backAct}">${backText}</button></p>`:''}</div>`;
+function fpCard(){
+  const em=esc(S.fpEmail||'');
+  if(S.fp==2)return sentCard('idle','ตรวจอีเมลของคุณ',`ถ้าอีเมล <b>${em}</b> สมัครไว้ในระบบ เราส่งลิงก์ตั้งรหัสผ่านใหม่ไปให้แล้ว (ลิงก์ใช้ได้ 1 ชั่วโมง) ถ้าไม่เจอลองดูในจดหมายขยะ`,'<p class="mute small" style="margin-top:8px">ขอลิงก์ใหม่ได้ทุก 1 นาที</p>','fpsend','ส่งลิงก์อีกครั้ง','fpback','กลับไปเข้าสู่ระบบ');
+  return `<div class="card"><h2>ลืมรหัสผ่าน</h2><p class="mute small" style="margin-top:6px">กรอกอีเมลที่สมัครไว้ ระบบจะส่งลิงก์สำหรับตั้งรหัสผ่านใหม่ไปให้ รหัสเดิมดูย้อนหลังไม่ได้เพราะเก็บแบบเข้ารหัส</p>
+  <label class="f">อีเมล<input class="in" id="fe" type="email" autocomplete="username" value="${em}"></label>
+  ${errBox()}<button class="btn block" style="margin-top:22px" data-act="fpsend">ส่งลิงก์ตั้งรหัสผ่านใหม่</button>
+  <p class="center" style="margin-top:14px"><button class="btn ghost sm" data-act="fpback">กลับไปเข้าสู่ระบบ</button></p></div>`}
+function vfCard(){const v=S.vf;
+  return sentCard('idle','ตรวจอีเมลของคุณ',`${esc(v.why||'เราส่งลิงก์ยืนยันไปที่')} <b>${esc(v.email)}</b> แล้ว กดลิงก์ในอีเมลเพื่อเริ่มใช้งาน (ลิงก์ใช้ได้ 24 ชั่วโมง) ถ้าไม่เจอลองดูในจดหมายขยะ`,v.sent&&!S.err?`<div class="ok" style="justify-content:center">${ic('check')}ส่งลิงก์ใหม่แล้ว (ขอซ้ำได้ทุก 1 นาที)</div>`:'','vfresend','ส่งลิงก์อีกครั้ง','vfback','กลับไปเข้าสู่ระบบ')}
+function lkCard(){const k=S.lk;
+  if(k.kind=='verify'){
+    if(k.state=='busy')return `<div class="card center"><div style="display:grid;justify-items:center">${mascot('busy',110)}</div><h2 style="margin-top:8px">กำลังยืนยันอีเมล</h2><p class="mute">รอสักครู่</p></div>`;
+    return sentCard('fake','ยืนยันอีเมลไม่สำเร็จ',esc(k.msg||'ลิงก์ไม่ถูกต้องหรือหมดอายุแล้ว'),'<p class="mute small" style="margin-top:8px">เข้าสู่ระบบด้วยอีเมลที่สมัครไว้ แล้วกดส่งลิงก์อีกครั้งได้</p>','lkgo','ไปหน้าเข้าสู่ระบบ')}
+  if(k.state=='done')return sentCard('real','ตั้งรหัสผ่านใหม่แล้ว','ใช้รหัสใหม่เข้าสู่ระบบได้เลย','','lkgo','ไปหน้าเข้าสู่ระบบ');
+  if(!k.token)return sentCard('fake','ลิงก์ไม่ถูกต้อง','ไม่พบรหัสในลิงก์ ขอลิงก์ใหม่ได้ที่หน้า "ลืมรหัสผ่าน"','','lkgo','ไปหน้าเข้าสู่ระบบ');
+  return `<div class="card"><h2>ตั้งรหัสผ่านใหม่</h2>
+  <label class="f">รหัสผ่านใหม่ (อย่างน้อย 8 ตัว)<span class="pwd"><input class="in" id="f1" type="password" autocomplete="new-password"><button type="button" class="eye" data-eye aria-label="แสดงหรือซ่อนรหัสผ่าน">${ic('eye')}</button></span></label>
+  <label class="f">ยืนยันรหัสผ่านใหม่<span class="pwd"><input class="in" id="f2" type="password" autocomplete="new-password"><button type="button" class="eye" data-eye aria-label="แสดงหรือซ่อนรหัสผ่าน">${ic('eye')}</button></span></label>
+  ${errBox()}<button class="btn block" style="margin-top:22px" data-act="lkreset">ตั้งรหัสผ่านใหม่</button>
+  <p class="center" style="margin-top:14px"><button class="btn ghost sm" data-act="lkgo">กลับไปเข้าสู่ระบบ</button></p></div>`}
+// ลิงก์จากอีเมล: #/verify-email?token=...  #/reset-password?token=...  (หรือ path /verify-email?token=... ถ้า server ตั้ง fallback ไว้)
+function linkRoute(){try{const h=(location.hash||'').replace(/^#\/?/,'');let m=h.match(/^(verify-email|reset-password)(?:\?(.*))?$/);
+  if(!m){const p=(location.pathname||'').replace(/^\/+|\/+$/g,'');if(/^(verify-email|reset-password)$/.test(p))m=[0,p,(location.search||'').slice(1)]}
+  if(!m)return null;return{kind:m[1]=='verify-email'?'verify':'reset',token:new URLSearchParams(m[2]||'').get('token')||''}}catch(e){return null}}
+function cleanUrl(){try{const q=new URLSearchParams(location.search);q.delete('token');const t=q.toString();history.replaceState(null,'',location.pathname.replace(/(verify-email|reset-password)\/?$/,'')+(t?'?'+t:''))}catch(e){}}
+function loginV(){
+  const adm=S.role=='admin';
+  return `<div class="login"><div class="hero">${mascot('idle')}<span class="sticker">ตรวจเสียงภาษาไทย</span><h1>ระบบตรวจสอบ<wbr>เสียงสังเคราะห์<wbr>ภาษาไทย</h1><p>อัปโหลดไฟล์หรือบันทึกเสียงสั้น ๆ แล้วรู้ผลทันทีไม่กี่วินาที</p></div>
+  <div class="lg"><div class="brand" style="margin:0 0 18px">${logo()}<span><span class="nb">ระบบตรวจสอบ</span><wbr><span class="nb">เสียงสังเคราะห์</span><wbr><span class="nb">ภาษาไทย</span></span></div>${S.lk?lkCard():S.vf?vfCard():S.fp&&!adm?fpCard():`<div class="card">
+  ${S.reg?`<h2>สมัครสมาชิก</h2>`:''}
+  ${S.reg?'<label class="f">ชื่อที่แสดง (ไม่บังคับ)<input class="in" id="rn" maxlength="100" autocomplete="nickname"></label>':''}<label class="f">${adm?'ชื่อผู้ใช้':'อีเมล'}<input class="in" id="em" ${adm?'':'type="email"'} autocomplete="username"></label>
+  <label class="f">รหัสผ่าน<span class="pwd"><input class="in" id="pw" type="password" autocomplete="current-password"><button type="button" class="eye" data-eye aria-label="แสดงหรือซ่อนรหัสผ่าน">${ic('eye')}</button></span></label>
+  ${!adm&&!S.reg?`<p style="margin-top:10px;text-align:right"><button class="linkbtn" data-act="fp">ลืมรหัสผ่าน?</button></p>`:''}${errBox()}<button class="btn block" style="margin-top:22px" data-act="${S.reg?'reg':'in'}">${S.reg?'สมัครสมาชิก':'เข้าสู่ระบบ'}</button>
+  ${adm?'':`<p class="center" style="margin-top:14px"><button class="btn ghost sm" data-act="tgl">${S.reg?'มีบัญชีแล้ว เข้าสู่ระบบ':'ยังไม่มีบัญชี สมัครสมาชิก'}</button></p>`}</div>`}
+  ${S.reg||S.lk||S.vf||S.fp&&!adm?'':`<p class="admfoot"><button class="linkbtn" data-role="${adm?'user':'admin'}">${adm?'กลับไปหน้าผู้ใช้ทั่วไป':'สำหรับผู้ดูแลระบบ'}</button></p>`}</div></div>`}
+function homeV(){
+  let b='';
+  if(S.phase=='busy')b=`<div class="stage center" style="padding:28px 20px"><div style="display:grid;justify-items:center">${mascot('busy',130)}</div><h3 style="margin-top:12px">กำลังประมวลผล</h3><p class="mute">กำลังวิเคราะห์เสียง กรุณารอสักครู่</p></div>`;
+  else if(S.phase=='done')b=resV();
+  else b=`<div class="stage"><div class="seg2"><button data-tab="rec" class="${S.tab=='rec'?'on':''}">บันทึกเสียง</button><button data-tab="up" class="${S.tab=='up'?'on':''}">อัปโหลดไฟล์</button></div>
+  ${S.tab=='rec'?`<canvas id="live" class="live" aria-hidden="true"></canvas><div class="timer num" id="rt">${S.rec?mmss(S.rec.sec):'0:00'}</div><button class="rec ${S.rec?'on':''}" data-act="rec" aria-label="${S.rec?'หยุดบันทึก':'เริ่มบันทึก'}">${ic(S.rec?'stop':'mic')}</button><p class="center mute small">${S.rec?'กดอีกครั้งเมื่อพูดจบ ระบบจะตรวจสอบให้ทันที':'กดปุ่มเพื่อบันทึกเสียง พูดอย่างน้อย 4 วินาทีเพื่อผลที่แม่นยำขึ้น'}</p>`
+  :`<label class="drop">${ic('upload')}<input type="file" id="fi" accept="audio/*"><b>เลือกไฟล์เสียง หรือลากแล้ววาง</b><span class="mute small">.wav .mp3 .m4a .flac</span></label>`}${errBox()}</div>`;
+  const mood=S.phase=='busy'?'busy':S.rec?'listen':'idle';
+  return `${S.phase=='busy'?'':`<div class="hello">${S.phase=='done'?'':mascot(mood)}</div>`}<h1 style="margin-top:${S.phase=='done'?'18':'4'}px">${S.phase=='done'?'ผลการตรวจ':'ตรวจสอบเสียง'}</h1>${b}`}
+function resV(det){
+  const d=S.cur,f=isF(d),th=d.th||S.th,p=fp(adj(d.score,th)),n=d.scores.length,bad=d.scores.filter(s=>s>=th).length,seg=d.segs&&d.segs.length==n,sus=d.scores.map((s,k)=>{const t=segT(d,k);return{s,a:t[0],b:t[1],lv:lvl(s,th)}}).filter(x=>x.lv).sort((x,y)=>y.s-x.s);
+  return `<section class="res ${f?'fake':'real'}"><div class="reshead"><div><div class="vword">${f?'เป็นเสียงสังเคราะห์':'เป็นเสียงคนพูดจริง'}</div>
+  <div class="bignum num${String(p).length>3?' long':''}" role="img" aria-label="คะแนน ${p} เปอร์เซ็นต์">${p}<small>%</small></div></div>${mascot(f?'fake':'real')}</div>
+  <div class="resmeta">${esc(d.name)}</div>
+  ${!f&&d.partial?`<div class="warn">แต่มีบางช่วงที่น่าสงสัย (สูงสุด ${fp(adj(d.maxp,th))}%)</div>`:''}
+  ${d.url?`<audio controls src="${d.url}" aria-label="ฟังไฟล์เสียงที่ตรวจ"></audio>`:''}
+  <div class="scope">${d.peaks&&d.peaks.length?'<canvas id="wave"></canvas>':''}${n?`<div class="segs">${d.scores.map((s,k)=>`<div class="sg num" style="flex:${seg?Math.max(d.segs[k].e-d.segs[k].s,.5):1}" title="ช่วง ${ts(segT(d,k)[0])}–${ts(segT(d,k)[1])} · คะแนน ${fp(adj(s,th))}% (ค่าดิบ ${+(+s).toFixed(14)})"><i style="background:${lvl(s,th)?'var(--fake)':'var(--real)'};opacity:${lvl(s,th)==1?.5:1}"></i><span>${fp(adj(s,th))}%</span></div>`).join('')}</div><div class="axis num"><span>0:00</span><span>${mmss(d.dur)}</span></div>`:''}</div>
+  ${n&&sus.length?`<div class="susp"><div class="suspt">ช่วงที่น่าสงสัย <span class="mute small">กดเพื่อฟังช่วงนั้น</span></div><div class="suspl">${sus.map(x=>`<button type="button" class="sch ${x.lv==2?'hi':''}" data-seek="${x.a.toFixed(2)}"><b class="num">${ts(x.a)}–${ts(x.b)}</b><span class="num">${fp(adj(x.s,th))}%</span></button>`).join('')}</div></div>`:n?`<p class="small" style="margin-top:12px">ไม่พบช่วงที่น่าสงสัย ทุกช่วงมีคะแนนต่ำกว่า 50%</p>`:''}
+</section>
+  <div class="card"><h3>${d.hadFb&&!d.sent?'ความเห็นของคุณต่อผลนี้':'ผลนี้ถูกต้องไหม'}</h3>
+  ${d.sent?`<p class="ok">${ic('check')}ส่งความเห็นแล้ว</p><p style="margin-top:14px"><button class="btn ghost sm" data-act="fbedit">แก้ไขความเห็น</button></p>`:`<div class="choices"><button class="choice yes ${d.agree===true?'on':''}" data-ag="1">${ic('check')}ถูกต้อง</button><button class="choice no ${d.agree===false?'on':''}" data-ag="0">${ic('cross')}ไม่ถูกต้อง</button></div>
+  <label class="f">ความเห็นเพิ่มเติม (ไม่บังคับ)<textarea class="in" id="cm" rows="3" maxlength="300" placeholder="เช่น คลิปนี้บันทึกในห้องที่มีเสียงรบกวน">${esc(d.comment)}</textarea></label>${qForm(d)}${errBox()}
+  <button class="btn lite" style="margin-top:20px" data-act="send">${d.hadFb?'บันทึกการแก้ไข':'ส่งความเห็น'}</button>`}</div>
+  ${det?'':`<p style="margin-top:32px;text-align:center"><button class="btn ghost again" data-act="again">ตรวจสอบไฟล์อื่น</button></p>`}`}
+
+// ===== ประวัติของผู้ใช้: ช่วงวันที่ + แบ่งหน้า =====
+const ufilt=l=>{const f=S.ur.from,t=S.ur.to;return l.filter(d=>(!S.f.res||(isF(d)?'fake':'real')==S.f.res)&&(!f||dk(d.at)>=f)&&(!t||dk(d.at)<=t))};
+const uPage=()=>{const a=ufilt(S.hist),n=Math.max(1,Math.ceil(a.length/S.hps));if(S.hp>=n)S.hp=n-1;if(S.hp<0)S.hp=0;return{all:a,items:a.slice(S.hp*S.hps,(S.hp+1)*S.hps),pages:n}};
+const uOn=()=>S.f.res||S.ur.mode;
+function pager(pages,cur){if(pages<=1)return'';const set=new Set([0,pages-1,cur-1,cur,cur+1]);let o='',last=-1;
+  [...set].filter(i=>i>=0&&i<pages).sort((a,b)=>a-b).forEach(i=>{if(last>=0&&i-last>1)o+='<span class="pgd">…</span>';o+=`<button class="pgb ${i==cur?'on':''}" data-pg="${i}" ${i==cur?'aria-current="page"':''} aria-label="หน้า ${i+1}">${i+1}</button>`;last=i});
+  return `<nav class="pager" aria-label="เลือกหน้า"><button class="pgb wide" data-pg="${cur-1}" ${cur==0?'disabled':''}>${ic('left')}ก่อนหน้า</button>${o}<button class="pgb wide" data-pg="${cur+1}" ${cur==pages-1?'disabled':''}>ถัดไป${ic('right')}</button></nav>`}
+function uBar(){const R=[['','ทั้งหมด'],['1','วันนี้'],['7','7 วัน'],['30','30 วัน']],today=dk(new Date());
+  return `<div class="chips">${[['','ทั้งหมด'],['real','เสียงจริง'],['fake','เสียงสังเคราะห์']].map(c=>`<button class="chip ${S.f.res==c[0]?'on':''}" data-chip="${c[0]}">${c[1]}</button>`).join('')}</div>
+  <div class="chips" style="margin-top:12px"><span class="small mute">ช่วงเวลา</span>${R.map(c=>`<button class="chip ${S.ur.mode==c[0]?'on':''}" data-ur="${c[0]}">${c[1]}</button>`).join('')}<button class="chip ${S.ur.mode=='custom'?'on':''}" data-ur="custom">${ic('cal')}เลือกช่วงวันที่</button>${uOn()?'<button class="btn ghost sm" data-act="clr">ล้างตัวกรอง</button>':''}</div>
+  ${S.ur.open||S.ur.mode=='custom'?`<div class="drcust"><label>ตั้งแต่<input class="in" type="date" id="u1" value="${S.ur.from}" max="${today}"></label><label>ถึง<input class="in" type="date" id="u2" value="${S.ur.to}" max="${today}"></label><button class="btn sm" data-act="urapply">ดูช่วงนี้</button></div>`:''}`}
+async function uPageLoad(){const it=uPage().items.filter(d=>d.id&&!d.rawDetail);if(it.length){await enrich(it);render()}}
+const selIds=()=>uPage().all.map(d=>String(d.id)).filter(i=>S.ahas.has(i));
+const selAll=l=>{const ids=selIds(),all=ids.length&&ids.every(i=>S.sel.has(i));return `<button type="button" class="selall" data-act="sela"><span class="cb ${all?'on':''}">${all?ic('check'):''}</span>เลือกทั้งหมด (${ids.length})</button>`};
+const selBar=()=>{const n=S.sel.size;return `<div class="selbar"><span>เลือกแล้ว ${n} ไฟล์</span><button type="button" class="danger" data-act="seld" ${n?'':'disabled'}>ลบไฟล์เสียงที่เลือก</button></div>`};
+const cfmV=()=>`<div class="scrim" data-act="cfmx"><div class="modal" role="dialog" aria-modal="true" aria-labelledby="cfmt"><h3 id="cfmt">ลบไฟล์เสียง?</h3><p class="mute">ลบไฟล์เสียง <b>${S.adel?1:S.sel?S.sel.size:0} ไฟล์</b> ออกจากประวัติการตรวจสอบ<br>ไฟล์เสียงจะถูกลบอย่างถาวรและไม่สามารถเล่นซ้ำได้</p><div class="mbtn"><button type="button" class="btn ghost" data-act="cfmx">ยกเลิก</button><button type="button" class="btn danger" data-act="cfmy">ลบ ${S.adel?1:S.sel?S.sel.size:0} ไฟล์</button></div></div></div>`;
+function uHistV(){
+  const P=uPage(),l=P.items,tot=P.all.length,a=S.hp*S.hps+1,b=S.hp*S.hps+l.length;
+  return `<div class="hd2"><h1>${S.sel?'เลือกไฟล์เสียงที่จะลบ':'ประวัติการตรวจสอบ'}</h1>${S.sel?'<button class="ib" data-act="selx">ยกเลิก</button>':S.ahas.size?`<button class="ib" data-act="selo">${ic('trash')}ล้างไฟล์เสียง</button>`:''}</div>${S.sel?'':uBar()}${errBox()}${typeof location!='undefined'&&location.search.includes('debug')&&S.hist[0]?`<pre class="dbg">รายการจาก /history:\n${esc(JSON.stringify(S.hist[0].raw,null,1))}\n\nรายละเอียดจาก /history/{id}:\n${esc(JSON.stringify(S.hist[0].rawDetail||null,null,1))}</pre>`:''}${S.hist.length?`<div class="row" style="justify-content:space-between;margin-top:20px"><p class="small mute num" style="margin:0">${tot?`แสดง ${a}–${b} จาก ${tot} รายการ`:'ไม่พบรายการ'}${S.hist.length>=200?' (ระบบส่งมาได้สูงสุด 200 รายการล่าสุด)':''}</p><span class="chips" style="margin:0"><span class="small mute">ต่อหน้า</span>${[10,20,50].map(n=>`<button class="chip ${S.hps==n?'on':''}" data-ps="${n}">${n}</button>`).join('')}</span></div>`:''}${l.length?`${S.sel?selAll(l):''}<div class="hlist">${l.map(d=>{const f=isF(d),sm=!!S.sel,has=S.ahas.has(String(d.id));return `<div class="hrow ${f?'fake':'real'} ${sm&&!has?'nosel':''}" ${sm?(has?`data-sel="${d.id}"`:''):`data-udet="${d.id}"`} style="cursor:${sm&&!has?'default':'pointer'}">${sm?`<span class="cb ${S.sel.has(String(d.id))?'on':''}">${has&&S.sel.has(String(d.id))?ic('check'):''}</span>`:`<span class="dot">${ic(f?'cross':'check')}</span>`}<div class="g"><b>${esc(d.name)}</b><div class="small mute">${D(d.at)} ${T(d.at)} น.</div><div style="margin-top:6px">${pill(d)}${!f&&d.partial?'<span class="pill fake">บางช่วงน่าสงสัย</span>':''}${fbp(d)}</div>${playBox(d)}<div class="small mute" style="margin-top:10px">ดูรายละเอียด ›</div></div><div class="sc"><div class="bigpct num">${fp(adj(d.score,d.th))}%</div><div class="small" style="color:var(--c)">${f?'เสียงสังเคราะห์':'เสียงคนพูดจริง'}</div></div><span></span></div>`}).join('')}</div>${S.sel?'':pager(P.pages,S.hp)}${S.sel?selBar():''}`:`<div class="empty">${mascot('busy',110)}<p>${uOn()?'ไม่พบรายการตามตัวกรองนี้':'ยังไม่มีรายการ ผลที่ตรวจแล้วจะมาอยู่ที่นี่'}</p><p style="margin-top:14px"><button class="btn" data-go="home">ตรวจเสียง</button></p></div>`}`}
+function profV(){
+  const u=S.user;
+  return `<h1>ข้อมูลผู้ใช้</h1><div class="card"><div class="row"><div class="avatar">${u.img?`<img src="${u.img}" alt="">`:esc((uname(u)[0]||'?').toUpperCase())}</div><div><h3>${esc(uname(u))}</h3><div class="mute">${esc(u.email)}</div></div></div>
+  <p style="margin-top:14px"><label class="btn ghost sm" style="cursor:pointer">เปลี่ยนรูปโปรไฟล์<input type="file" id="av" accept="image/*" style="display:none"></label></p>
+  <dl class="dl"><div><dt>อีเมล</dt><dd>${esc(u.email)}</dd></div><div><dt>สมาชิกตั้งแต่</dt><dd>${since(u)}</dd></div><div><dt>รหัสผ่าน</dt><dd><button class="btn ghost sm" data-act="pwo">เปลี่ยนรหัสผ่าน</button></dd></div></dl></div>
+  <div class="card"><h3>ไฟล์เสียงที่เก็บไว้</h3><dl class="dl"><div><dt>จำนวนไฟล์</dt><dd>${S.astat?S.astat.n:0} ไฟล์</dd></div><div><dt>พื้นที่ที่ใช้</dt><dd>${S.astat?(S.astat.sz/1048576).toFixed(1):'0.0'} MB</dd></div></dl></div>
+  <div class="card"><h3>ชื่อที่แสดง</h3><label class="f">ชื่อ<input class="in" id="dn" maxlength="100" autocomplete="nickname" value="${esc(u.display_name||'')}" placeholder="${esc(String(u.email).split('@')[0])}"></label>${S.dm?`<div class="${S.dm.ok?'ok':'err'}" role="${S.dm.ok?'status':'alert'}">${S.dm.ok?ic('check'):''}${esc(S.dm.m)}</div>`:''}<button class="btn" style="margin-top:16px" data-act="dn">บันทึกชื่อ</button></div>
+  ${S.pwo||S.msg?`<div class="card" id="pwcard"><h3>เปลี่ยนรหัสผ่าน</h3><label class="f">รหัสผ่านปัจจุบัน<span class="pwd"><input class="in" type="password" id="p0" autocomplete="current-password"><button type="button" class="eye" data-eye aria-label="แสดงหรือซ่อนรหัสผ่าน">${ic('eye')}</button></span></label><label class="f">รหัสผ่านใหม่ (อย่างน้อย 8 ตัว)<span class="pwd"><input class="in" type="password" id="p1" autocomplete="new-password"><button type="button" class="eye" data-eye aria-label="แสดงหรือซ่อนรหัสผ่าน">${ic('eye')}</button></span></label><label class="f">ยืนยันรหัสผ่านใหม่<span class="pwd"><input class="in" type="password" id="p2" autocomplete="new-password"><button type="button" class="eye" data-eye aria-label="แสดงหรือซ่อนรหัสผ่าน">${ic('eye')}</button></span></label>
+  ${errBox()}${S.msg?`<div class="ok">${ic('check')}${S.msg}</div>`:''}<button class="btn" style="margin-top:16px" data-act="pw">บันทึกรหัสผ่านใหม่</button></div>`:''}
+  <p style="margin-top:20px"><button class="btn block ghost" data-act="out">ออกจากระบบ</button></p>`}
+function ovBlocks(){
+  const st=S.stats||{},ok=typeof st.total_detections=='number',total=ok?st.total_detections:0,fake=ok?(st.total_spoof_verdicts||0):0,real=ok?(st.total_real_verdicts!==undefined?st.total_real_verdicts:total-fake):0,users=typeof st.total_users=='number'?st.total_users:'–',tv=v=>ok?v:'–',
+    dc=S.dcnt||[],nd=dc.length,mx=Math.max(1,...dc.map(x=>x.c)),today=dk(new Date()),sum=dc.reduce((a,x)=>a+x.c,0),
+    lab=x=>nd<=7?x.d.toLocaleDateString('th-TH',{weekday:'short'}):x.d.getDate()+'/'+(x.d.getMonth()+1),stp=nd>45?10:nd>20?6:nd>7?3:1,
+    rb=[[7,'7 วัน'],[15,'15 วัน'],[30,'30 วัน']].map(c=>`<button class="chip ${S.dr.n==c[0]?'on':''}" data-dr="${c[0]}">${c[1]}</button>`).join('')+`<button class="chip ${!S.dr.n?'on':''}" data-dr="custom">${ic('cal')}เลือกช่วงวันที่</button>`,
+    cust=(S.dr.open||!S.dr.n)?`<div class="drcust"><label>ตั้งแต่<input class="in" type="date" id="d1" value="${S.dr.from}" max="${today}"></label><label>ถึง<input class="in" type="date" id="d2" value="${S.dr.to}" max="${today}"></label><button class="btn sm" data-act="drapply">ดูช่วงนี้</button></div>`:'',
+    ttl=S.dr.n?S.dr.n+' วันล่าสุด':(S.dr.from?D(new Date(S.dr.from+'T00:00:00'))+' – '+D(new Date(S.dr.to+'T00:00:00')):'เลือกช่วงเวลา');
+  return `${ok?'':'<div class="err" role="alert">ดึงสถิติรวมจากระบบไม่ได้ ตรวจว่า backend ทำงานอยู่และยังล็อกอินแอดมินอยู่</div>'}
+  <div class="stats"><button class="stat" data-go="hist" data-res=""><span class="k">ตรวจทั้งหมด</span><strong class="num">${tv(total)}</strong><span class="sub num">100%</span></button><button class="stat" style="--c:var(--fake)" data-go="hist" data-res="fake"><span class="k"><i></i>เสียงสังเคราะห์</span><strong class="num">${tv(fake)}</strong><span class="sub num">${total?Math.round(fake/total*100):0}% ของทั้งหมด</span></button><button class="stat" style="--c:var(--real)" data-go="hist" data-res="real"><span class="k"><i></i>เสียงจริง</span><strong class="num">${tv(real)}</strong><span class="sub num">${total?Math.round(real/total*100):0}% ของทั้งหมด</span></button><button class="stat" data-go="users"><span class="k">ผู้ใช้งาน</span><strong class="num">${users}</strong><span class="sub">ดูรายชื่อผู้ใช้</span></button></div>
+  <div class="card"><h3>สัดส่วนผลตรวจ</h3>${total>0?`<div class="ratio">${fake>0?`<button class="rf" style="flex:${fake}" data-go="hist" data-res="fake" aria-label="เสียงสังเคราะห์ ${fake} รายการ"></button>`:''}${real>0?`<button class="rr" style="flex:${real}" data-go="hist" data-res="real" aria-label="เสียงจริง ${real} รายการ"></button>`:''}</div><div class="legend num"><span>เสียงสังเคราะห์ ${fake} (${Math.round(fake/total*100)}%)</span><span>เสียงจริง ${real} (${Math.round(real/total*100)}%)</span></div>`:'<p class="mute" style="margin-top:8px">ยังไม่มีผลตรวจ</p>'}</div>
+  <div class="card"><h3>จำนวนการตรวจ ${ttl}</h3><div class="chips" style="margin-top:14px">${rb}</div>${cust}${nd?`<p class="small mute num drsum">${D(dc[0].d)} ถึง ${D(dc[nd-1].d)} · รวม ${sum} ครั้ง ใน ${nd} วัน (เฉลี่ย ${(sum/nd).toFixed(1)} ครั้งต่อวัน)</p><div class="chartw"><div class="chart2" style="min-width:${nd>7?nd*44:0}px">${dc.map((x,i)=>`<button type="button" class="${x.k==today?'today':''} ${x.c?'':'z'}" ${x.c?`data-gday="${x.k}"`:'disabled'} title="${D(x.d)}: ${x.c} ครั้ง${x.c?' · กดเพื่อดูไฟล์เสียงของวันนั้น':''}"><div class="pl"><i style="height:${x.c?Math.max(8,Math.sqrt(x.c/mx)*100):0}%"></i></div><b class="num">${x.c}</b><span class="num">${nd<=7||[1,5,10,15,20,25,30].includes(x.d.getDate())||i==nd-1?x.d.getDate()+'/'+(x.d.getMonth()+1):''}</span></button>`).join('')}</div></div>`:'<p class="mute" style="margin-top:14px">เลือกวันที่เริ่มและวันที่สิ้นสุด แล้วกด "ดูช่วงนี้"</p>'}</div>`}
+function dashV(){
+  const A=S.fbrec||[],st=S.stats||{};
+  return `<h1>ภาพรวมระบบ</h1>${errBox()}${ovBlocks()}
+  <div class="card"><h3>ความเห็นล่าสุดจากผู้ใช้</h3>${typeof st.feedback_agreement_rate=='number'?`<p class="agree num"><b>${Math.round(st.feedback_agreement_rate*100)}%</b> ของผู้ใช้ที่ให้ความเห็นบอกว่าผลถูกต้อง</p>`:''}<div style="margin-top:8px">${A.map(d=>`<div class="row" style="justify-content:space-between;padding:14px 0;border-top:1px solid var(--line)"><div style="min-width:0;overflow-wrap:anywhere">${uLink(d)}<div class="small mute">${D(d.at)} ${T(d.at)} น.</div><div style="margin-top:8px">${pill(d)}${fbp(d)}</div></div><div style="text-align:right"><div class="pctbadge num" style="color:${isF(d)?'var(--fake)':'var(--real)'}">${fp(adj(d.score,d.th))}%</div>${d.id?`<button class="btn ghost sm" style="margin-top:8px" data-ddet="${d.id}">รายละเอียด</button>`:''}</div></div>`).join('')||'<p class="mute">ยังไม่มีความเห็นจากผู้ใช้</p>'}</div></div>`}
+function aHistV(){
+  const l=S.adet;
+  return `<h1>ประวัติการตรวจสอบ</h1>${errBox()}${ovBlocks()}<h2 class="ovh">รายการตรวจ</h2>${filterBar()}${fuBan()}${atNote()}${typeof location!='undefined'&&location.search.includes('debug')&&S.adet[0]?`<pre class="dbg">${esc(JSON.stringify(S.adet[0].raw,null,1))}</pre>`:''}<div class="row" style="gap:10px;margin:6px 0 14px;flex-wrap:wrap"><button class="btn ghost sm" data-exp="csv">ส่งออก CSV</button><button class="btn ghost sm" data-exp="json">ส่งออก JSON</button></div><div class="card tw"><table><thead><tr><th>เวลา</th><th>ผู้ใช้</th><th>ผลตรวจ</th><th>โมเดล</th><th>เกณฑ์ตอนตรวจ</th><th>ผลตอบรับจากผู้ใช้</th><th></th></tr></thead><tbody>${l.map(d=>`<tr><td>${D(d.at)}<br>${T(d.at)} น.</td><td>${uLink(d)}</td><td>${pill(d)} <span class="num">${fp(adj(d.score,d.th))}%</span></td><td>${esc(d.model||'–')}</td><td class="num">${thTxt(d)}</td><td>${fbp(d)}</td><td>${d.id?`<button class="btn ghost sm" data-ddet="${d.id}">รายละเอียด</button>`:''}</td></tr>`).join('')||'<tr><td colspan="7" class="mute">ไม่พบรายการตามตัวกรองนี้</td></tr>'}</tbody></table></div>${moreBtn(S.adet.length,S.atotal,'more')}`}
+function thV(){
+  const i=S.thinfo,by=pick(i,['updated_by','set_by']),at=pick(i,['effective_from','updated_at','created_at']),x=((Math.min(.997,Math.max(.001,S.th))-.001)/.996*100).toFixed(1),v=String(S.th);
+  return `<h1>เกณฑ์การตัดสินใจ</h1>${errBox()}
+  <input class="thbig num" id="tv" type="number" inputmode="decimal" min="0.001" max="0.997" step="any" value="${v}" ${v.length>8?'style="font-size:clamp(24px,7vw,44px)"':''} aria-label="ค่า threshold (ทศนิยมได้ถึง 14 ตำแหน่ง)">
+  
+  <div class="zones"><span style="color:var(--real)">ต่ำกว่าค่านี้เป็นเสียงจริง</span><span style="color:var(--fake);text-align:right">ตั้งแต่ค่านี้ขึ้นไป เป็นเสียงสังเคราะห์</span></div>
+  ${S.msg?`<div class="ok">${ic('check')}${S.msg}</div>`:''}<button class="btn block" style="margin-top:24px" data-act="th">บันทึกการตั้งค่า</button>
+  ${at?`<p class="small mute center" style="margin-top:14px">บันทึกล่าสุดเมื่อ ${D(new Date(at))} ${T(new Date(at))} น.${by?' โดย '+esc(by):''}</p>`:''}`}
+
+
+// ===== v20: หน้ารายละเอียดการตรวจ / สรุปผู้ใช้ / ช่วงเวลากราฟ =====
+const uLink=d=>d.uid?`<button class="linkbtn" data-uopen="${esc(d.uid)}" data-em="${esc(d.email)}">${esc(d.email)}</button>`:esc(d.email);
+const backBtn=()=>`<button class="btn ghost sm back" data-back>${ic('left')}ย้อนกลับ</button>`;
+const szTxt=b=>b>=1048576?(b/1048576).toFixed(1)+' MB':Math.max(1,Math.round(b/1024))+' KB';
+function segBlock(d,th){const n=d.scores.length,seg=d.segs&&d.segs.length==n,sus=d.scores.map((s,k)=>{const t=segT(d,k);return{s,a:t[0],b:t[1],lv:lvl(s,th)}}).filter(x=>x.lv).sort((x,y)=>y.s-x.s);
+  if(!n)return'';
+  return `<div class="scope"><div class="segs">${d.scores.map((s,k)=>`<div class="sg num" style="flex:${seg?Math.max(d.segs[k].e-d.segs[k].s,.5):1}" title="ช่วง ${ts(segT(d,k)[0])}–${ts(segT(d,k)[1])} · คะแนน ${fp(adj(s,th))}% (ค่าดิบ ${+(+s).toFixed(14)})"><i style="background:${lvl(s,th)?'var(--fake)':'var(--real)'};opacity:${lvl(s,th)==1?.5:1}"></i><span>${fp(adj(s,th))}%</span></div>`).join('')}</div><div class="axis num"><span>0:00</span><span>${mmss(d.dur)}</span></div></div>
+  ${sus.length?`<div class="susp"><div class="suspt">ช่วงที่น่าสงสัย</div><div class="suspl">${sus.map(x=>`<span class="sch static ${x.lv==2?'hi':''}"><b class="num">${ts(x.a)}–${ts(x.b)}</b><span class="num">${fp(adj(x.s,th))}%</span></span>`).join('')}</div></div>`:`<p class="small" style="margin-top:12px">ไม่พบช่วงที่น่าสงสัย ทุกช่วงมีคะแนนต่ำกว่า 50%</p>`}`}
+function ddetV(){
+  const d=S.dd;if(!d)return backBtn()+errBox()+'<p class="mute">ไม่พบข้อมูลรายการนี้</p>';
+  const x=d.x||{},f=isF(d),th=d.th||S.th,p=fp(adj(d.score,th)),fa=x.feedback_updated_at||x.feedback_created_at;
+  return `${backBtn()}<h1>รายละเอียดการตรวจ</h1>${errBox()}
+  <section class="res ${f?'fake':'real'}"><div class="reshead"><div><div class="vword">${f?'เป็นเสียงสังเคราะห์':'เป็นเสียงคนพูดจริง'}</div>
+  <div class="bignum num${String(p).length>3?' long':''}">${p}<small>%</small></div></div>${mascot(f?'fake':'real')}</div>
+  <div class="resmeta">${esc(x.original_filename||d.name)} · ${D(d.at)} ${T(d.at)} น.</div>
+  ${!f&&d.partial?`<div class="warn">แต่มีบางช่วงที่น่าสงสัย (สูงสุด ${fp(adj(d.maxp,th))}%)</div>`:''}${segBlock(d,th)}</section>
+  <div class="card"><h3>ข้อมูลการตรวจ</h3><dl class="dl">
+  <div><dt>ผู้ใช้</dt><dd>${uLink(d)}</dd></div>
+  <div><dt>ชื่อไฟล์</dt><dd>${esc(x.original_filename||d.name)}</dd></div>
+  <div><dt>ความยาว</dt><dd class="num">${mmss(d.dur)} นาที${x.num_segments?' (แบ่งเป็น '+x.num_segments+' ช่วง)':''}</dd></div>
+  <div><dt>คะแนนเฉลี่ย / สูงสุด</dt><dd class="num">${p}% / ${fp(adj(d.maxp,th))}%</dd></div>
+  <div><dt>เกณฑ์ตอนตรวจ</dt><dd class="num">${th.toFixed(2)}</dd></div>
+  ${x.sample_rate?`<div><dt>ความถี่เสียง</dt><dd class="num">${x.sample_rate} Hz</dd></div>`:''}
+  ${x.file_size_bytes?`<div><dt>ขนาดไฟล์</dt><dd class="num">${szTxt(x.file_size_bytes)}${x.audio_format?' · '+esc(x.audio_format):''}</dd></div>`:''}
+  ${x.model_version?`<div><dt>เวอร์ชันโมเดล</dt><dd>${esc(x.model_version)}</dd></div>`:''}
+  ${x.processing_ms!==undefined&&x.processing_ms!==null?`<div><dt>เวลาประมวลผล</dt><dd class="num">${x.processing_ms} มิลลิวินาที</dd></div>`:''}
+  </dl></div>
+  <div class="card"><h3>ความเห็นจากผู้ใช้</h3>${d.agree===null?'<p class="mute" style="margin-top:8px">ผู้ใช้ยังไม่ได้ให้ความเห็นกับผลนี้</p>':`<div style="margin-top:10px">${fbp(d)}</div>${d.comment?`<div class="cmt">${esc(d.comment)}</div>`:''}${fdTags(d)}${fa?`<p class="small mute" style="margin-top:12px">ตอบเมื่อ ${D(new Date(fa))} ${T(new Date(fa))} น.</p>`:''}`}</div>`}
+function usumV(){
+  const U=S.us;if(!U)return backBtn();const u=U.u||{},L=U.list||[],tot=U.total||0,sp=U.spoof||0,ag=U.agree||0,dg=U.dis||0,dt=v=>v?D(new Date(v)):'';
+  return `${backBtn()}<h1>${esc(u.display_name||String(u.email||'').split('@')[0]||'ผู้ใช้')}</h1><p class="mute">${esc(u.email||'')}</p>${errBox()}
+  <div class="stats"><div class="stat"><span class="k">ตรวจทั้งหมด</span><strong class="num">${tot}</strong><span class="sub num">ครั้ง</span></div><div class="stat" style="--c:var(--fake)"><span class="k"><i></i>เสียงสังเคราะห์</span><strong class="num">${sp}</strong><span class="sub num">${tot?Math.round(sp/tot*100):0}% ของทั้งหมด</span></div><div class="stat" style="--c:var(--real)"><span class="k"><i></i>เสียงจริง</span><strong class="num">${tot-sp}</strong><span class="sub num">${tot?Math.round((tot-sp)/tot*100):0}% ของทั้งหมด</span></div><div class="stat"><span class="k">บอกว่าผลถูกต้อง</span><strong class="num">${ag+dg?Math.round(ag/(ag+dg)*100)+'%':'–'}</strong><span class="sub num">จาก ${ag+dg} ความเห็น</span></div></div>
+  <div class="card"><h3>ข้อมูลบัญชี</h3><dl class="dl"><div><dt>สมัครเมื่อ</dt><dd>${dt(u.created_at)||'ไม่ระบุ'}</dd></div><div><dt>เข้าใช้ล่าสุด</dt><dd>${u.last_login_at?dt(u.last_login_at)+' '+T(new Date(u.last_login_at))+' น.':'ยังไม่เคย'}</dd></div><div><dt>สถานะ</dt><dd>${u.is_active===false?'<span class="pill fake">ถูกระงับ</span>':'<span class="pill real">ใช้งานปกติ</span>'}</dd></div></dl></div>
+  <div class="card"><h3>ผลตรวจของผู้ใช้คนนี้</h3>${filterBar()}<p class="small mute num">แสดง ${L.length} จาก ${U.ltotal||0} รายการ</p><div class="tw"><table><thead><tr><th>เวลา</th><th>ไฟล์</th><th>ผลตรวจ</th><th>ผลตอบรับจากผู้ใช้</th><th></th></tr></thead><tbody>${L.map(d=>`<tr><td>${D(d.at)}<br>${T(d.at)} น.</td><td>${esc(d.name)}</td><td>${pill(d)} <span class="num">${fp(adj(d.score,d.th))}%</span></td><td>${fbp(d)}</td><td>${d.id?`<button class="btn ghost sm" data-ddet="${d.id}">รายละเอียด</button>`:''}</td></tr>`).join('')||'<tr><td colspan="5" class="mute">ไม่พบรายการ</td></tr>'}</tbody></table></div>${moreBtn(L.length,U.ltotal||0,'more')}</div>`}
+function rngDays(){const r=S.dr;let a,b;if(r.n){b=new Date();b.setHours(0,0,0,0);a=new Date(b);a.setDate(a.getDate()-(r.n-1))}else if(r.from&&r.to){a=new Date(r.from+'T00:00:00');b=new Date(r.to+'T00:00:00')}else return[];
+  const o=[];for(let d=new Date(a);d<=b;d.setDate(d.getDate()+1))o.push(new Date(d));return o}
+async function loadRange(){const ds=rngDays(),out=[];
+  for(let i=0;i<ds.length;i+=10)out.push(...await Promise.all(ds.slice(i,i+10).map(async d=>{const k=dk(d);try{const j=await api('/admin/detections?limit=1&date_from='+k+'&date_to='+k);return{k,d,c:j&&j.total!==undefined?j.total:list(j).length}}catch(e){if(e.status==401)throw e;return{k,d,c:0}}})));
+  S.dcnt=out}
+const admPg=()=>S.role=='admin'&&(S.page=='hist'||S.page=='usum');
+function admQ(off,uid,lim){const q=new URLSearchParams({limit:lim||50,offset:off});if(S.f.res)q.set('verdict',S.f.res=='fake'?'spoof':'real');if(S.f.model)q.set('model_version',S.f.model);if(S.f.fb)q.set('feedback',S.f.fb);if(S.f.th&&S.fopt){const t=+S.f.th;q.set('min_threshold',Math.max(0,t-5e-7).toFixed(7));q.set('max_threshold',Math.min(1,t+5e-7).toFixed(7))}if(S.f.date){q.set('date_from',S.f.date);q.set('date_to',S.f.date)}const u=uid||(S.fu&&S.fu.id);if(u)q.set('user_id',u);return q}
+const thEq=(a,b)=>a!==undefined&&Math.abs(+a-+b)<1e-6;
+function seeOpts(L){L.forEach(d=>{if(d.model)S.mopts.add(d.model);if(d.th!==undefined)S.topts.add(+d.th.toFixed(6))})}
+// backend ยังกรองด้วยเกณฑ์ไม่ได้ (ส่ง threshold_used ไปจะโดน 422) จึงดึงทีละ 200 รายการ (สูงสุด 2000) แล้วกรองในหน้าเว็บ
+async function scanAll(cb){let off=0,tot=1,n=0;while(off<tot&&off<2000){const j=await api('/admin/detections?'+admQ(off,null,200)),L=list(j).map(norm);tot=j&&j.total!==undefined?j.total:L.length;seeOpts(L);cb&&cb(L);off+=200;if(!L.length)break}return Math.min(tot,2000)}
+async function loadHist(reset){
+  if(S.f.th&&!S.fopt){const all=[];const tot=await scanAll(L=>all.push(...L.filter(d=>thEq(d.th,S.f.th))));S.adet=all;S.atotal=all.length;S.athNote=tot>2000?'ค้นจาก 2000 รายการล่าสุด':'';return}
+  S.athNote='';const j=await api('/admin/detections?'+admQ(reset?0:S.adet.length)),L=list(j).map(norm);seeOpts(L);
+  S.adet=reset?L:S.adet.concat(L);S.atotal=j&&j.total!==undefined?j.total:S.adet.length}
+async function loadFopt(){try{const j=await api('/admin/detections/filter-options');S.fopt={models:(j.model_versions||[]).map(m=>({v:m.value,n:m.count})),tmin:j.threshold_used&&j.threshold_used.min,tmax:j.threshold_used&&j.threshold_used.max,total:j.total}}catch(e){S.fopt=null}}
+let optScan=0;async function scanOpts(){if(optScan||S.role!='admin')return;optScan=1;try{await scanAll();render()}catch(e){optScan=0}}
+async function loadUList(reset){const U=S.us,j=await api('/admin/detections?'+admQ(reset?0:U.list.length,U.u.id)),L=list(j).map(norm);U.list=reset?L:U.list.concat(L);U.ltotal=j&&j.total!==undefined?j.total:U.list.length}
+async function admReload(){S.err='';render();try{if(S.page=='usum')await loadUList(true);else await loadHist(true)}catch(e){S.err=e.message;if(S.page=='hist'){S.adet=[];S.atotal=0}}render()}
+const here=()=>({p:S.page,did:S.did,uu:S.us&&S.us.u});
+async function view(p,o){S.err='';S.msg='';S.cal.open=false;S.f={date:'',res:'',model:'',th:'',fb:''};Object.assign(S,o||{});S.page=p;S.loading=true;render();await load();S.loading=false;render();scrollTo(0,0)}
+function udetV(){return `<p><button class="btn ghost sm back" data-act="udback">${ic('left')}ย้อนกลับ</button></p><h1 style="margin-top:14px">รายละเอียดการตรวจสอบ</h1>${S.cur?resV(true):''}`}
+async function openUDet(id){const d=S.hist.find(x=>String(x.id)==String(id));if(!d)return;
+  if(!(d.scores&&d.scores.length)&&!d.rawDetail){try{await enrich([d])}catch(e){}}
+  S.cur=Object.assign({},d,{sent:false,hadFb:d.agree!==null&&d.agree!==undefined,url:S.aurl[id]||''});if(!S.cur.fd)S.cur.fd={};S.pp='hist';S.err='';S.page='udet';render();scrollTo(0,0);
+  try{if(!S.cur.url&&S.ahas.has(String(id))){const b=await AU.get(id);if(b&&S.cur&&String(S.cur.id)==String(id)){S.aurl[id]=URL.createObjectURL(b);S.cur.url=S.aurl[id];render()}}}catch(e){}}
+async function exportDet(fmt){const all=[];let off=0,tot=1;
+  while(off<tot&&off<5000){const j=await api('/admin/detections?'+admQ(off,null,200)),L=list(j);tot=j&&j.total!==undefined?j.total:L.length;all.push(...L);off+=200;if(!L.length)break}
+  let rows=all.map(x=>({raw:x,d:norm(x)}));if(S.f.th&&!S.fopt)rows=rows.filter(r=>thEq(r.d.th,S.f.th));
+  const z=new Date(),p=n=>String(n).padStart(2,'0'),fn='detections-'+z.getFullYear()+p(z.getMonth()+1)+p(z.getDate())+'-'+p(z.getHours())+p(z.getMinutes())+'.'+fmt;let body,mime;
+  if(fmt=='json'){body=JSON.stringify({exported_at:z.toISOString(),filters:S.f,total:rows.length,items:rows.map(r=>r.raw)},null,2);mime='application/json'}
+  else{const q=v=>'"'+String(v===undefined||v===null?'':v).replace(/"/g,'""')+'"',H=['เวลา','ผู้ใช้','ผลตรวจ','คะแนนดิบ(0-1)','โมเดล','เกณฑ์ตอนตรวจ','ผลตอบรับจากผู้ใช้'];
+    body='\ufeff'+[H.map(q).join(',')].concat(rows.map(r=>{const d=r.d;return [d.at instanceof Date?d.at.toISOString():d.at,d.email,isF(d)?'สังเคราะห์':'เสียงจริง',d.score,d.model,d.th,d.agree===null?'ยังไม่ให้':d.agree?'ถูกต้อง':'ไม่ถูกต้อง'].map(q).join(',')})).join('\r\n');mime='text/csv;charset=utf-8'}
+  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([body],{type:mime}));a.download=fn;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},1000);S.msg='ส่งออก '+rows.length+' รายการแล้ว ('+fn+')'}
+async function openDetail(id){S.stk.push(here());S.pp=S.page=='ddet'?S.pp:S.page=='usum'?'users':S.page;await view('ddet',{did:id,dd:null})}
+async function openUser(u){S.stk.push(here());S.pp='users';await view('usum',{us:{u,list:[],total:0}})}
+async function backTo(){const h=S.stk.pop();if(!h)return go('hist');if(h.p=='ddet')return view('ddet',{did:h.did,dd:null});if(h.p=='usum')return view('usum',{us:{u:h.uu,list:[],total:0}});S.stk=[];return go(h.p)}
+
+// ===== โหลดข้อมูล / นำทาง =====
+async function load(){
+  try{S.err='';
+    if(S.role=='admin'){
+      if(S.page=='dash'){const fb=z=>api('/admin/detections?limit=5&feedback='+z).then(j=>list(j).map(norm)).catch(()=>[]);const[ag,dg,st]=await Promise.all([fb('agree'),fb('disagree'),api('/admin/stats').catch(e=>{S.err=e.message;return{}})]);S.fbrec=ag.concat(dg).sort((a,b)=>b.at-a.at).slice(0,5);S.stats=st||{};await loadRange()}
+      else if(S.page=='hist'){const[st,tc]=await Promise.all([api('/admin/stats').catch(e=>{S.err=e.message;return{}}),api('/admin/threshold').catch(()=>null),loadFopt().then(()=>loadHist(true))]);S.stats=st||{};const cv=tc&&pick(tc,['value','threshold','current']);S.curth=cv!==undefined&&cv!==null?+cv:undefined;await loadRange();if(!S.fopt){optScan=0;scanOpts()}}
+      else if(S.page=='ddet'){await loadFO();const x=await api('/admin/detections/'+S.did),d=norm(x),fd=x&&x.feedback_details;if(fd){d.comment=fd.comment||'';d.fd=pickFd(fd)}d.x=x;S.dd=d}
+      else if(S.page=='usum'){const u=S.us.u,q='user_id='+encodeURIComponent(u.id),g=z=>api('/admin/detections?limit=1&'+q+z).then(j=>(j&&j.total)||0).catch(()=>0);await loadFO();
+        const[tot,sp,ag,dg,ul]=await Promise.all([g(''),g('&verdict=spoof'),g('&feedback=agree'),g('&feedback=disagree'),u.email?api('/admin/users?limit=5&q='+encodeURIComponent(u.email)).catch(()=>null):null]);
+        const m=ul&&list(ul).find(x=>x.id==u.id);S.us={u:Object.assign({},u,m||{}),list:[],total:tot,ltotal:0,spoof:sp,agree:ag,dis:dg};await loadUList(true)}
+      else if(S.page=='users'){const q=new URLSearchParams({limit:200});if(S.uq)q.set('q',S.uq);if(S.ua)q.set('is_active',S.ua);const j=await api('/admin/users?'+q);S.users=list(j);S.utotal=j.total||S.users.length}
+      else if(S.page=='th'){const t=await api('/admin/threshold');S.thinfo=t||{};S.th=+(pick(t,['value','threshold','current'])??S.th)}
+    }else if(S.page=='hist'||S.page=='prof'){await AU.scan();if(S.page=='prof'){}else{S.hist=list(await api('/history?limit=200')).map(norm);await mergeFb(S.hist);await enrich(uPage().items)}}
+  }catch(e){S.err=e.message}
+}
+// ===== แบบสอบถามฟีดแบ็ก (ตัวเลือกมาจาก GET /feedback/options) =====
+async function loadFO(){if(S.fo)return;try{const o=await api('/feedback/options');if(o&&Array.isArray(o.questions))S.fo=o}catch(e){}}
+const FDK=['audio_source','input_method','environment','mic_distance','audio_issues','truth_basis','speaker_accent','speaker_age_group','recording_device','playback_device'];
+const optL=(k,v)=>{const q=S.fo&&S.fo.questions.find(x=>x.key==k),o=q&&q.options&&q.options.find(x=>x.value==v);return o?o.label:v};
+const pickFd=x=>{const o={};for(const k of FDK)if(x[k]!==undefined&&x[k]!==null&&x[k]!=='')o[k]=x[k];return o};
+function fdTags(d){const f=d.fd;if(!f)return'';const t=[];
+  for(const k of FDK){const v=f[k];if(v===undefined||v===null||v==='')continue;
+    if(k=='audio_issues'){t.push(v.length?'ปัญหา: '+v.map(x=>optL(k,x)).join(', '):'เสียงไม่มีปัญหา');continue}
+    if(k=='recording_device'){t.push('อุปกรณ์อัด: '+v);continue}
+    if(k=='playback_device'){t.push('อุปกรณ์เปิดเสียง: '+v);continue}
+    t.push(optL(k,v))}
+  return t.length?`<div class="tags">${t.map(x=>`<span class="tg">${esc(x)}</span>`).join('')}</div>`:''}
+async function mergeFb(a){await loadFO();try{const m={};list(await api('/feedback?limit=200')).forEach(x=>{m[x.detection_id]=x});
+  a.forEach(d=>{const x=m[d.id];if(x){d.agree=x.user_agrees;d.comment=x.comment||'';d.fd=pickFd(x)}})}catch(e){}}
+async function enrichAdmin(a){await loadFO();await Promise.all(a.filter(d=>d.id&&d.agree!==null).slice(0,60).map(async d=>{try{const x=await api('/admin/detections/'+d.id),fd=x&&x.feedback_details;if(fd){d.comment=fd.comment||'';d.fd=pickFd(fd)}}catch(e){}}))}
+function qForm(d){const fo=S.fo;if(!fo||!fo.questions||!fo.questions.length)return'';const a=d.fd||(d.fd={});
+  const qs=fo.questions.filter(q=>q.ask_user!==false&&q.key!='comment'&&(!q.show_if||Object.entries(q.show_if).every(([k,v])=>a[k]===v)));
+  const on=(q,v)=>q.type=='multi'?Array.isArray(a[q.key])&&a[q.key].includes(v):a[q.key]===v;
+  return `<details class="qd" ${S.qopen?'open':''}><summary>ตอบแบบสอบถามเพิ่มเติม (ไม่บังคับ)</summary>${fo.notice?`<p class="small mute">${esc(fo.notice)}</p>`:''}${qs.map(q=>`<fieldset class="q"><legend>${esc(q.label)}</legend>${q.help?`<div class="small mute">${esc(q.help)}</div>`:''}${q.type=='text'?`<input class="in" data-q="${q.key}" maxlength="${q.max_length||100}" value="${esc(a[q.key]||'')}">`:`<div class="chips tight">${(q.options||[]).map(o=>`<button type="button" class="chip ${on(q,o.value)?'on':''}" data-q="${q.key}" data-v="${o.value}" aria-pressed="${on(q,o.value)}">${esc(o.label)}</button>`).join('')}${q.type=='multi'?`<button type="button" class="chip ${Array.isArray(a[q.key])&&!a[q.key].length?'on':''}" data-q="${q.key}" data-v="__none">ไม่มีปัญหา</button>`:''}</div>`}</fieldset>`).join('')}</details>`}
+function fbBody(){const c=S.cur,b={user_agrees:c.agree},cm=(c.comment||'').trim();if(cm)b.comment=cm.slice(0,300);
+  const qs=(S.fo&&S.fo.questions)||[],a=c.fd||{};
+  for(const q of qs){if(q.ask_user===false||q.key=='comment')continue;let v=a[q.key];if(typeof v=='string')v=v.trim();if(v===undefined||v==='')continue;b[q.key]=v}
+  if(qs.some(q=>q.key=='input_method')&&c.method)b.input_method=c.method;
+  if(b.audio_source!='speaker_replay')delete b.playback_device;return b}
+// ===== หน้าผู้ใช้ของแอดมิน =====
+const fuBan=()=>S.fu?`<div class="ban">กำลังดูเฉพาะผลตรวจของ <b>${esc(S.fu.email)}</b> <button class="linkbtn" data-act="ufclr">ดูทั้งหมด</button></div>`:'';
+const atNote=()=>S.atotal?`<p class="small mute num">แสดง ${S.adet.length} จาก ${S.atotal} รายการ</p>`:'';
+const moreBtn=(a,b,act)=>a<b?`<p class="center" style="margin-top:20px"><button class="btn ghost" data-act="${act}">แสดงเพิ่มเติม (${b-a} รายการ)</button></p>`:'';
+function usersV(){const l=S.users,dt=v=>v?D(new Date(v)):'';
+  return `<h1>ผู้ใช้งาน</h1>${errBox()}
+  <div class="chips">${[['','ทั้งหมด'],['true','ใช้งานปกติ'],['false','ถูกระงับ']].map(c=>`<button class="chip ${S.ua==c[0]?'on':''}" data-ua="${c[0]}">${c[1]}</button>`).join('')}<span class="usearch"><input class="in" id="uq" type="search" placeholder="ค้นหาอีเมลหรือชื่อ" aria-label="ค้นหาผู้ใช้" value="${esc(S.uq)}"><button class="btn sm" data-act="usearch">ค้นหา</button></span></div>
+  <p class="small mute num" style="margin-top:12px">${S.utotal?'แสดง '+l.length+' จาก '+S.utotal+' คน':''}</p>
+  <div class="card tw"><table><thead><tr><th>ผู้ใช้</th><th>สมัครเมื่อ</th><th>เข้าใช้ล่าสุด</th><th>ตรวจแล้ว</th><th>สถานะ</th><th></th></tr></thead><tbody>${l.map(u=>`<tr><td><b>${esc(u.display_name||String(u.email).split('@')[0])}</b><div class="small mute">${esc(u.email)}</div></td><td>${dt(u.created_at)}</td><td>${u.last_login_at?dt(u.last_login_at)+'<br>'+T(new Date(u.last_login_at))+' น.':'<span class="mute">ยังไม่เคย</span>'}</td><td class="num">${u.detection_count}</td><td>${u.is_active?'<span class="pill real">ใช้งานปกติ</span>':'<span class="pill fake">ถูกระงับ</span>'}</td><td><button class="btn ghost sm" data-uview="${u.id}">ดูผลตรวจ</button> <button class="btn ghost sm" data-utog="${u.id}">${u.is_active?'ระงับ':'เปิดใช้'}</button></td></tr>`).join('')||'<tr><td colspan="6" class="mute">ไม่พบผู้ใช้</td></tr>'}</tbody></table></div>${moreBtn(l.length,S.utotal||0,'umore')}`}
+async function searchUsers(){S.uq=($('#uq')&&$('#uq').value.trim())||'';return go('users')}
+S.aurl={};S.adel=null;S.sel=null;S.cfm=false;S.tst='';S.mopts=new Set();S.topts=new Set();S.ahas=new Set();S.astat=null;
+const AU={db:null,open(){return this.db||(this.db=new Promise((ok,no)=>{const r=indexedDB.open('vc-audio',1);r.onupgradeneeded=()=>r.result.createObjectStore('a');r.onsuccess=()=>ok(r.result);r.onerror=()=>no(r.error)}))},
+  acc(){const u=S.user||{};return String(u.id||u.email||'?')},
+  k(id){return this.acc()+'|'+id},
+  async put(id,b){try{const db=await this.open();await new Promise((ok,no)=>{const t=db.transaction('a','readwrite');t.objectStore('a').put(b,this.k(id));t.oncomplete=ok;t.onerror=t.onabort=()=>no(t.error)});S.ahas.add(String(id));try{navigator.storage&&navigator.storage.persist&&navigator.storage.persist()}catch(e){}return true}catch(e){return false}},
+  async get(id){try{const db=await this.open();return await new Promise(ok=>{const r=db.transaction('a').objectStore('a').get(this.k(id));r.onsuccess=()=>ok(r.result||null);r.onerror=()=>ok(null)})}catch(e){return null}},
+  async del(id){try{const db=await this.open();await new Promise(ok=>{const t=db.transaction('a','readwrite');t.objectStore('a').delete(this.k(id));t.oncomplete=t.onerror=t.onabort=ok});S.ahas.delete(String(id))}catch(e){}},
+  async scan(){const pre=this.acc()+'|',ids=new Set();let n=0,sz=0;try{const db=await this.open();await new Promise(ok=>{const q=db.transaction('a').objectStore('a').openCursor();q.onsuccess=()=>{const c=q.result;if(!c){ok();return}if(String(c.key).startsWith(pre)){ids.add(String(c.key).slice(pre.length));n++;sz+=(c.value&&c.value.size)||0}c.continue()};q.onerror=()=>ok()})}catch(e){}S.ahas=ids;S.astat={n,sz};return ids}};
+async function fetchAudio(id){
+  for(const p of ['/history/'+id+'/audio','/admin/detections/'+id+'/audio','/history/'+id+'/file']){
+    try{const r=await fetch(API+p,{headers:{Authorization:'Bearer '+S.token}});if(r.ok&&/audio|octet/i.test(r.headers.get('content-type')||''))return await r.blob()}catch(e){}}
+  return null}
+async function playAudio(id,b){
+  const box=document.getElementById('pl-'+id);b.disabled=true;const old=b.innerHTML;b.textContent='กำลังโหลด...';
+  let u=S.aurl[id];
+  if(!u){const bl=(await AU.get(id))||(await fetchAudio(id));if(bl)u=S.aurl[id]=URL.createObjectURL(bl)}
+  if(u&&box){box.innerHTML=`<audio controls autoplay src="${u}" aria-label="ฟังเสียงที่ตรวจ"></audio>`;b.remove()}
+  else{b.disabled=false;b.innerHTML=old;if(box)box.insertAdjacentHTML('beforeend','<div class="small mute nofile">ไม่พบไฟล์เสียงของรายการนี้ ระบบเก็บเฉพาะผลตรวจ จะฟังได้เฉพาะเสียงที่ตรวจจากเบราว์เซอร์นี้หลังอัปเดตแล้ว</div>')}}
+const playBox=d=>{if(!d.id)return'';const has=S.aurl[d.id]||S.ahas.has(String(d.id)),tb=has&&!S.sel?`<button type="button" class="iconbtn adel" data-adel="${d.id}" aria-label="ลบไฟล์เสียง ${esc(d.name)}" title="ลบไฟล์เสียงนี้">${ic('trash')}</button>`:'';
+  return `<div class="pl" id="pl-${d.id}">${S.aurl[d.id]?`<span class="plr"><audio controls src="${S.aurl[d.id]}" aria-label="ฟังเสียงที่ตรวจ"></audio>${tb}</span>`:has?`<span class="plr"><button class="btn ghost sm" data-play="${d.id}">${ic('play')}ฟังเสียง</button>${tb}</span>`:`<div class="small mute nofile">ไม่มีไฟล์เสียงในเบราว์เซอร์นี้</div>`}</div>`};
+const LS={get:id=>{try{return JSON.parse(localStorage.getItem('fb:'+id))}catch(e){return null}},set:(id,v)=>{try{localStorage.setItem('fb:'+id,JSON.stringify(v))}catch(e){}}};
+
+async function enrich(a){await Promise.all(a.slice(0,30).filter(d=>d.id).map(async d=>{try{const rawDet=await api('/history/'+d.id),det=norm(rawDet);d.rawDetail=rawDet;
+  if(det.score)d.score=det.score;if(det.scores.length)d.scores=det.scores;if(det.agree!==null)d.agree=det.agree;if(det.comment)d.comment=det.comment;if(det.dur)d.dur=det.dur;if(det.fake!==undefined)d.fake=det.fake;if(det.th!==undefined)d.th=det.th;if(det.segs.length)d.segs=det.segs;if(det.maxp)d.maxp=det.maxp;d.partial=det.partial||d.partial}catch(e){}}))}
+async function go(p,res,keep,day){S.stk=[];S.sel=null;S.cfm=false;S.hp=0;S.ur={mode:'',from:'',to:'',open:false};if(!keep)S.fu=null;S.dm=null;S.pwo=false;S.cal.open=false;S.page=p;S.f={date:day||'',res:res||'',model:'',th:'',fb:''};S.err='';S.msg='';S.loading=true;render();await load();S.loading=false;render();if(day)scrollTo(0,0)}
+async function enter(tok,adm){
+  adm=(r=>r?r=='admin':adm)(jwtRole(tok));S.token=tok;S.role=adm?'admin':'user';store.set('tok',tok);store.set('role',S.role);
+  S.user=adm?{name:'ผู้ดูแลระบบ',email:'admin'}:await api('/users/me');if(!adm){const av=AV.get(S.user);if(av)S.user.img=av}loadFO();
+  S.page=adm?'dash':'home';S.phase='idle';S.cur=null;S.loading=true;render();await load();S.loading=false}
+function logout(){S.role='user';S.token=null;S.user=null;S.page='home';S.phase='idle';S.cur=null;store.set('tok',null);store.set('role',null);render()}
+
+// ===== ตรวจเสียง =====
+function pk(x,n){const o=[],st=Math.floor(x.length/n)||1;for(let i=0;i<n;i++){let m=0;for(let j=i*st;j<Math.min(x.length,(i+1)*st);j+=8)m=Math.max(m,Math.abs(x[j]));o.push(m)}const t=Math.max(...o)||1;return o.map(v=>v/t)}
+function draw(){const c=$('#wave'),r=devicePixelRatio||1,w=c.clientWidth,h=c.clientHeight;c.width=w*r;c.height=h*r;const g=c.getContext('2d');g.scale(r,r);const d=S.cur,P=d.peaks,bw=w/P.length,n=d.scores.length,cs=getComputedStyle(document.documentElement),th=d.th||S.th;
+P.forEach((p,i)=>{const tot=n&&d.segs&&d.segs.length==n?d.segs[n-1].e:0,tt=i/P.length*tot;let k=tot?d.segs.findIndex(g=>tt>=g.s&&tt<g.e):-1;if(k<0)k=Math.min(n-1,Math.floor(i/P.length*n));const s=n?d.scores[k]:d.score;const lv=lvl(s,th);g.fillStyle=cs.getPropertyValue(lv?'--fake':'--real').trim();g.globalAlpha=lv==1?.5:1;const bh=Math.max(4,p*h*.92);g.beginPath();if(g.roundRect)g.roundRect(i*bw+bw*.22,(h-bh)/2,bw*.56,bh,bw*.28);else g.rect(i*bw+bw*.22,(h-bh)/2,bw*.56,bh);g.fill();g.globalAlpha=1})}
+async function toWav(a){
+  const sr=16000,n=Math.max(1,Math.ceil(a.duration*sr)),oc=new OfflineAudioContext(1,n,sr),src=oc.createBufferSource();
+  src.buffer=a;src.connect(oc.destination);src.start();
+  const x=(await oc.startRendering()).getChannelData(0),buf=new ArrayBuffer(44+x.length*2),v=new DataView(buf),w=(o,t)=>[...t].forEach((c,i)=>v.setUint8(o+i,c.charCodeAt(0)));
+  w(0,'RIFF');v.setUint32(4,36+x.length*2,true);w(8,'WAVEfmt ');v.setUint32(16,16,true);v.setUint16(20,1,true);v.setUint16(22,1,true);v.setUint32(24,sr,true);v.setUint32(28,sr*2,true);v.setUint16(32,2,true);v.setUint16(34,16,true);w(36,'data');v.setUint32(40,x.length*2,true);
+  for(let i=0;i<x.length;i++){const t=Math.max(-1,Math.min(1,x[i]));v.setInt16(44+i*2,t<0?t*32768:t*32767,true)}
+  return new Blob([buf],{type:'audio/wav'})}
+async function run(blob,name,method){
+  if(S.role=='admin'){S.err='ผู้ดูแลระบบส่งไฟล์เข้าตรวจไม่ได้ ใช้ได้เฉพาะบัญชีผู้ใช้';render();return}
+  S.err='';S.phase='busy';render();
+  try{
+    let a,wav;
+    try{const ax=new(window.AudioContext||window.webkitAudioContext)();a=await ax.decodeAudioData(await blob.arrayBuffer());ax.close&&ax.close();wav=await toWav(a)}
+    catch(e){throw new Error('เบราว์เซอร์อ่านไฟล์เสียงนี้ไม่ได้ ลองไฟล์ .wav หรือ .mp3 ที่ไม่เสียหาย')}
+    const isW=/\.wav$/i.test(name)||/^audio\/(x-)?wav/i.test(blob.type||''),snd=isW?blob:wav,fd=new FormData();fd.append('files',snd,name.replace(/\.[^.]+$/,'')+'.wav');
+    const j=await api('/predict',{method:'POST',form:fd});console.log('คำตอบจาก /predict',j);
+    if(!list(j).length&&!Array.isArray(j)){const ff=j&&j.failed_files;throw new Error('backend ตรวจไฟล์นี้ไม่ได้: '+(ff&&ff.length?JSON.stringify(ff):'ไม่มีผลลัพธ์กลับมา'))}
+    const f0=Array.isArray(j)?j[0]:list(j)[0],x=(f0&&typeof f0=='object')?f0:j,d=norm(x);
+    d.name=String(name).replace(/\.(webm|wav|mp3|m4a|ogg|flac|aac|opus|mp4)$/i,'');d.url=URL.createObjectURL(blob);d.peaks=pk(a.getChannelData(0),64);if(!d.dur)d.dur=Math.round(a.duration);
+    if(d.id){try{const det=norm(await api('/history/'+d.id));if(det.th!==undefined)d.th=det.th;if(det.fake!==undefined)d.fake=det.fake;if(det.scores.length)d.scores=det.scores;if(det.segs.length)d.segs=det.segs}catch(e){}}
+    if(!d.id){try{const l=list(await api('/history?limit=1')).map(norm)[0];if(l&&l.id&&(!l.name||String(l.name)==String(d.name)||true))d.id=l.id}catch(e){}}
+    d.audioSaved=d.id?await AU.put(d.id,snd):false;if(d.id)S.aurl[d.id]=d.url;
+    await loadFO();d.method=method;S.cur=d;S.phase='done'}
+  catch(e){S.phase='idle';S.err=e.message}
+  render()}
+function drawLive(arr){
+  const c=$('#live');if(!c)return;const r=devicePixelRatio||1,w=c.clientWidth,h=c.clientHeight;if(!w)return;
+  c.width=w*r;c.height=h*r;const g=c.getContext('2d');g.scale(r,r);
+  const n=Math.max(16,Math.floor(w/8)),bw=w/n,cs=getComputedStyle(document.documentElement);g.fillStyle=cs.getPropertyValue(arr?'--accent':'--line').trim();
+  for(let i=0;i<n;i++){const v=arr?Math.pow((arr[Math.floor(i/n*arr.length*.6)]||0)/255,1.4):0,bh=Math.max(4,v*h);g.beginPath();if(g.roundRect)g.roundRect(i*bw+bw*.3,(h-bh)/2,bw*.4,bh,2);else g.rect(i*bw+bw*.3,(h-bh)/2,bw*.4,bh);g.fill()}}
+// อัดเสียงเป็น PCM ดิบ (ไม่ผ่าน webm/opus) ถ้าเบราว์เซอร์รองรับ ไม่งั้นถอยไปใช้ MediaRecorder
+function pcmWav(ch,sr){const n=ch.reduce((a,c)=>a+c.length,0),buf=new ArrayBuffer(44+n*2),v=new DataView(buf),w=(o,t)=>[...t].forEach((c,i)=>v.setUint8(o+i,c.charCodeAt(0)));
+  w(0,'RIFF');v.setUint32(4,36+n*2,true);w(8,'WAVEfmt ');v.setUint32(16,16,true);v.setUint16(20,1,true);v.setUint16(22,1,true);v.setUint32(24,sr,true);v.setUint32(28,sr*2,true);v.setUint16(32,2,true);v.setUint16(34,16,true);w(36,'data');v.setUint32(40,n*2,true);
+  let o=44;for(const c of ch)for(let i=0;i<c.length;i++){const t=Math.max(-1,Math.min(1,c[i]));v.setInt16(o,t<0?t*32768:t*32767,true);o+=2}
+  return new Blob([buf],{type:'audio/wav'})}
+async function rec(){
+  if(S.rec){S.rec.mr.stop();return}
+  try{const st=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:false,noiseSuppression:false,autoGainControl:false,channelCount:1}});
+    let ac=null,an=null,buf=null,pcm=null;
+    try{ac=new(window.AudioContext||window.webkitAudioContext)();if(ac.resume)ac.resume();an=ac.createAnalyser();an.fftSize=128;const src=ac.createMediaStreamSource(st);src.connect(an);buf=new Uint8Array(an.frequencyBinCount);
+      if(ac.createScriptProcessor){const sp=ac.createScriptProcessor(4096,1,1),mute=ac.createGain(),ch=[];mute.gain.value=0;sp.onaudioprocess=e=>{ch.push(new Float32Array(e.inputBuffer.getChannelData(0)))};src.connect(sp);sp.connect(mute);mute.connect(ac.destination);pcm={sp,mute,ch,sr:ac.sampleRate}}}
+    catch(e){ac=null;an=null;pcm=null}
+    const tick=()=>{if(!S.rec)return;if(an){an.getByteFrequencyData(buf);drawLive(buf)}S.rec.raf=requestAnimationFrame(tick)};
+    const clean=()=>{st.getTracks().forEach(t=>t.stop());clearInterval(S.rec.t);cancelAnimationFrame(S.rec.raf);if(pcm){try{pcm.sp.disconnect();pcm.mute.disconnect()}catch(e){}}if(ac&&ac.close)ac.close()};
+    let mr;
+    if(pcm){mr={stop(){clean();const r=pcm;S.rec=null;run(pcmWav(r.ch,r.sr),'บันทึกเสียง '+T(new Date())+'.wav','recorded_in_app')}}}
+    else{const ch=[],m=new MediaRecorder(st);m.ondataavailable=e=>ch.push(e.data);m.onstop=()=>{clean();S.rec=null;run(new Blob(ch,{type:m.mimeType}),'บันทึกเสียง '+T(new Date())+'.webm','recorded_in_app')};m.start();mr=m}
+    S.rec={mr,sec:0,raf:0,t:setInterval(()=>{S.rec.sec++;const e=$('#rt');if(e)e.textContent=mmss(S.rec.sec)},1000)};S.err='';
+    render();S.rec.raf=requestAnimationFrame(tick);return}
+  catch(e){S.err='เปิดไมโครโฟนไม่ได้ ตรวจสิทธิ์การใช้ไมโครโฟนของเบราว์เซอร์ หรือใช้การอัปโหลดไฟล์แทน'}
+  render()}
+
+// ===== เหตุการณ์ =====
+const fpErr=x=>/not found|method not allowed|\(404\)|\(405\)/i.test(x.message)?new Error('เซิร์ฟเวอร์ยังไม่มีระบบนี้ (ต้องอัปเดต backend ก่อน) ตอนนี้ให้ผู้ดูแลช่วยดูแลบัญชีให้'):x;
+const app=$('#app'),guard=async f=>{try{S.err='';await f()}catch(e){S.err=e.message}render()};
+app.addEventListener('click',e=>{const b=e.target.closest('button');if(S.cal.open&&!e.target.closest('.datewrap')){S.cal.open=false;render()}if(!b){const rs=e.target.closest('[data-sel]');if(rs&&S.sel){const i=rs.dataset.sel;S.sel.has(i)?S.sel.delete(i):S.sel.add(i);render();return}if(e.target.classList&&e.target.classList.contains('scrim')){S.cfm=false;S.adel=null;render();return}const r=e.target.closest('[data-udet]');if(r&&!e.target.closest('audio,a,input,select,textarea,.pl'))openUDet(r.dataset.udet);return}const d=b.dataset;
+  if(d.exp){guard(()=>exportDet(d.exp));return}
+  if(d.adel!==undefined){S.adel=d.adel;S.cfm=true;render();return}
+  if(d.play!==undefined){playAudio(d.play,b);return}
+  if(d.eye!==undefined){const i=b.previousElementSibling;i.type=i.type=='password'?'text':'password';b.classList.toggle('on',i.type=='text');return}
+  if(d.cal!==undefined){if(d.cal=='toggle'){S.cal.open=!S.cal.open;if(S.cal.open){const t=S.f.date?new Date(S.f.date+'T00:00:00'):new Date();S.cal.y=t.getFullYear();S.cal.m=t.getMonth()}}else{S.cal.m+=+d.cal;if(S.cal.m<0){S.cal.m=11;S.cal.y--}if(S.cal.m>11){S.cal.m=0;S.cal.y++}}return render()}
+  if(d.day!==undefined){S.f.date=d.day;S.cal.open=false;return admPg()?admReload():render()}
+  if(d.chip!==undefined){S.f.res=d.chip;S.hp=0;if(admPg())return admReload();render();return S.page=='hist'&&S.role!='admin'?uPageLoad():0}
+  if(d.q&&d.v!==undefined&&S.cur&&S.fo){const a=S.cur.fd||(S.cur.fd={}),k=d.q,qd=S.fo.questions.find(x=>x.key==k);if($('#cm'))S.cur.comment=$('#cm').value;
+    if(qd&&qd.type=='multi'){if(d.v=='__none')a[k]=Array.isArray(a[k])&&!a[k].length?undefined:[];else{const c=Array.isArray(a[k])?a[k].slice():[],i=c.indexOf(d.v);i>=0?c.splice(i,1):c.push(d.v);a[k]=c.length?c:undefined}}
+    else a[k]=a[k]===d.v?undefined:d.v;
+    if(k=='audio_source'&&a[k]!='speaker_replay')delete a.playback_device;return render()}
+  if(d.ua!==undefined){S.ua=d.ua;if($('#uq'))S.uq=$('#uq').value.trim();return go('users')}
+  if(d.uview){const u=S.users.find(x=>x.id==d.uview);if(u)return openUser(u);return}
+  if(d.pg!==undefined){if(d.pg===''||isNaN(+d.pg))return;S.hp=+d.pg;render();scrollTo({top:0});return uPageLoad()}
+  if(d.ps!==undefined){S.hps=+d.ps;S.hp=0;render();return uPageLoad()}
+  if(d.ur!==undefined){const t=new Date(),k=n=>{const x=new Date(t);x.setDate(x.getDate()-n);return dk(x)};
+    if(d.ur=='custom'){S.ur.mode='custom';S.ur.open=true;return render()}
+    S.ur={mode:d.ur,from:d.ur?k(d.ur=='1'?0:+d.ur-1):'',to:d.ur?dk(t):'',open:false};S.hp=0;render();return uPageLoad()}
+  if(d.uopen){const u=S.users.find(x=>x.id==d.uopen)||{id:d.uopen,email:d.em};return openUser(u)}
+  if(d.ddet)return openDetail(d.ddet);
+  if(d.back!==undefined)return backTo();
+  if(d.dr!==undefined){if(d.dr=='custom'){S.dr.open=!S.dr.open;return render()}S.dr={n:+d.dr,from:'',to:'',open:false};return guard(loadRange)}
+  if(d.utog)return guard(async()=>{const u=S.users.find(x=>x.id==d.utog);if(!u)return;if(u.is_active&&!confirm('ระงับบัญชี '+u.email+' ผู้ใช้จะเข้าสู่ระบบไม่ได้จนกว่าจะเปิดใช้อีกครั้ง'))return;await api('/admin/users/'+u.id,{method:'PATCH',body:{is_active:!u.is_active}});await load()});
+  if(d.seek!==undefined){const a=document.querySelector('audio');if(a){a.currentTime=+d.seek;const p=a.play&&a.play();if(p&&p.catch)p.catch(()=>{})}return}
+  if(d.gday)return go('hist','',0,d.gday);
+  if(d.go!==undefined)return go(d.go,d.res);
+  if(d.role){S.role=d.role;S.err='';return render()}
+  if(d.tab){S.tab=d.tab;S.err='';return render()}
+  if(d.del)return guard(async()=>{if(!confirm('ลบรายการนี้ออกจากประวัติ'))return;await api('/history/'+d.del,{method:'DELETE'});await AU.del(d.del);delete S.aurl[d.del];await load()});
+  if(d.ag!==undefined){S.cur.agree=d.ag=='1';S.cur.comment=$('#cm').value;return render()}
+  switch(d.act){
+    case'fp':S.fp=1;S.err='';render();break;
+    case'fpback':S.fp=0;S.err='';render();break;
+    case'fpsend':guard(async()=>{const e=$('#fe')?$('#fe').value.trim():S.fpEmail;if(!/^\S+@\S+\.\S+$/.test(e||''))throw new Error('กรอกอีเมลให้ถูกต้องก่อน');S.fpEmail=e;
+      try{await api('/auth/forgot-password',{method:'POST',noAuthRedirect:true,body:{email:e}})}catch(x){throw fpErr(x)}S.fp=2});break;
+    case'vfback':S.vf=null;S.err='';render();break;
+    case'vfresend':guard(async()=>{try{await api('/auth/resend-verification',{method:'POST',noAuthRedirect:true,body:{email:S.vf.email}})}catch(x){throw fpErr(x)}S.vf.sent=1});break;
+    case'lkgo':S.lk=null;S.err='';cleanUrl();render();break;
+    case'lkreset':guard(async()=>{const p1=$('#f1').value,p2=$('#f2').value;if(p1.length<8)throw new Error('รหัสผ่านต้องยาวอย่างน้อย 8 ตัวอักษร');if(p1!==p2)throw new Error('รหัสผ่านใหม่สองช่องไม่ตรงกัน');
+      await api('/auth/reset-password',{method:'POST',noAuthRedirect:true,body:{token:S.lk.token,new_password:p1}});S.lk={kind:'reset',state:'done'}});break;
+    case'usearch':searchUsers();break;
+    case'ufclr':go('hist');break;
+    case'urapply':{const a=$('#u1').value,b=$('#u2').value;let m='';if(!a||!b)m='เลือกวันที่เริ่มและวันที่สิ้นสุดให้ครบก่อน';else if(a>b)m='วันที่เริ่มต้องไม่หลังวันที่สิ้นสุด';
+      if(m){S.err=m;render();break}S.err='';S.ur={mode:'custom',from:a,to:b,open:true};S.hp=0;render();uPageLoad();break}
+    case'more':guard(async()=>{if(S.page=='usum')await loadUList(false);else await loadHist(false)});break;
+    case'umore':guard(async()=>{const q=new URLSearchParams({limit:200,offset:S.users.length});if(S.uq)q.set('q',S.uq);if(S.ua)q.set('is_active',S.ua);const j=await api('/admin/users?'+q);S.users=S.users.concat(list(j));S.utotal=j&&j.total||S.users.length});break;
+    case'drapply':{const a=$('#d1').value,b=$('#d2').value;let m='';
+      if(!a||!b)m='เลือกวันที่เริ่มและวันที่สิ้นสุดให้ครบก่อน';else if(a>b)m='วันที่เริ่มต้องไม่หลังวันที่สิ้นสุด';else if((new Date(b)-new Date(a))/864e5>=92)m='เลือกได้ไม่เกิน 92 วันต่อครั้ง';
+      if(m){S.err=m;render();break}S.dr={n:0,from:a,to:b,open:true};guard(loadRange);break}
+    case'dn':{const v=$('#dn').value.trim();S.dm=null;api('/users/me',{method:'PATCH',body:{display_name:v||null}}).then(u=>{S.user=Object.assign({},S.user,u);S.dm={ok:1,m:'บันทึกชื่อแล้ว'}}).catch(e=>{S.dm={m:e.message}}).then(render);break}
+    case'tgl':S.reg=!S.reg;S.err='';render();break;
+    case'clr':S.f={date:'',res:'',model:'',th:'',fb:''};S.ur={mode:'',from:'',to:'',open:false};S.hp=0;admPg()?admReload():(render(),S.role!='admin'&&S.page=='hist'&&uPageLoad());break;
+    case'again':S.phase='idle';S.cur=null;S.err='';render();break;
+    case'rec':rec();break;
+    case'out':logout();break;
+    case'selo':S.sel=new Set();S.tst='';render();break;
+    case'selx':S.sel=null;S.cfm=false;render();break;
+    case'sela':{const ids=selIds(),all=ids.length&&ids.every(i=>S.sel.has(i));ids.forEach(i=>all?S.sel.delete(i):S.sel.add(i));render();break}
+    case'seld':if(S.sel&&S.sel.size){S.cfm=true;render()}break;
+    case'cfmx':S.cfm=false;S.adel=null;render();break;
+    case'cfmy':guard(async()=>{const ids=S.adel?[String(S.adel)]:[...S.sel];for(const i of ids){await AU.del(i);try{S.aurl[i]&&URL.revokeObjectURL(S.aurl[i])}catch(e){}delete S.aurl[i];if(S.cur&&String(S.cur.id)==i)S.cur.url=undefined}S.sel=null;S.adel=null;S.cfm=false;await AU.scan();S.tst='ลบไฟล์เสียงแล้ว '+ids.length+' ไฟล์ · ผลตรวจในประวัติยังอยู่';render();setTimeout(()=>{S.tst='';render()},3500)});break;
+    case'send':guard(async()=>{const cm=$('#cm');if(cm)S.cur.comment=cm.value;if(S.cur.agree===null)throw new Error('เลือกก่อนว่าผลนี้ถูกต้องหรือไม่ถูกต้อง');
+      if(!S.cur.id){const h=list(await api('/history?limit=5')).map(norm).sort((a,b)=>b.at-a.at)[0];if(!h||!h.id)throw new Error('หาผลตรวจนี้ในประวัติไม่เจอ ส่งความเห็นได้เฉพาะตอนเข้าสู่ระบบ');S.cur.id=h.id}
+      const body=fbBody(),u='/history/'+S.cur.id+'/feedback';
+      try{await api(u,{method:'POST',body})}catch(x){if(x.status==409)await api(u,{method:'PUT',body});else throw x}
+      S.cur.sent=true;S.cur.hadFb=true;if(S.page=='udet'){const h=S.hist.find(x=>String(x.id)==String(S.cur.id));if(h){h.agree=S.cur.agree;h.comment=S.cur.comment;h.fd=S.cur.fd}}});break;
+    case'fbedit':S.cur.sent=false;S.err='';render();break;
+    case'udback':S.cur=null;S.page='hist';render();scrollTo(0,0);break;
+    case'pwo':S.pwo=!S.pwo;S.msg='';S.err='';render();if(S.pwo){const c=$('#pwcard');if(c)c.scrollIntoView({behavior:'smooth'})}break;
+    case'th':guard(async()=>{S.msg='';const v=parseFloat($('#tv').value);if(decs($('#tv').value)>14)throw new Error('ใส่ทศนิยมได้ไม่เกิน 14 ตำแหน่ง');if(!(v>=0.001&&v<=0.997))throw new Error('ใส่ค่าระหว่าง 0.001 ถึง 0.997');await api('/admin/threshold',{method:'POST',body:{value:v,threshold:v}});S.msg='บันทึกแล้ว';await load()});break;
+    case'pw':guard(async()=>{const a=$('#p0').value,n=$('#p1').value,c=$('#p2').value;S.msg='';
+      if(n.length<8)throw new Error('รหัสผ่านใหม่ต้องยาวอย่างน้อย 8 ตัวอักษร');if(n!==c)throw new Error('รหัสผ่านใหม่สองช่องไม่ตรงกัน');
+      await api('/users/me/password',{method:'PUT',body:{current_password:a,new_password:n}});S.msg='เปลี่ยนรหัสผ่านแล้ว'});break;
+    case'in':guard(async()=>{const adm=S.role=='admin',em=$('#em').value.trim(),pw=$('#pw').value;
+      let j;try{j=await api(adm?'/auth/admin/login':'/auth/login',{method:'POST',noAuthRedirect:true,body:adm?{username:em,password:pw}:{email:em,password:pw}})}
+      catch(x){if(!adm&&x.status==403&&x.message==ERR_TH['Email not verified']){S.vf={email:em,why:'บัญชีนี้ยังไม่ได้ยืนยันอีเมล ลิงก์ยืนยันส่งไปที่'};S.err='';return}throw x}await enter(j.access_token,adm)});break;
+    case'reg':guard(async()=>{const em=$('#em').value.trim(),pw=$('#pw').value;if(pw.length<8)throw new Error('รหัสผ่านต้องยาวอย่างน้อย 8 ตัวอักษร');
+      const nm=$('#rn')?$('#rn').value.trim():'',body={email:em,password:pw};if(nm)body.display_name=nm;
+      const j=await api('/auth/register',{method:'POST',noAuthRedirect:true,body});S.reg=false;
+      if(j&&j.access_token)await enter(j.access_token,false);else S.vf={email:em}});break;
+  }});
+app.addEventListener('input',e=>{const t=e.target;if(S.cur&&t.dataset&&t.dataset.q)(S.cur.fd||(S.cur.fd={}))[t.dataset.q]=t.value;if(S.cur&&t.id=='cm')S.cur.comment=t.value;if(t.id=='tv'){const tv=$('#tv');if(!/e/i.test(t.value)&&decs(t.value)>14){const k=t.value.indexOf('.');t.value=t.value.slice(0,k+15)}const q=parseFloat(t.value);if(!isNaN(q))S.th=q;tv.style.fontSize=tv.value.length>8?'clamp(24px,7vw,44px)':''}});
+app.addEventListener('change',e=>{const t=e.target;
+  if(t.dataset.f){S.f[t.dataset.f]=t.value;S.hp=0;if(admPg())return admReload();render()}
+  if(t.id=='fi'&&t.files[0])run(t.files[0],t.files[0].name,'uploaded_file');
+  if(t.id=='av'&&t.files[0]){avShrink(t.files[0]).then(d=>{S.user.img=d;S.dm=null;if(!AV.set(S.user,d))S.dm={m:'รูปนี้ใหญ่เกินกว่าเบราว์เซอร์จะจำไว้ได้ รูปจะหายเมื่อออกจากระบบ'};render()}).catch(e=>{S.dm={m:e.message};render()})}});
+app.addEventListener('dragover',e=>e.preventDefault());
+app.addEventListener('drop',e=>{e.preventDefault();const f=e.dataTransfer.files[0];if(f&&S.page=='home'&&S.phase=='idle'&&S.tab=='up')run(f,f.name,'uploaded_file')});
+addEventListener('resize',()=>{if(S.phase=='done'&&$('#wave'))draw();if(!S.rec&&$('#live'))drawLive()});
+
+app.addEventListener('keydown',e=>{if(e.key=='Enter'&&e.target.id=='uq'){e.preventDefault();searchUsers()}});
+app.addEventListener('toggle',e=>{if(e.target.classList&&e.target.classList.contains('qd'))S.qopen=e.target.open},true);
+
+// เปิดหน้าใหม่แล้ว token ยังอยู่ใน sessionStorage ให้เข้าต่อได้เลย
+(async()=>{const t=store.get('tok'),L=linkRoute();
+  if(L){store.set('tok',null);store.set('role',null);S.lk=L.kind=='verify'?{kind:'verify',state:L.token?'busy':'fail',msg:L.token?'':'ไม่พบรหัสในลิงก์ ขอลิงก์ใหม่ได้ที่หน้าเข้าสู่ระบบ'}:{kind:'reset',token:L.token,state:'form'};render();
+    if(S.lk.kind=='verify'&&L.token){try{const j=await api('/auth/verify-email',{method:'POST',noAuthRedirect:true,body:{token:L.token}});S.lk=null;cleanUrl();await enter(j.access_token,false)}catch(e){S.lk={kind:'verify',state:'fail',msg:e.message}}render()}
+    return}
+  render();
+  if(t){try{await enter(t,store.get('role')=='admin')}catch(e){logout()}render()}})();
+</script>
+</body>
+</html>
